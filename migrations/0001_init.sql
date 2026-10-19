@@ -1,0 +1,2 @@
+-- Platform schema (users, groups, memberships, grants,
+-- sessions, db connections, migration history).
