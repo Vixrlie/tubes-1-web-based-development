@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/admin"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/config"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/db"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
@@ -23,6 +24,10 @@ func main() {
 }
 
 func run() error {
+	if err := config.LoadDotEnv(".env"); err != nil {
+		return err
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -38,6 +43,11 @@ func run() error {
 	defer pool.Close()
 
 	if err := db.Migrate(ctx, pool, migrations.FS); err != nil {
+		return err
+	}
+
+	userStore := auth.NewPGStore(pool)
+	if err := auth.SeedAdmin(ctx, userStore, cfg.AdminUsername, cfg.AdminPassword); err != nil {
 		return err
 	}
 
