@@ -2,27 +2,25 @@ package access
 
 import "context"
 
-// Action = permission level buat seorang user
-// Urutan dari least - most privileged: view < query < migrate
+// Action = tindakan yang diminta user pada satu koneksi database.
+// Urutan dari paling rendah ke tinggi: view < edit.
 type Action string
 
 const (
-	// Ngeliat skema
+	// View Only: lihat schema, data, dan riwayat migration.
 	ActionView Action = "view"
-	// Jalanin query
-	ActionQuery Action = "query"
-	// Pake migration
-	ActionMigrate Action = "migrate"
+	// View + Edit: semua View Only, ditambah buat, ubah, dan jalankan migration.
+	ActionEdit Action = "edit"
 )
 
-// Deduct apakah seorang user boleh pake actionnya
+// Policy memutuskan apakah user boleh melakukan aksi pada koneksi tertentu.
 type Policy interface {
 	Can(ctx context.Context, userID int64, connID int64, a Action) (bool, error)
 }
 
-// Allow permission ke semua req
-type AllowAll struct{}
+// DenyAll menolak semua request. Dipakai sebagai default sampai policy asli jadi.
+type DenyAll struct{}
 
-func (AllowAll) Can(ctx context.Context, userID int64, connID int64, a Action) (bool, error) {
-	return true, nil
+func (DenyAll) Can(ctx context.Context, userID int64, connID int64, a Action) (bool, error) {
+	return false, nil
 }

@@ -1,3 +1,6 @@
+-include .env
+export
+
 .PHONY: up down run test test-integration lint
 
 up:
