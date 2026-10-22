@@ -1,0 +1,33 @@
+{{define "content"}}
+<h1>Kelola User</h1>
+<p><a href="/">Beranda</a> | <a href="/admin/users/new">Buat user</a></p>
+{{if .Notice}}<p role="status">{{.Notice}}</p>{{end}}
+<table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Nama</th>
+            <th>Email</th>
+            <th>Peran</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range .Users}}
+        <tr>
+            <td>{{.Username}}</td>
+            <td>{{.FullName}}</td>
+            <td>{{.Email}}</td>
+            <td>{{if .IsPlatformAdmin}}Platform Admin{{else}}User{{end}}</td>
+            <td>{{if .IsActive}}Aktif{{else}}Nonaktif{{end}}</td>
+            <td><a href="/admin/users/{{.ID}}">Ubah</a></td>
+        </tr>
+        {{else}}
+        <tr>
+            <td colspan="6">Belum ada user.</td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}

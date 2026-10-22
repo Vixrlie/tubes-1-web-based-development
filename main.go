@@ -71,6 +71,7 @@ func run() error {
 
 	authHandlers := auth.NewHandlers(userStore, sessions, renderer, cfg.CookieSecure)
 
+	adminUsers := admin.NewPGUserStore(pool)
 	r := web.NewRouter()
 
 	// Rute publik: belum ada session (login punya perlindungan Origin sendiri).
@@ -83,7 +84,9 @@ func run() error {
 		r.Use(auth.CSRFProtect)
 
 		authHandlers.ProtectedRoutes(r)
-		admin.NewHandlers().Routes(r)
+		admin.NewHandlers(
+			admin.WithUserAdmin(adminUsers, sessions, renderer),
+		).Routes(r)
 	})
 
 	srv := &http.Server{

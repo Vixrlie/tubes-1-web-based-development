@@ -6,11 +6,21 @@ import (
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 )
 
-// Handle layar administrasi
-type Handlers struct{}
+// Option mengaktifkan satu bagian halaman admin. Tiap pemilik bagian membuat
+// Option sendiri di file-nya, jadi NewHandlers tidak perlu diubah lagi.
+type Option func(*Handlers)
 
-func NewHandlers() *Handlers {
-	return &Handlers{}
+// Handle layar administrasi
+type Handlers struct {
+	users *userHandlers // Arin
+}
+
+func NewHandlers(opts ...Option) *Handlers {
+	h := &Handlers{}
+	for _, o := range opts {
+		o(h)
+	}
+	return h
 }
 
 // Routes dipasang di bawah /admin dan dibungkus RequireAdmin.

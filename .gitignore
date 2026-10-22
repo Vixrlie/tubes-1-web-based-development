@@ -6,5 +6,5 @@ bin/
 
 # Unit test tidak ikut di-commit
 *_test.go
-!*_integration_test.go
-   !fakes_test.go
+*_integration_test.go
+!fakes_test.go

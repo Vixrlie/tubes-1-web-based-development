@@ -1,0 +1,50 @@
+{{define "content"}}
+<p><a href="/admin/users">&larr; Daftar user</a></p>
+{{if .IsNew}}<h1>Buat User</h1>{{else}}<h1>Ubah User: {{.Username}}</h1>{{end}}
+{{if .Notice}}<p role="status">{{.Notice}}</p>{{end}}
+{{if .Error}}<p role="alert" class="error">{{.Error}}</p>{{end}}
+
+<form method="post" action="{{.FormAction}}">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    {{if .IsNew}}
+    <p><label>Username <input name="username" value="{{.Username}}" required autocomplete="off"></label></p>
+    <p><label>Password <input type="password" name="password" required autocomplete="new-password"></label></p>
+    {{end}}
+    <p><label>Nama lengkap <input name="full_name" value="{{.FullName}}"></label></p>
+    <p><label>Email <input type="email" name="email" value="{{.Email}}"></label></p>
+    <p>
+        <label><input type="checkbox" name="is_platform_admin" {{if .IsPlatformAdmin}}checked{{end}} {{if
+                .IsSelf}}disabled{{end}}> Platform Admin</label>
+        {{if .IsSelf}}<small>(tidak bisa mengubah peran sendiri)</small>{{end}}
+    </p>
+    <button type="submit">Simpan</button>
+</form>
+
+{{if not .IsNew}}
+<hr>
+<h2>Status akun: {{if .IsActive}}Aktif{{else}}Nonaktif{{end}}</h2>
+{{if .IsActive}}
+{{if .IsSelf}}
+<p>Anda tidak bisa menonaktifkan akun sendiri.</p>
+{{else}}
+<form method="post" action="/admin/users/{{.ID}}/deactivate">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <button type="submit">Nonaktifkan user</button>
+</form>
+{{end}}
+{{else}}
+<form method="post" action="/admin/users/{{.ID}}/activate">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <button type="submit">Aktifkan kembali</button>
+</form>
+{{end}}
+
+<hr>
+<h2>Reset password</h2>
+<form method="post" action="/admin/users/{{.ID}}/password">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <p><label>Password baru <input type="password" name="new_password" required autocomplete="new-password"></label></p>
+    <button type="submit">Reset password</button>
+</form>
+{{end}}
+{{end}}
