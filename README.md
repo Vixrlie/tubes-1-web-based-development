@@ -87,7 +87,7 @@ curl -i http://localhost:8080/static/style.css   # 200
 
 Di Windows PowerShell, `curl` adalah alias `Invoke-WebRequest`. Pakai `curl.exe` supaya yang dipanggil curl asli: `curl.exe -i http://localhost:8080/static/style.css`.
 
-Route `/admin` dan `/login` belum terdaftar, jadi saat ini keduanya mengembalikan 404. Setelah route admin dibuat, path di bawah `/admin` (misalnya `/admin/users`) mengembalikan 403 untuk request tanpa session admin.
+Route `/login` sudah aktif. Route `/admin/*` belum punya halaman, jadi tanpa session valid diarahkan ke `/login`, dan untuk non-admin mengembalikan 403.
 
 ### Reset database dari nol
 
@@ -245,7 +245,7 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 - [ ] Database viewer dan migration
 - [ ] Unit dan integration test
 
-Saat ini route `/login` dan `/admin/*` belum terdaftar (mengembalikan 404). Seed admin sudah berjalan saat start, tetapi belum ada cara login.
+Login dan logout sudah terpasang di `main.go` (tes handler menyusul). Halaman `/` masih sementara, dan route `/admin/*` belum punya halaman.
 
 ## Alur Kerja Git
 

@@ -9,10 +9,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/admin"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/config"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/db"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 	"github.com/Vixrlie/tubes-1-web-based-development/migrations"
 )
@@ -51,8 +54,37 @@ func run() error {
 		return err
 	}
 
+	sessions, err := session.NewManager(session.NewPGStore(pool), session.Config{
+		IdleTimeout:     cfg.SessionIdle,
+		AbsoluteTimeout: cfg.SessionAbsolute,
+		RotateInterval:  cfg.SessionRotate,
+		GracePeriod:     cfg.SessionGrace,
+	}, nil)
+	if err != nil {
+		return err
+	}
+
+	renderer, err := web.NewRenderer()
+	if err != nil {
+		return err
+	}
+
+	authHandlers := auth.NewHandlers(userStore, sessions, renderer, cfg.CookieSecure)
+
 	r := web.NewRouter()
-	admin.NewHandlers().Routes(r)
+
+	// Rute publik: belum ada session (login punya perlindungan Origin sendiri).
+	authHandlers.PublicRoutes(r)
+
+	// Rute terlindungi: session wajib valid, lalu token CSRF untuk request
+	// pengubah state. Fitur lain (viewer, migration, admin) dipasang di grup ini.
+	r.Group(func(r chi.Router) {
+		r.Use(auth.AuthMiddleware(auth.NewSessionValidator(sessions), cfg.CookieSecure))
+		r.Use(auth.CSRFProtect)
+
+		authHandlers.ProtectedRoutes(r)
+		admin.NewHandlers().Routes(r)
+	})
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,

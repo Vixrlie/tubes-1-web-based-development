@@ -4,6 +4,7 @@ import (
 	"embed"
 	"html/template"
 	"io/fs"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -48,6 +49,7 @@ func (r *Renderer) Render(w http.ResponseWriter, name string, data any) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := t.ExecuteTemplate(w, "layout.html", data); err != nil {
+		log.Printf("render %s gagal: %v", name, err)
 		http.Error(w, "gagal render halaman", http.StatusInternalServerError)
 	}
 }
