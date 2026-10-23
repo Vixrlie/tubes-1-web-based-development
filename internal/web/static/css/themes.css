@@ -1,0 +1,201 @@
+/* ==========================================================================
+   theme.css  -  SEMANTIC TOKENS
+   Komponen HANYA boleh memakai token di file ini (bukan --color-primary-600 dst).
+   Ganti tema = ganti mapping di sini, komponen tidak perlu disentuh.
+   Bagian "di luar Figma" (spacing, radius, shadow, dll) adalah asumsi:
+   sesuaikan kalau desainmu punya angka lain.
+   ========================================================================== */
+:root {
+    color-scheme: light;
+
+    /* ---------- Surface & teks ---------- */
+    --color-bg: var(--color-white);
+    --color-surface: var(--color-neutral-50);
+    --color-surface-muted: var(--color-neutral-100);
+    --color-surface-raised: var(--color-white);
+
+    --color-text: var(--color-neutral-900);
+    --color-text-muted: var(--color-neutral-500);
+    /* kontras 4.7:1 di atas putih */
+    --color-text-subtle: var(--color-neutral-400);
+    /* placeholder/disabled saja */
+    --color-text-inverse: var(--color-white);
+
+    --color-border: var(--color-neutral-200);
+    --color-border-strong: var(--color-neutral-300);
+
+    /* ---------- Aksi: primary ---------- */
+    /* Pakai 600 sbg dasar: primary-500 + teks putih kontrasnya < 4.5:1 */
+    --color-primary: var(--color-primary-600);
+    --color-primary-hover: var(--color-primary-700);
+    --color-primary-active: var(--color-primary-800);
+    --color-primary-soft: var(--color-primary-50);
+    --color-primary-soft-hover: var(--color-primary-100);
+    --color-primary-border: var(--color-primary-200);
+    --color-on-primary: var(--color-white);
+    --color-link: var(--color-primary-600);
+    --color-link-hover: var(--color-primary-700);
+
+    /* ---------- Aksi: secondary ---------- */
+    --color-secondary: var(--color-secondary-50);
+    --color-secondary-hover: var(--color-secondary-100);
+    --color-secondary-active: var(--color-secondary-200);
+    --color-secondary-border: var(--color-secondary-200);
+    --color-on-secondary: var(--color-secondary-700);
+
+    /* ---------- Aksi: danger ---------- */
+    --color-danger: var(--color-error-500);
+    --color-danger-hover: var(--color-error-600);
+    --color-danger-active: var(--color-error-700);
+    --color-on-danger: var(--color-white);
+
+    /* ---------- Kontrol (disabled, fokus) ---------- */
+    --color-disabled-bg: var(--color-neutral-100);
+    --color-disabled-fg: var(--color-neutral-400);
+    --color-disabled-border: var(--color-neutral-200);
+    --color-focus: var(--color-primary-500);
+    --focus-ring: 0 0 0 3px var(--color-primary-200);
+    --focus-ring-danger: 0 0 0 3px var(--color-error-200);
+
+    /* ---------- Feedback (alert, badge) ---------- */
+    --color-info-bg: var(--color-primary-50);
+    --color-info-border: var(--color-primary-200);
+    --color-info-text: var(--color-primary-800);
+    --color-info-solid: var(--color-primary-600);
+
+    --color-success-bg: var(--color-success-100);
+    --color-success-border: var(--color-success-300);
+    --color-success-text: var(--color-success-800);
+    --color-success-solid: var(--color-success-600);
+
+    --color-warning-bg: var(--color-warning-100);
+    --color-warning-border: var(--color-warning-300);
+    --color-warning-text: var(--color-warning-900);
+    --color-warning-solid: var(--color-warning-500);
+    /* pakai teks gelap di atasnya */
+
+    --color-error-bg: var(--color-error-50);
+    --color-error-border: var(--color-error-200);
+    --color-error-text: var(--color-error-700);
+    --color-error-solid: var(--color-error-500);
+
+    /* ---------- Tabel ---------- */
+    --color-table-head-bg: var(--color-neutral-50);
+    --color-table-row-hover: var(--color-neutral-50);
+
+    /* ---------- Spacing (skala 4px) - di luar Figma ---------- */
+    --space-0: 0;
+    --space-1: 0.25rem;
+    /* 4  */
+    --space-2: 0.5rem;
+    /* 8  */
+    --space-3: 0.75rem;
+    /* 12 */
+    --space-4: 1rem;
+    /* 16 */
+    --space-5: 1.25rem;
+    /* 20 */
+    --space-6: 1.5rem;
+    /* 24 */
+    --space-8: 2rem;
+    /* 32 */
+    --space-10: 2.5rem;
+    /* 40 */
+    --space-12: 3rem;
+    /* 48 */
+    --space-16: 4rem;
+    /* 64 */
+
+    /* ---------- Radius - di luar Figma ---------- */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-full: 9999px;
+
+    /* ---------- Shadow - di luar Figma ---------- */
+    --shadow-sm: 0 1px 2px rgb(36 43 54 / 0.06);
+    --shadow-md: 0 4px 12px rgb(36 43 54 / 0.08);
+    --shadow-lg: 0 12px 32px rgb(36 43 54 / 0.12);
+
+    /* ---------- Ukuran kontrol ---------- */
+    --control-h-sm: 2rem;
+    /* 32 */
+    --control-h-md: 2.5rem;
+    /* 40 */
+    --control-h-lg: 3rem;
+    /* 48 */
+
+    /* ---------- Layout ---------- */
+    --header-h: 4rem;
+    /* 64  */
+    --sidebar-w: 15rem;
+    /* 240 */
+    --content-max: 75rem;
+    /* 1200 */
+    --form-max: 32rem;
+    /* 512 */
+
+    /* ---------- Motion & z-index ---------- */
+    --transition-fast: 150ms ease;
+    --transition-base: 250ms ease;
+    --z-header: 100;
+    --z-dropdown: 200;
+    --z-modal: 300;
+    --z-toast: 400;
+
+    /* Breakpoint tidak bisa pakai var() di @media. Nilai acuan:
+     sm 640px, md 768px, lg 1024px, xl 1280px */
+}
+
+/* ==========================================================================
+   Dark theme (opsional, opt-in lewat <html data-theme="dark">)
+   Tidak otomatis ikut OS supaya tampilan tetap sama dengan desain Figma.
+   ========================================================================== */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --color-bg: var(--color-neutral-900);
+    --color-surface: var(--color-neutral-800);
+    --color-surface-muted: var(--color-neutral-700);
+    --color-surface-raised: var(--color-neutral-800);
+
+    --color-text: var(--color-neutral-50);
+    --color-text-muted: var(--color-neutral-300);
+    --color-text-subtle: var(--color-neutral-500);
+
+    --color-border: var(--color-neutral-700);
+    --color-border-strong: var(--color-neutral-600);
+
+    --color-primary-soft: var(--color-primary-900);
+    --color-primary-soft-hover: var(--color-primary-800);
+    --color-primary-border: var(--color-primary-700);
+    --color-link: var(--color-primary-300);
+    --color-link-hover: var(--color-primary-200);
+
+    --color-secondary: var(--color-secondary-900);
+    --color-secondary-hover: var(--color-secondary-800);
+    --color-secondary-active: var(--color-secondary-700);
+    --color-secondary-border: var(--color-secondary-700);
+    --color-on-secondary: var(--color-secondary-100);
+
+    --color-disabled-bg: var(--color-neutral-800);
+    --color-disabled-fg: var(--color-neutral-500);
+    --color-disabled-border: var(--color-neutral-700);
+    --focus-ring: 0 0 0 3px var(--color-primary-800);
+
+    --color-info-bg: var(--color-primary-900);
+    --color-info-border: var(--color-primary-700);
+    --color-info-text: var(--color-primary-100);
+    --color-success-bg: var(--color-success-900);
+    --color-success-border: var(--color-success-700);
+    --color-success-text: var(--color-success-100);
+    --color-warning-bg: var(--color-warning-900);
+    --color-warning-border: var(--color-warning-700);
+    --color-warning-text: var(--color-warning-100);
+    --color-error-bg: var(--color-error-900);
+    --color-error-border: var(--color-error-700);
+    --color-error-text: var(--color-error-100);
+
+    --color-table-head-bg: var(--color-neutral-800);
+    --color-table-row-hover: var(--color-neutral-800);
+}

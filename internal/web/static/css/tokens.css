@@ -1,0 +1,122 @@
+:root {
+    /* color / base */
+    --color-white: #ffffff;
+    --color-black: #000000;
+
+    /* color / neutrals */
+    --color-neutral-50: #f8f9fa;
+    --color-neutral-100: #edeff2;
+    --color-neutral-200: #d4d9e0;
+    --color-neutral-300: #b5bdc8;
+    --color-neutral-400: #8e9aac;
+    --color-neutral-500: #64748b;
+    --color-neutral-600: #536174;
+    --color-neutral-700: #434e5f;
+    --color-neutral-800: #333c4a;
+    --color-neutral-900: #242b36;
+
+    /* color / primary */
+    --color-primary-50: #eaf2ff;
+    --color-primary-100: #d6e5ff;
+    --color-primary-200: #adcaff;
+    --color-primary-300: #83b0ff;
+    --color-primary-400: #5a95ff;
+    --color-primary-500: #317bff;
+    --color-primary-600: #2762cc;
+    --color-primary-700: #1d4a99;
+    --color-primary-800: #143166;
+    --color-primary-900: #0a1933;
+
+    /* color / secondary */
+    --color-secondary-50: #ebeffd;
+    --color-secondary-100: #d7e0fb;
+    --color-secondary-200: #aec1f6;
+    --color-secondary-300: #86a1f2;
+    --color-secondary-400: #5d82ed;
+    --color-secondary-500: #3563e9;
+    --color-secondary-600: #2a4fba;
+    --color-secondary-700: #203b8c;
+    --color-secondary-800: #15285d;
+    --color-secondary-900: #0b142f;
+
+    /* color / error */
+    --color-error-50: #fef7f5;
+    --color-error-100: #fce8e5;
+    --color-error-200: #f7c8c1;
+    --color-error-300: #ed9e93;
+    --color-error-400: #db675a;
+    --color-error-500: #c10007;
+    --color-error-600: #a20005;
+    --color-error-700: #850003;
+    --color-error-800: #680002;
+    --color-error-900: #4d0001;
+
+    /* color / warning */
+    --color-warning-50: #fffbf7;
+    --color-warning-100: #fff5ea;
+    --color-warning-200: #fee7cd;
+    --color-warning-300: #fdd4a6;
+    --color-warning-400: #fabc71;
+    --color-warning-500: #f59e0b;
+    --color-warning-600: #cf8508;
+    --color-warning-700: #aa6c05;
+    --color-warning-800: #865403;
+    --color-warning-900: #643e02;
+
+    /* color / success */
+    --color-success-50: #f7fbf8;
+    --color-success-100: #eaf3ed;
+    --color-success-200: #cee2d4;
+    --color-success-300: #a9ccb4;
+    --color-success-400: #7bb18d;
+    --color-success-500: #409261;
+    --color-success-600: #357a51;
+    --color-success-700: #2a6341;
+    --color-success-800: #1f4d32;
+    --color-success-900: #153823;
+
+    /* font / family */
+    --font-family-heading: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-family-paragraph: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-family-cta: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-family-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    /* di luar Figma, buat code/editor */
+
+    /* font / weight */
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --font-weight-extra-bold: 800;
+    --font-weight-black: 900;
+
+    /* text styles / title (px Figma -> rem, basis 16px) */
+    --font-size-t1: 1.375rem;
+    /* 22 */
+    --font-size-t2: 1.125rem;
+    /* 18 */
+    --font-size-t3: 1.25rem;
+    /* 20 */
+    --font-size-t4: 1rem;
+    /* 16 */
+    --font-size-t5: 0.875rem;
+    /* 14 */
+    --font-size-t6: 0.75rem;
+    /* 12 */
+
+    /* text styles / paragraph */
+    --font-size-p1: 1.125rem;
+    /* 18 */
+    --font-size-p2: 1rem;
+    /* 16 */
+    --font-size-p3: 0.875rem;
+    /* 14 */
+    --font-size-p4: 0.75rem;
+    /* 12 */
+    --font-size-p5: 0.625rem;
+    /* 10 */
+    --font-size-p6: 0.5rem;
+    /* 8  */
+
+    --line-height-auto: normal;
+}
