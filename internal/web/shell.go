@@ -34,6 +34,9 @@ type ShellUser struct {
 	FullName        string
 	AvatarURL       string // kosong -> tampil inisial
 	IsPlatformAdmin bool
+	// CSRFToken = token csrf sesi; dipakai form Logout di kartu akun (header).
+	// Diisi handler yang membangun ShellUser, sama seperti token di data halaman.
+	CSRFToken string
 }
 
 func (u *ShellUser) DisplayName() string {

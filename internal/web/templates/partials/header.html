@@ -20,7 +20,17 @@
                     {{end}}
                 </ul>
             </nav>
-            {{template "avatar" .User}}
+            {{/* Avatar = tombol pembuka kartu akun (nama, role, Logout). Lihat partials/user-menu.html */}}
+            <div class="user-menu" data-user-menu>
+                <button type="button" class="user-menu__trigger" aria-haspopup="true" aria-expanded="false"
+                    aria-controls="user-menu-panel" aria-label="Menu akun {{.User.DisplayName}}">
+                    {{template "avatar" .User}}
+                </button>
+                <div class="user-menu__panel" id="user-menu-panel" hidden>
+                    {{template "user-menu-card" .User}}
+                </div>
+            </div>
+            <script src="/static/js/user-menu.js" defer></script>
         </div>
     </div>
 </header>

@@ -31,3 +31,10 @@
     align-items: center;
     gap: var(--space-3);
 }
+
+/* keterangan kecil di kanan judul (opsional), mis. "Diatur dari halaman Groups" */
+.card__note {
+    margin: 0;
+    font-size: var(--font-size-p4);
+    color: var(--color-text-muted);
+}

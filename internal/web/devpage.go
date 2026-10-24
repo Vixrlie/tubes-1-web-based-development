@@ -18,6 +18,13 @@ func (d DevRoutes) Routes(r chi.Router) {
 	r.Get("/dev/table", d.tableDetail)
 	r.Get("/dev/groups", d.groups)
 	r.Get("/dev/group", d.groupDetail)
+	r.Get("/dev/connections", d.connections)
+	r.Get("/dev/connection", d.connectionDetail)
+	// Khusus dev: menu sidebar "Koneksi Database" menuju /admin/connections. Hapus baris ini
+	// kalau route asli /admin/connections sudah dipasang, supaya tidak menimpanya.
+	r.Get("/admin/connections", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/dev/connections", http.StatusSeeOther)
+	})
 }
 
 type devData struct {
@@ -40,7 +47,7 @@ func devShell(nav, active string, admin bool) Shell {
 	if nav != "admin" && nav != "database" && nav != "databases" {
 		return s // User nil -> tanpa header & sidebar
 	}
-	s.User = &ShellUser{Username: "arin", FullName: "Arin Dev", IsPlatformAdmin: admin}
+	s.User = &ShellUser{Username: "arin", FullName: "Arin Dev", IsPlatformAdmin: admin, CSRFToken: "dev-token"}
 	switch nav {
 	case "admin":
 		s.SideActive = active // users | groups | connections
@@ -337,4 +344,48 @@ func devGroupDetail(edit bool) GroupDetailPage {
 // Halaman Detail Grup dengan data contoh: /dev/group[?mode=edit]
 func (d DevRoutes) groupDetail(w http.ResponseWriter, r *http.Request) {
 	d.R.Render(w, "admin/group_detail.html", devGroupDetail(r.URL.Query().Get("mode") == "edit"))
+}
+
+// devConnections membuat data contoh halaman Kelola Koneksi (dipakai route dev dan test).
+func devConnections() ConnectionsPage {
+	return ConnectionsPage{
+		Shell:      devShell("admin", "connections", true),
+		PageHeader: ConnectionsHeader("#"),
+		Connections: NewConnectionsTable([]ConnectionSummary{
+			{Name: "shop_db", Host: "db-shop.internal", Port: 5432, Status: ConnConnected,
+				Groups: []string{"Tim Backend"}, Href: "/dev/connection"},
+			{Name: "analytics_db", Host: "dw.internal", Port: 5432, Status: ConnConnected,
+				Groups: []string{"Tim Backend", "Tim Data", "Analis"}, Href: "/dev/connection"},
+			{Name: "hr_db", Host: "db-hr.internal", Port: 5432, Status: ConnFailed, Href: "/dev/connection"},
+		}),
+	}
+}
+
+// Halaman Kelola Koneksi dengan data contoh: /dev/connections
+func (d DevRoutes) connections(w http.ResponseWriter, r *http.Request) {
+	d.R.Render(w, "admin/connections.html", devConnections())
+}
+
+// devConnectionDetail membuat data contoh halaman Detail Koneksi.
+func devConnectionDetail() ConnectionDetailPage {
+	p := ConnectionDetailPage{
+		Shell:        devShell("admin", "connections", true),
+		PageHeader:   ConnectionDetailHeader("shop_db", "/dev/connections", "#"),
+		TestAction:   "#",
+		DeleteAction: "#",
+		Params: NewConnectionParamsCard(ConnectionParams{
+			DisplayName: "shop_db", Database: "shop", Host: "db-shop.internal", Port: 5432, Username: "pathgres_app",
+		}),
+		Groups: NewConnectionGroupsCard([]ConnectionGroup{
+			{Name: "Tim Backend", MemberCount: 3, Level: AccessEdit},
+			{Name: "Analis", MemberCount: 1, Level: AccessView},
+		}),
+	}
+	p.SetCSRF("dev-token")
+	return p
+}
+
+// Halaman Detail Koneksi dengan data contoh: /dev/connection
+func (d DevRoutes) connectionDetail(w http.ResponseWriter, r *http.Request) {
+	d.R.Render(w, "admin/connection_detail.html", devConnectionDetail())
 }

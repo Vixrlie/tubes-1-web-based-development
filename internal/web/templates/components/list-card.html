@@ -5,6 +5,7 @@ Kartu berisi judul + tombol aksi + daftar baris. Data: web.ListCard (lihat listc
 
 ListCard:
 Title judul kartu
+Note keterangan kecil di kanan judul (opsional)
 Actions daftar tombol di kanan judul (opsional): []web.Button
 Items daftar baris: Title, Subtitle (opsional), Tag (label di kanan, opsional),
 Action (tombol kecil di kanan, dikirim sebagai form POST, opsional)
@@ -14,7 +15,17 @@ CSRFToken token csrf untuk form aksi baris
 */}}
 {{define "list-card"}}
 <section class="card list-card{{with .Class}} {{.}}{{end}}">
+    {{- if .Note}}
+    <header class="card__head">
+        <h2 class="card__title">{{.Title}}</h2>
+        <div class="card__actions">
+            <p class="card__note">{{.Note}}</p>
+            {{- range .Actions}}{{template `button` .}}{{end}}
+        </div>
+    </header>
+    {{- else}}
     {{template `card-head` .}}
+    {{- end}}
     <ul class="list-card__list" role="list">
         {{- range $it := .Items}}
         <li class="list-card__item">

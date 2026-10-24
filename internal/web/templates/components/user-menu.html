@@ -1,0 +1,29 @@
+{{/*
+Kartu akun yang muncul saat avatar di header ditekan: avatar besar, nama, username, role,
+lalu tombol Logout. Dipanggil dari partials/header.html. Param: *web.ShellUser
+
+Logout = form POST /logout dengan csrf_token. Tokennya diambil dari ShellUser.CSRFToken
+(lihat shell.go), jadi handler yang membangun ShellUser wajib mengisinya.
+
+Buka / tutup kartu: static/js/user-menu.js.
+*/}}
+
+{{define "user-menu-card"}}
+{{- $role := `User`}}{{if .IsPlatformAdmin}}{{$role = `Admin`}}{{end}}
+<div class="user-card">
+    <div class="user-card__info">
+        {{template `avatar-lg` .}}
+        <div class="user-card__text">
+            <p class="user-card__name">{{.DisplayName}}</p>
+            {{- if .FullName}}<p class="user-card__username">{{.Username}}</p>{{end}}
+            {{template `label` (dict `Label` $role `Variant` `neutral`)}}
+        </div>
+    </div>
+    <hr class="user-card__divider">
+    <form class="user-card__form" method="post" action="/logout">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        {{template `button` (dict `Label` `Logout` `Type` `submit` `Variant` `soft-danger` `IconLeft` `logout` `Class`
+        `user-card__logout`)}}
+    </form>
+</div>
+{{end}}
