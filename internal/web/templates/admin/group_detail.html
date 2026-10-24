@@ -1,0 +1,115 @@
+{{define "content"}}
+<p><a href="/admin/groups">&larr; Daftar group</a></p>
+<h1>Group: {{.Group.Name}}</h1>
+{{if .Notice}}<p role="status">{{.Notice}}</p>{{end}}
+{{if .Error}}<p role="alert" class="error">{{.Error}}</p>{{end}}
+
+<h2>Ubah nama</h2>
+<form method="post" action="/admin/groups/{{.Group.ID}}">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <p><label>Nama group <input name="name" value="{{.Group.Name}}" required></label></p>
+    <button type="submit">Simpan</button>
+</form>
+
+<h2>Anggota ({{.Group.MemberCount}})</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Nama</th>
+            <th>Peran</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range .Members}}
+        <tr>
+            <td>{{.Username}}</td>
+            <td>{{.FullName}}</td>
+            <td>{{if .IsPlatformAdmin}}Platform Admin{{else}}User{{end}}</td>
+            <td>{{if .IsActive}}Aktif{{else}}Nonaktif{{end}}</td>
+            <td>
+                <form method="post" action="/admin/groups/{{$.Group.ID}}/members/{{.ID}}/delete"
+                      onsubmit="return confirm('Hapus anggota ini dari group?')">
+                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                    <button type="submit">Hapus</button>
+                </form>
+            </td>
+        </tr>
+        {{else}}
+        <tr>
+            <td colspan="5">Belum ada anggota.</td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+<form method="post" action="/admin/groups/{{.Group.ID}}/members">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <p>
+        <label>Tambah anggota
+            <select name="user_id" required>
+                <option value="">Pilih user</option>
+                {{range .AvailableUsers}}<option value="{{.ID}}">{{.Username}}</option>{{end}}
+            </select>
+        </label>
+        <button type="submit">Tambah</button>
+    </p>
+</form>
+
+<h2>Akses database</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Database</th>
+            <th>Level</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range .Grants}}
+        <tr>
+            <td>{{.ConnectionName}}</td>
+            <td>{{if eq .Level "edit"}}View + Edit{{else}}View Only{{end}}</td>
+            <td>
+                <form method="post" action="/admin/groups/{{$.Group.ID}}/grants/{{.ConnectionID}}/delete"
+                      onsubmit="return confirm('Cabut akses group ke database ini?')">
+                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                    <button type="submit">Cabut</button>
+                </form>
+            </td>
+        </tr>
+        {{else}}
+        <tr>
+            <td colspan="3">Belum ada akses.</td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+<form method="post" action="/admin/groups/{{.Group.ID}}/grants">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <p>
+        <label>Database
+            <select name="connection_id" required>
+                <option value="">Pilih database</option>
+                {{range .AvailableConnections}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+            </select>
+        </label>
+        <label>Level
+            <select name="level" required>
+                <option value="view">View Only</option>
+                <option value="edit">View + Edit</option>
+            </select>
+        </label>
+        <button type="submit">Simpan akses</button>
+    </p>
+</form>
+
+<hr>
+<h2>Hapus group</h2>
+<form method="post" action="/admin/groups/{{.Group.ID}}/delete"
+      onsubmit="return confirm('Hapus group ini? Semua anggota dan akses group akan dihapus.')">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <p><button type="submit">Hapus group</button></p>
+</form>
+{{end}}

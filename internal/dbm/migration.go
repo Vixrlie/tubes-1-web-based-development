@@ -66,7 +66,6 @@ func (m Migration) ExecutedAtLabel() string {
 	return m.ExecutedAt.Format("02 Jan 2006 15:04")
 }
 
-// Checksum menghitung sidik jari SHA-256 dari SQL migration.
 func Checksum(sqlText string) string {
 	sum := sha256.Sum256([]byte(sqlText))
 	return hex.EncodeToString(sum[:])
@@ -78,7 +77,6 @@ func VersionNow(now time.Time) int64 {
 	return version
 }
 
-// InjectName menyisipkan atau mengganti komentar pertama SQL dengan nama migration.
 func InjectName(sqlText, name string) string {
 	if strings.TrimSpace(name) == "" {
 		return sqlText
@@ -141,7 +139,6 @@ func truncateName(name string) string {
 	return name[:maxNameLength] + "…"
 }
 
-// MigrationStore menyimpan draft dan riwayat migration di database platform.
 type MigrationStore interface {
 	List(ctx context.Context, connID int64) ([]Migration, error)
 	Get(ctx context.Context, id int64) (Migration, error)
@@ -293,7 +290,6 @@ func sanitizePGError(err error) string {
 	return message
 }
 
-// Execute menjalankan migration dan mencatat statusnya (applied atau failed).
 func (r *MigrationRunner) Execute(ctx context.Context, connID, migrationID, userID int64) (string, error) {
 	platformTx, err := r.platform.Begin(ctx)
 	if err != nil {

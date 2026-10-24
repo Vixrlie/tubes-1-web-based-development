@@ -72,22 +72,14 @@ func run() error {
 	}
 
 	authHandlers := auth.NewHandlers(userStore, sessions, renderer, cfg.CookieSecure)
+	accessPolicy := access.NewPolicy(access.NewPGLevelSource(pool))
 
 	adminUsers := admin.NewPGUserStore(pool)
+	groupStore := admin.NewPGGroupStore(pool)
+	connLister := admin.NewPGConnectionLister(pool)
 	connStore := admin.NewPGConnectionStore(pool)
 	shellStore := dbm.NewPGShellStore(pool)
-	registry := dbm.NewPGRegistry(pool)
-	defer registry.Close()
 	r := web.NewRouter()
-
-	dbmHandlers := dbm.NewHandlers(dbm.Config{
-		Platform:   pool,
-		Registry:   registry,
-		Policy:     access.DenyAll{}, // TODO(vincent): ganti dengan policy asli saat policy tersedia
-		Renderer:   renderer,
-		Shell:      shellStore,
-		Migrations: dbm.NewPGMigrationStore(pool),
-	})
 
 	// Rute publik: belum ada session (login punya perlindungan Origin sendiri).
 	authHandlers.PublicRoutes(r)
@@ -99,11 +91,11 @@ func run() error {
 		r.Use(auth.CSRFProtect)
 
 		authHandlers.ProtectedRoutes(r)
-		dbmHandlers.Routes(r)
+		dbm.NewHandlers(accessPolicy, dbm.NewPGRegistry(pool)).Routes(r)
 		admin.NewHandlers(
 			admin.WithUserAdmin(adminUsers, sessions, renderer),
-			admin.WithGroupAdmin(adminUsers, renderer),
-			admin.WithConnectionAdmin(connStore, renderer, dbm.StubRegistry{}, shellStore),
+			admin.WithGroupAdmin(groupStore, adminUsers, connLister, sessions, renderer),
+			admin.WithConnectionAdmin(connStore, renderer, dbm.NewPGRegistry(pool), shellStore),
 		).Routes(r)
 	})
 

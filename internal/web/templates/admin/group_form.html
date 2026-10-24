@@ -1,0 +1,10 @@
+{{define "content"}}
+<p><a href="/admin/groups">&larr; Daftar group</a></p>
+{{if .IsNew}}<h1>Buat Group</h1>{{else}}<h1>Ubah Group</h1>{{end}}
+{{if .Error}}<p role="alert" class="error">{{.Error}}</p>{{end}}
+<form method="post" action="{{.FormAction}}">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <p><label>Nama group <input name="name" value="{{.Name}}" required autocomplete="off"></label></p>
+    <button type="submit">Simpan</button>
+</form>
+{{end}}

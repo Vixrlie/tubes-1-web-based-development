@@ -3,13 +3,11 @@ package dbm
 import (
 	"context"
 	"errors"
-	"sync"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrConnectionFailed = errors.New("koneksi database gagal")
+var ErrConnNotFound = errors.New("koneksi database target tidak ditemukan")
 
 type Registry interface {
 	Get(ctx context.Context, connID int64) (*pgxpool.Pool, error)
@@ -17,92 +15,76 @@ type Registry interface {
 	Close()
 }
 
-type PGRegistry struct {
-	mu       sync.Mutex
-	pools    map[int64]*pgxpool.Pool
-	platform *pgxpool.Pool
-}
-
-func NewPGRegistry(platform *pgxpool.Pool) *PGRegistry {
-	return &PGRegistry{
-		pools:    make(map[int64]*pgxpool.Pool),
-		platform: platform,
-	}
-}
-
-var _ Registry = (*PGRegistry)(nil)
-
-func (r *PGRegistry) Get(ctx context.Context, connID int64) (*pgxpool.Pool, error) {
-	r.mu.Lock()
-	if p, ok := r.pools[connID]; ok {
-		r.mu.Unlock()
-		return p, nil
-	}
-	r.mu.Unlock()
-
-	var connectionURL string
-	err := r.platform.QueryRow(ctx,
-		`SELECT connection_url FROM db_connections WHERE id = $1`, connID).Scan(&connectionURL)
-	if err != nil {
-		return nil, ErrConnectionFailed
-	}
-
-	config, err := pgxpool.ParseConfig(connectionURL)
-	if err != nil {
-		return nil, ErrConnectionFailed
-	}
-	config.MaxConns = 4
-	config.MinConns = 0
-	config.MaxConnIdleTime = 5 * time.Minute
-
-	pool, err := pgxpool.NewWithConfig(ctx, config)
-	if err != nil {
-		return nil, ErrConnectionFailed
-	}
-
-	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	if err := pool.Ping(pingCtx); err != nil {
-		pool.Close()
-		return nil, ErrConnectionFailed
-	}
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if existing, ok := r.pools[connID]; ok {
-		pool.Close()
-		return existing, nil
-	}
-	r.pools[connID] = pool
-	return pool, nil
-}
-
-func (r *PGRegistry) Evict(connID int64) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if p, ok := r.pools[connID]; ok {
-		delete(r.pools, connID)
-		p.Close()
-	}
-}
-
-func (r *PGRegistry) Close() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	for id, p := range r.pools {
-		delete(r.pools, id)
-		p.Close()
-	}
-}
-
-// StubRegistry dipakai sampai registry pool target siap dipakai.
+// StubRegistry adalah registry default yang fail-closed bila target DB belum
+// dihubungkan oleh aplikasi utama.
 type StubRegistry struct{}
 
 var _ Registry = StubRegistry{}
 
 func (StubRegistry) Get(ctx context.Context, connID int64) (*pgxpool.Pool, error) {
-	return nil, nil
+	return nil, ErrConnNotFound
 }
+
+type PGRegistry struct {
+	platform *pgxpool.Pool
+}
+
+func NewPGRegistry(platform *pgxpool.Pool) *PGRegistry {
+	return &PGRegistry{platform: platform}
+}
+
+func (r *PGRegistry) Get(ctx context.Context, connID int64) (*pgxpool.Pool, error) {
+	if r == nil || r.platform == nil {
+		return nil, ErrConnNotFound
+	}
+
+	var url string
+	if err := r.platform.QueryRow(ctx,
+		`SELECT connection_url FROM db_connections WHERE id = $1`, connID,
+	).Scan(&url); err != nil {
+		return nil, ErrConnNotFound
+	}
+	if url == "" {
+		return nil, ErrConnNotFound
+	}
+
+	pool, err := pgxpool.New(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return nil, err
+	}
+	return pool, nil
+}
+
+func (r *PGRegistry) Evict(connID int64) {}
+
+func (r *PGRegistry) Close() {}
+
+type PoolRegistry struct {
+	pools map[int64]*pgxpool.Pool
+}
+
+func NewPoolRegistry(pools map[int64]*pgxpool.Pool) *PoolRegistry {
+	return &PoolRegistry{pools: pools}
+}
+
+func (r *PoolRegistry) Get(ctx context.Context, connID int64) (*pgxpool.Pool, error) {
+	if r == nil || r.pools == nil {
+		return nil, ErrConnNotFound
+	}
+	pool, ok := r.pools[connID]
+	if !ok || pool == nil {
+		return nil, ErrConnNotFound
+	}
+	return pool, nil
+}
+
+func (r *PoolRegistry) Evict(connID int64) {}
+
+func (r *PoolRegistry) Close() {}
 
 func (StubRegistry) Evict(connID int64) {}
 
