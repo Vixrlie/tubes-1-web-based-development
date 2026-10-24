@@ -1,0 +1,116 @@
+{{define "content"}}
+<div class="page-head row-between">
+  <div>
+    {{if eq .Migration.Status "applied"}}
+    <h1 class="page-title">Migration berhasil</h1>
+    {{else if eq .Migration.Status "failed"}}
+    <h1 class="page-title">Migration gagal</h1>
+    {{else}}
+    <h1 class="page-title">Draft migration</h1>
+    {{end}}
+    <p class="page-desc">{{.Migration.Name}} · Hasil eksekusi pada database {{.Connection.Name}}.</p>
+  </div>
+  <a class="btn btn-secondary" href="/databases/{{.Connection.ID}}/migrations">Kembali ke riwayat</a>
+</div>
+
+{{if .Notice}}
+<div class="flash-slot">
+  <div class="alert alert-success" role="status">
+    <span class="alert-icon">{{template "icon" (dict "Name" "check-circle")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">{{.Notice}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{if eq .Migration.Status "applied"}}
+<div class="alert alert-success" role="status">
+  <span class="alert-icon">{{template "icon" (dict "Name" "check-circle")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Transaksi di-commit</p>
+    <p class="alert-desc">Perubahan tersimpan di database {{.Connection.Name}}.</p>
+  </div>
+</div>
+{{else if eq .Migration.Status "failed"}}
+<div class="alert alert-error" role="alert">
+  <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Transaksi di-rollback</p>
+    <p class="alert-desc">{{.Migration.Error}}</p>
+  </div>
+</div>
+{{else}}
+<div class="alert alert-info" role="status">
+  <span class="alert-icon">{{template "icon" (dict "Name" "info")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Draft belum dijalankan</p>
+    <p class="alert-desc">Database target belum diubah. SQL dijalankan dalam satu transaksi saat migrasi dieksekusi.</p>
+  </div>
+</div>
+{{end}}
+
+<div class="with-aside mt-4">
+  <div class="stack">
+    <section class="sql-panel">
+      <div class="sql-panel-head">
+        <span class="sql-panel-title">SQL · {{.Connection.Name}}</span>
+        <span class="badge badge-neutral">{{template "icon" (dict "Name" "lock")}} Hanya-baca</span>
+      </div>
+      <pre class="sql-panel-body"><code>{{.Migration.SQL}}</code></pre>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Checksum · SHA-256</h2>
+      </div>
+      <div class="card-body">
+        <p class="mono hash">{{.Migration.Checksum}}</p>
+        <p class="muted mt-2">Sudah dieksekusi. Migration ini tidak dapat diubah atau dijalankan kembali.</p>
+      </div>
+    </section>
+  </div>
+
+  <aside class="card">
+    <div class="card-header">
+      <h2 class="card-title">Detail eksekusi</h2>
+    </div>
+    <div class="card-body">
+      <dl class="detail-list">
+        <div class="detail-row">
+          <dt>Status</dt>
+          <dd>
+            {{if eq .Migration.Status "applied"}}
+            <span class="badge badge-success">{{template "icon" (dict "Name" "check-circle")}} success</span>
+            {{else if eq .Migration.Status "failed"}}
+            <span class="badge badge-error">{{template "icon" (dict "Name" "alert")}} failed</span>
+            {{else}}
+            <span class="badge badge-warning">{{template "icon" (dict "Name" "edit")}} draft</span>
+            {{end}}
+          </dd>
+        </div>
+        <div class="detail-row">
+          <dt>Version</dt>
+          <dd><span class="mono">{{.Migration.Version}}</span></dd>
+        </div>
+        <div class="detail-row">
+          <dt>Nama</dt>
+          <dd>{{.Migration.Name}}</dd>
+        </div>
+        <div class="detail-row">
+          <dt>Database tujuan</dt>
+          <dd><span class="mono">{{.Connection.Name}}</span></dd>
+        </div>
+        <div class="detail-row">
+          <dt>Eksekutor</dt>
+          <dd>{{if .Migration.ExecutedByName}}{{.Migration.ExecutedByName}}{{else}}<span class="muted">—</span>{{end}}</dd>
+        </div>
+        <div class="detail-row">
+          <dt>Waktu eksekusi</dt>
+          <dd>{{if .Migration.ExecutedAtLabel}}{{.Migration.ExecutedAtLabel}}{{else}}<span class="muted">—</span>{{end}}</dd>
+        </div>
+      </dl>
+    </div>
+  </aside>
+</div>
+{{end}}
