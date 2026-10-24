@@ -8,3 +8,4 @@ bin/
 *_test.go
 *_integration_test.go
 !fakes_test.go
+pathgres
