@@ -1,0 +1,88 @@
+{{define "content"}}
+<div class="page-head">
+  <h1 class="page-title">Database Anda</h1>
+  <p class="page-desc">Pilih database untuk melihat schema, data, dan riwayat migrasi.</p>
+</div>
+
+<section class="card">
+  <div class="card-header">
+    <h2 class="card-title">Database yang dapat Anda buka</h2>
+    <span class="badge badge-neutral">{{len .Databases}} item</span>
+  </div>
+
+  {{if .Databases}}
+  <div class="table-wrap table-wrap-shadow">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Database / deskripsi</th>
+          <th scope="col">Host:port</th>
+          <th scope="col">Akses efektif</th>
+          <th scope="col" class="table-cell-right"><span class="visually-hidden">Aksi</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Databases}}
+        <tr>
+          <td>
+            <strong class="mono">{{.Name}}</strong>
+            {{if .Description}}<span class="muted">— {{.Description}}</span>{{end}}
+          </td>
+          <td><span class="mono">{{.HostPort}}</span></td>
+          <td>
+            {{if eq .Level "edit"}}
+            <span class="badge badge-primary">{{template "icon" (dict "Name" "edit")}} View + Edit</span>
+            {{else}}
+            <span class="badge badge-neutral">{{template "icon" (dict "Name" "eye")}} View Only</span>
+            {{end}}
+          </td>
+          <td class="table-cell-actions">
+            <a href="/databases/{{.ID}}" class="link-with-icon">Buka {{.Name}} {{template "icon" (dict "Name" "arrow-right")}}</a>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <div class="card-empty">
+    <span class="card-empty-icon">{{template "icon" (dict "Name" "database")}}</span>
+    <p class="card-empty-title">Belum ada database yang bisa dibuka</p>
+    <p class="card-empty-desc">Database tampil di sini setelah ada group yang memberi Anda akses ke database tersebut.</p>
+  </div>
+  {{end}}
+</section>
+
+<div class="alert alert-info mt-4">
+  <span class="alert-icon">{{template "icon" (dict "Name" "info")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Akses melalui group</p>
+    <p class="alert-desc">Hanya database yang diizinkan untuk group Anda yang ditampilkan. Status Administrator tidak otomatis memberi akses database.</p>
+  </div>
+</div>
+
+<div class="grid-2 mt-4">
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Keanggotaan Anda</h2>
+    </div>
+    <div class="card-body">
+      {{if .Groups}}
+      <p>{{range $i, $g := .Groups}}{{if $i}}, {{end}}{{$g.Name}}{{end}}</p>
+      <p class="t-caption muted mt-2">Level tertinggi dari seluruh group berlaku untuk setiap database.</p>
+      {{else}}
+      <p class="muted">Anda belum menjadi anggota group mana pun.</p>
+      {{end}}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Membaca dan mengubah struktur</h2>
+    </div>
+    <div class="card-body">
+      <p class="muted">View Only untuk membaca schema, data, dan riwayat migrasi. View + Edit juga dapat membuat draft dan menjalankan migrasi terhadap database tersebut.</p>
+    </div>
+  </section>
+</div>
+{{end}}

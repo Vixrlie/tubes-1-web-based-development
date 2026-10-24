@@ -1,0 +1,139 @@
+{{define "content"}}
+<div class="page-head row-between">
+  <div>
+    <h1 class="page-title">Koneksi database</h1>
+    <p class="page-desc">Kelola tujuan PostgreSQL tanpa menampilkan password. Host berikut hanya ilustratif.</p>
+  </div>
+  <a class="btn btn-primary" href="/admin/connections/new">Tambah koneksi</a>
+</div>
+
+{{if .Notice}}
+<div class="flash-slot">
+  <div class="alert alert-success" role="status">
+    <span class="alert-icon">{{template "icon" (dict "Name" "check-circle")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">{{.Notice}}</p>
+      {{if .NoticeDesc}}<p class="alert-desc">{{.NoticeDesc}}</p>{{end}}
+    </div>
+  </div>
+</div>
+{{end}}
+
+<section class="card">
+  <div class="card-header">
+    <h2 class="card-title">Tujuan PostgreSQL</h2>
+    <span class="badge badge-neutral">{{len .Connections}} item</span>
+  </div>
+
+  {{if .Connections}}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Nama tampilan</th>
+          <th scope="col">Host</th>
+          <th scope="col">Port</th>
+          <th scope="col">Database</th>
+          <th scope="col">Username database</th>
+          <th scope="col" class="table-cell-right"><span class="visually-hidden">Aksi</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Connections}}
+        <tr>
+          <td>
+            <strong>{{.Name}}</strong>
+            {{if .Description}}<span class="muted">— {{.Description}}</span>{{end}}
+          </td>
+          <td><span class="mono">{{.Host}}</span></td>
+          <td><span class="mono">{{.Port}}</span></td>
+          <td><span class="mono">{{.Database}}</span></td>
+          <td><span class="mono">{{.Username}}</span></td>
+          <td class="table-cell-actions">
+            <form method="post" action="/admin/connections/{{.ID}}/test" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+              <button type="submit" class="link-as-text">Uji koneksi</button>
+            </form>
+            <span aria-hidden="true">·</span>
+            <a class="link-as-text" href="/admin/connections/{{.ID}}">Ubah</a>
+            <span aria-hidden="true">·</span>
+            <a class="link-as-text" href="/admin/connections?hapus={{.ID}}">Hapus...</a>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <div class="card-empty">
+    <span class="card-empty-icon">{{template "icon" (dict "Name" "lock")}}</span>
+    <p class="card-empty-title">Belum ada koneksi database</p>
+    <p class="card-empty-desc">Tambahkan tujuan PostgreSQL agar platform dapat memberikan akses dan menjalankan migrasi.</p>
+    <a class="btn btn-primary mt-4" href="/admin/connections/new">Tambah koneksi</a>
+  </div>
+  {{end}}
+</section>
+
+{{if .Selected}}
+<div class="grid-2 mt-4">
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">{{.Selected.Name}} · Aksi koneksi</h2>
+    </div>
+    <div class="card-body">
+      <p class="mono">{{.Selected.Host}}:{{.Selected.Port}}</p>
+      <div class="row-start mt-4">
+        <form method="post" action="/admin/connections/{{.Selected.ID}}/test" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <button type="submit" class="btn btn-secondary">Uji koneksi</button>
+        </form>
+        <a class="btn btn-secondary" href="/admin/connections/{{.Selected.ID}}">Ubah</a>
+      </div>
+      <p class="t-caption muted mt-3">
+        Uji koneksi hanya memeriksa keterbukaan. Password dan connection string tidak ditampilkan.
+      </p>
+    </div>
+  </section>
+
+  <section class="card" id="hapus-koneksi">
+    <div class="card-header">
+      <h2 class="card-title">Hapus koneksi · {{.Selected.Name}}</h2>
+    </div>
+    <div class="card-body">
+      {{if .DeleteError}}
+      <div class="alert alert-error mb-4" role="alert">
+        <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+        <div class="alert-content">
+          <p class="alert-title">{{.DeleteError}}</p>
+        </div>
+      </div>
+      {{end}}
+      <p class="t-body">
+        Menghapus koneksi juga menghapus grants dan riwayat migrasi terkait dari platform.
+        Konfirmasi diperlukan sebelum menghapus.
+      </p>
+      <form method="post" action="/admin/connections/{{.Selected.ID}}/delete" class="form mt-4" data-confirm-form
+        data-confirm-value="{{.Selected.Name}}">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="field">
+          <label for="field-confirm-name">Ketik {{.Selected.Name}} untuk konfirmasi</label>
+          <input type="text" id="field-confirm-name" name="confirm_name" autocomplete="off" data-confirm-name
+            aria-describedby="field-confirm-hint">
+          <p class="help-text" id="field-confirm-hint">
+            Password koneksi dan riwayat migrasi tidak dapat dipulihkan setelah dihapus.
+          </p>
+        </div>
+        <label class="checkbox">
+          <input type="checkbox" name="confirm_delete" data-confirm-check>
+          <span>Saya memahami grants dan riwayat migrasi akan dihapus.</span>
+        </label>
+        <div class="form-actions mt-4">
+          <button type="submit" class="btn btn-danger" data-confirm-submit disabled>Hapus koneksi</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+{{end}}
+
+{{end}}

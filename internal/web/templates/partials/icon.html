@@ -1,0 +1,4 @@
+{{/* Pemakaian: {{template "icon" (dict "Name" "alert")}} atau {{template "icon" "alert"}}.
+     Varian dict mendukung "Class" (kelas tambahan) dan "Alt" (judul untuk screen reader).
+     Tambah icon baru = taruh file di static/icons/<nama>.svg. */}}
+{{define "icon"}}{{icon .}}{{end}}

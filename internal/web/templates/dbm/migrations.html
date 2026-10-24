@@ -1,0 +1,103 @@
+{{define "content"}}
+<div class="page-head row-between">
+  <div>
+    <h1 class="page-title">Riwayat Migration</h1>
+    <p class="page-desc">
+      {{.Connection.Name}} · Terbaru lebih dahulu · {{len .Migrations}} migration
+    </p>
+  </div>
+  {{if .CanEdit}}
+  <a class="btn btn-primary" href="/databases/{{.Connection.ID}}/migrations/new">
+    Migration Baru
+  </a>
+  {{end}}
+</div>
+
+{{if .Notice}}
+<div class="flash-slot">
+  <div class="alert alert-success" role="status">
+    <span class="alert-icon">{{template "icon" (dict "Name" "check-circle")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">{{.Notice}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
+
+<div class="status-legend mt-4">
+  <span class="badge badge-primary-soft">View + Edit</span>
+  <span class="badge badge-warning">{{template "icon" (dict "Name" "edit")}} draft</span>
+  <span class="badge badge-success">{{template "icon" (dict "Name" "check-circle")}} success</span>
+  <span class="badge badge-error">{{template "icon" (dict "Name" "alert")}} failed</span>
+</div>
+
+<section class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">Migration {{.Connection.Name}}</h2>
+    <span class="badge badge-neutral">{{len .Migrations}} item</span>
+  </div>
+
+  {{if .Migrations}}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Versi</th>
+          <th scope="col">Nama</th>
+          <th scope="col">Status</th>
+          <th scope="col">Pelaksana</th>
+          <th scope="col">Waktu</th>
+          <th scope="col" class="table-cell-right"><span class="visually-hidden">Aksi</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Migrations}}
+        <tr>
+          <td><span class="mono">{{.Version}}</span></td>
+          <td>{{.Name}}</td>
+          <td>
+            {{if eq .Status "applied"}}
+            <span class="badge badge-success">{{template "icon" (dict "Name" "check-circle")}} Berhasil</span>
+            {{else if eq .Status "failed"}}
+            <span class="badge badge-error">{{template "icon" (dict "Name" "alert")}} Gagal</span>
+            {{else}}
+            <span class="badge badge-warning">{{template "icon" (dict "Name" "edit")}} Draft</span>
+            {{end}}
+          </td>
+          <td>
+            {{if .ExecutedByName}}{{.ExecutedByName}}{{else}}<span class="muted">belum ada</span>{{end}}
+          </td>
+          <td>{{.ExecutedAtLabel}}</td>
+          <td class="table-cell-actions">
+            {{if eq .Status "draft"}}
+            <a class="link-with-icon" href="/databases/{{$.Connection.ID}}/migrations/{{.ID}}">Tinjau draft {{template "icon" (dict "Name" "arrow-right")}}</a>
+            {{else}}
+            <a class="link-with-icon" href="/databases/{{$.Connection.ID}}/migrations/{{.ID}}">Lihat detail {{template "icon" (dict "Name" "arrow-right")}}</a>
+            {{end}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else if .Filter}}
+  <div class="card-empty">
+    <span class="card-empty-icon">{{template "icon" (dict "Name" "file-diff")}}</span>
+    <p class="card-empty-title">Tidak ada migrasi dengan status ini</p>
+    <p class="card-empty-desc">Ubah filter di atas untuk melihat migrasi lain pada database ini.</p>
+    <a class="btn btn-secondary mt-4" href="/databases/{{.Connection.ID}}/migrations">Lihat semua migrasi</a>
+  </div>
+  {{else}}
+  <div class="card-empty">
+    <span class="card-empty-icon">{{template "icon" (dict "Name" "file-diff")}}</span>
+    <p class="card-empty-title">Belum ada migrasi</p>
+    <p class="card-empty-desc">
+      Riwayat akan terisi setelah migrasi pertama untuk database ini disimpan dan dijalankan.
+    </p>
+    {{if .CanEdit}}
+    <a class="btn btn-primary mt-4" href="/databases/{{.Connection.ID}}/migrations/new">Buat migrasi pertama</a>
+    {{end}}
+  </div>
+  {{end}}
+</section>
+{{end}}

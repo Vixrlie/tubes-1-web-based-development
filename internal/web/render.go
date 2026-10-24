@@ -30,21 +30,49 @@ var iconCache sync.Map
 // iconSVG membaca static/icons/<nama>.svg dan menyisipkan class "icon"
 // ke tag <svg>, jadi ukuran diatur CSS (.btn .icon, .side-link .icon)
 // dan warna ikut currentColor. Nama hanya dari literal template.
-func iconSVG(name string) (template.HTML, error) {
+func iconSVG(params any) (template.HTML, error) {
+	var name, class, alt string
+	switch v := params.(type) {
+	case string:
+		name = v
+	case map[string]any:
+		if n, ok := v["Name"].(string); ok {
+			name = n
+		}
+		if c, ok := v["Class"].(string); ok {
+			class = c
+		}
+		if a, ok := v["Alt"].(string); ok {
+			alt = a
+		}
+	default:
+		return "", fmt.Errorf("icon: argumen tidak valid %T", params)
+	}
 	if !iconNameRe.MatchString(name) {
 		return "", fmt.Errorf("icon: nama tidak valid %q", name)
 	}
-	if v, ok := iconCache.Load(name); ok {
+	key := name
+	if class != "" {
+		key = name + "|" + class
+	}
+	if v, ok := iconCache.Load(key); ok {
 		return v.(template.HTML), nil
 	}
 	b, err := StaticFS.ReadFile("static/icons/" + name + ".svg")
 	if err != nil {
 		return "", fmt.Errorf("icon %q tidak ditemukan di static/icons", name)
 	}
+	svgClass := "icon"
+	if class != "" {
+		svgClass += " " + class
+	}
 	s := strings.Replace(strings.TrimSpace(string(b)), "<svg",
-		`<svg class="icon" aria-hidden="true" focusable="false"`, 1)
+		fmt.Sprintf(`<svg class="%s" aria-hidden="true" focusable="false"`, svgClass), 1)
+	if alt != "" {
+		s = strings.Replace(s, ">", fmt.Sprintf("><title>%s</title>", template.HTMLEscapeString(alt)), 1)
+	}
 	h := template.HTML(s)
-	iconCache.Store(name, h)
+	iconCache.Store(key, h)
 	return h, nil
 }
 
@@ -83,6 +111,16 @@ var funcs = template.FuncMap{
 	},
 	// list membuat slice untuk {{range}}: {{range (list "a" "b")}}
 	"list": func(v ...any) []any { return v },
+	// default mengembalikan val, atau def bila val kosong (string "" atau nil).
+	"default": func(def, val any) any {
+		if val == nil {
+			return def
+		}
+		if s, ok := val.(string); ok && s == "" {
+			return def
+		}
+		return val
+	},
 	// css menandai nilai CSS tepercaya supaya var(--x) tidak diblokir
 	// sanitizer html/template (jadi "ZgotmplZ"). Hanya untuk literal di template.
 	"css": func(s string) template.CSS { return template.CSS(s) },
@@ -107,14 +145,19 @@ func isShared(p string) bool {
 }
 
 type Renderer struct {
-	pages map[string]*template.Template
+	pages    map[string]*template.Template
+	appPages map[string]*template.Template
 }
 
-// NewRenderer mem-parse tiap halaman bersama templates/layout.html.
-// Nama halaman = path relatif dari templates/, misalnya "login.html"
-// atau "admin/users.html".
+// NewRenderer mem-parse tiap halaman bersama shell-nya. Halaman bagian
+// database management memakai templates/app.html, halaman lain memakai
+// templates/layout.html. Nama halaman = path relatif dari templates/,
+// misalnya "login.html", "admin/users.html", atau "dbm/databases.html".
 func NewRenderer() (*Renderer, error) {
-	r := &Renderer{pages: map[string]*template.Template{}}
+	r := &Renderer{
+		pages:    map[string]*template.Template{},
+		appPages: map[string]*template.Template{},
+	}
 	err := fs.WalkDir(TemplatesFS, "templates", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -124,14 +167,32 @@ func NewRenderer() (*Renderer, error) {
 		}
 		files := append([]string{"templates/layout.html"}, sharedGlobs...)
 		files = append(files, p)
-		t, err := template.New("layout.html").Funcs(funcs).ParseFS(TemplatesFS, files...)
+		name := strings.TrimPrefix(p, "templates/")
+		isApp := usesAppShell(p)
+		root := "layout.html"
+		if isApp {
+			root = "app.html"
+			files[0] = "templates/app.html"
+		}
+		t, err := template.New(root).Funcs(funcs).ParseFS(TemplatesFS, files...)
 		if err != nil {
 			return err
 		}
-		r.pages[strings.TrimPrefix(p, "templates/")] = t
+		if isApp {
+			r.appPages[name] = t
+		} else {
+			r.pages[name] = t
+		}
 		return nil
 	})
 	return r, err
+}
+
+func usesAppShell(path string) bool {
+	if strings.HasPrefix(path, "templates/dbm/") {
+		return true
+	}
+	return strings.HasPrefix(strings.TrimPrefix(path, "templates/"), "admin/")
 }
 
 func (r *Renderer) Render(w http.ResponseWriter, name string, data any) {
@@ -142,6 +203,19 @@ func (r *Renderer) Render(w http.ResponseWriter, name string, data any) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := t.ExecuteTemplate(w, "layout.html", data); err != nil {
+		log.Printf("render %s gagal: %v", name, err)
+		http.Error(w, "gagal render halaman", http.StatusInternalServerError)
+	}
+}
+
+func (r *Renderer) RenderApp(w http.ResponseWriter, name string, data any) {
+	t, ok := r.appPages[name]
+	if !ok {
+		http.Error(w, "template tidak ditemukan", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := t.ExecuteTemplate(w, "app.html", data); err != nil {
 		log.Printf("render %s gagal: %v", name, err)
 		http.Error(w, "gagal render halaman", http.StatusInternalServerError)
 	}

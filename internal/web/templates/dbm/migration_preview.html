@@ -1,0 +1,111 @@
+{{define "content"}}
+<div class="page-head">
+  <h1 class="page-title">Pratinjau & konfirmasi</h1>
+  <p class="page-desc">Tinjau SQL. Membuka halaman ini tidak menjalankan migration.</p>
+</div>
+
+{{if .Error}}
+<div class="alert alert-error" role="alert" tabindex="-1" id="error-summary">
+  <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Ada masalah</p>
+    <p class="alert-desc"><a href="#confirm-name">{{.Error}}</a></p>
+  </div>
+</div>
+{{end}}
+
+<div class="with-aside">
+  <div class="stack">
+    <section class="card">
+      <div class="card-body">
+        <h2 class="card-title mb-3">{{.Migration.Name}}</h2>
+        <div class="row-start gap-4">
+          <span class="badge badge-warning">{{template "icon" (dict "Name" "edit")}} draft</span>
+          <div>
+            <p class="text-caption muted">VERSION</p>
+            <p class="mono">{{.Migration.Version}}</p>
+          </div>
+        </div>
+        <p class="muted mt-3">Menambahkan notes bertipe text, nullable, ke public.customers. Belum dieksekusi.</p>
+      </div>
+    </section>
+
+    <section class="sql-panel">
+      <div class="sql-panel-head">
+        <span class="sql-panel-title">SQL · {{.Connection.Name}}</span>
+        <span class="badge badge-neutral">{{template "icon" (dict "Name" "lock")}} Hanya-baca</span>
+      </div>
+      <pre class="sql-panel-body"><code>{{.Migration.SQL}}</code></pre>
+    </section>
+
+    <div class="row-start">
+      <a class="btn btn-secondary" href="/databases/{{.Connection.ID}}/migrations/{{.Migration.ID}}/edit">Ubah Draft</a>
+    </div>
+
+    <div class="alert alert-warning" role="alert">
+      <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+      <div class="alert-content">
+        <p class="alert-title">Database akan berubah</p>
+        <p class="alert-desc">
+          SQL dijalankan dalam satu transaksi. Commit jika success; rollback jika failed. Pastikan tujuan dan dampak sudah sesuai.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <aside class="stack">
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Database tujuan</h2>
+      </div>
+      <div class="card-body">
+        <dl class="detail-list">
+          <div class="detail-row">
+            <dt>Nama</dt>
+            <dd><span class="mono">{{.Connection.Name}}</span></dd>
+          </div>
+          <div class="detail-row">
+            <dt>Host</dt>
+            <dd><span class="mono">{{.Connection.HostPort}}</span></dd>
+          </div>
+        </dl>
+        <span class="badge badge-primary-soft mt-4">View + Edit</span>
+        <p class="muted mt-2">Akses melalui Pengembang. Perubahan hanya melalui alur migration.</p>
+      </div>
+    </section>
+
+    <section class="card" id="konfirmasi-eksekusi">
+      <div class="card-header">
+        <h2 class="card-title">Konfirmasi eksekusi</h2>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{{.FormAction}}" class="form" data-confirm-form data-confirm-value="{{.Connection.Name}}">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+          <div class="field">
+            <label for="confirm-name">Ketik {{.Connection.Name}} untuk konfirmasi</label>
+            <input type="text" id="confirm-name" name="confirm_name" autocomplete="off" data-confirm-name
+              aria-describedby="confirm-hint">
+            <p class="help-text" id="confirm-hint">
+              Nama harus sama persis dengan database tujuan.
+            </p>
+          </div>
+
+          <label class="checkbox">
+            <input type="checkbox" name="confirm_execute" data-confirm-check>
+            <span>Saya menyetujui perubahan pada database {{.Connection.Name}}.</span>
+          </label>
+
+          <div class="form-actions mt-4">
+            <button type="submit" class="btn btn-primary btn-block" data-confirm-submit disabled>Jalankan Migration</button>
+          </div>
+          <p class="help-text mt-3">
+            Tombol aktif setelah nama dan persetujuan lengkap. Saat memproses: "Eksekusi berjalan...", tombol nonaktif untuk mencegah kirim ganda. Tunggu hasil, jangan kirim ulang.
+          </p>
+          <a class="btn btn-secondary btn-block mt-3" href="/databases/{{.Connection.ID}}/migrations/{{.Migration.ID}}">Batal</a>
+        </form>
+      </div>
+    </section>
+  </aside>
+</div>
+{{end}}

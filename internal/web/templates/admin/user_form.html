@@ -1,50 +1,167 @@
 {{define "content"}}
-<p><a href="/admin/users">&larr; Daftar user</a></p>
-{{if .IsNew}}<h1>Buat User</h1>{{else}}<h1>Ubah User: {{.Username}}</h1>{{end}}
-{{if .Notice}}<p role="status">{{.Notice}}</p>{{end}}
-{{if .Error}}<p role="alert" class="error">{{.Error}}</p>{{end}}
+<div class="page-head">
+  <h1 class="page-title">{{if .IsNew}}Buat User{{else}}Ubah User: <span class="mono">{{.Username}}</span>{{end}}</h1>
+  <p class="page-desc">{{if .IsNew}}Buat akun pengguna baru untuk mengakses platform.{{else}}Kelola data, peran, status, dan password pengguna.{{end}}</p>
+</div>
 
-<form method="post" action="{{.FormAction}}">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    {{if .IsNew}}
-    <p><label>Username <input name="username" value="{{.Username}}" required autocomplete="off"></label></p>
-    <p><label>Password <input type="password" name="password" required autocomplete="new-password"></label></p>
-    {{end}}
-    <p><label>Nama lengkap <input name="full_name" value="{{.FullName}}"></label></p>
-    <p><label>Email <input type="email" name="email" value="{{.Email}}"></label></p>
-    <p>
-        <label><input type="checkbox" name="is_platform_admin" {{if .IsPlatformAdmin}}checked{{end}} {{if
-                .IsSelf}}disabled{{end}}> Platform Admin</label>
-        {{if .IsSelf}}<small>(tidak bisa mengubah peran sendiri)</small>{{end}}
-    </p>
-    <button type="submit">Simpan</button>
-</form>
+{{if .Notice}}
+<div class="flash-slot">
+  <div class="alert alert-success" role="status">
+    <span class="alert-icon">{{template "icon" (dict "Name" "check-circle")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">{{.Notice}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{if .Error}}
+<div class="alert alert-error" role="alert">
+  <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Ada masalah</p>
+    <p class="alert-desc">{{.Error}}</p>
+  </div>
+</div>
+{{end}}
+
+<section class="card">
+  <div class="card-header">
+    <h2 class="card-title">Informasi user</h2>
+  </div>
+  <div class="card-body">
+    <form method="post" action="{{.FormAction}}" class="form">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+      {{if .IsNew}}
+      <div class="field">
+        <label for="field-username">Username</label>
+        <input type="text" id="field-username" name="username" value="{{.Username}}" required autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="field-password">Password</label>
+        <input type="password" id="field-password" name="password" required autocomplete="new-password">
+      </div>
+      {{end}}
+
+      <div class="field">
+        <label for="field-full-name">Nama lengkap</label>
+        <input type="text" id="field-full-name" name="full_name" value="{{.FullName}}">
+      </div>
+
+      <div class="field">
+        <label for="field-email">Email</label>
+        <input type="email" id="field-email" name="email" value="{{.Email}}">
+      </div>
+
+      <label class="checkbox">
+        <input type="checkbox" name="is_platform_admin" {{if .IsPlatformAdmin}}checked{{end}} {{if .IsSelf}}disabled{{end}}>
+        <span>Platform Admin</span>
+      </label>
+      {{if .IsSelf}}<p class="help-text">Anda tidak bisa mengubah peran sendiri.</p>{{end}}
+
+      <div class="form-actions">
+        <a class="btn btn-secondary" href="/admin/users">Batal</a>
+        <div class="form-actions-primary">
+          <button type="submit" class="btn btn-primary">Simpan</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
 
 {{if not .IsNew}}
-<hr>
-<h2>Status akun: {{if .IsActive}}Aktif{{else}}Nonaktif{{end}}</h2>
-{{if .IsActive}}
-{{if .IsSelf}}
-<p>Anda tidak bisa menonaktifkan akun sendiri.</p>
-{{else}}
-<form method="post" action="/admin/users/{{.ID}}/deactivate">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    <button type="submit">Nonaktifkan user</button>
-</form>
-{{end}}
-{{else}}
-<form method="post" action="/admin/users/{{.ID}}/activate">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    <button type="submit">Aktifkan kembali</button>
-</form>
-{{end}}
+<section class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">Status akun</h2>
+    {{if .IsActive}}
+    <span class="badge badge-success">Aktif</span>
+    {{else}}
+    <span class="badge badge-error">Nonaktif</span>
+    {{end}}
+  </div>
+  <div class="card-body">
+    {{if .IsActive}}
+    {{if .IsSelf}}
+    <p class="muted">Anda tidak bisa menonaktifkan akun sendiri.</p>
+    {{else}}
+    <form method="post" action="/admin/users/{{.ID}}/deactivate" class="form" data-confirm-form
+      data-confirm-value="{{.Username}}">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <p class="muted">User tidak akan bisa login setelah dinonaktifkan.</p>
+      <div class="field">
+        <label for="confirm-deactivate">Ketik {{.Username}} untuk konfirmasi</label>
+        <input type="text" id="confirm-deactivate" name="confirm_name" autocomplete="off" data-confirm-name>
+      </div>
+      <label class="checkbox">
+        <input type="checkbox" name="confirm_deactivate" data-confirm-check>
+        <span>Saya memahami user ini akan dinonaktifkan.</span>
+      </label>
+      <div class="form-actions mt-4">
+        <button type="submit" class="btn btn-danger" data-confirm-submit disabled>Nonaktifkan user</button>
+      </div>
+    </form>
+    {{end}}
+    {{else}}
+    <form method="post" action="/admin/users/{{.ID}}/activate" class="form">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <p class="muted">User akan dapat login kembali setelah diaktifkan.</p>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Aktifkan kembali</button>
+      </div>
+    </form>
+    {{end}}
+  </div>
+</section>
 
-<hr>
-<h2>Reset password</h2>
-<form method="post" action="/admin/users/{{.ID}}/password">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    <p><label>Password baru <input type="password" name="new_password" required autocomplete="new-password"></label></p>
-    <button type="submit">Reset password</button>
-</form>
+<section class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">Reset password</h2>
+  </div>
+  <div class="card-body">
+    <form method="post" action="/admin/users/{{.ID}}/password" class="form">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <div class="field">
+        <label for="field-new-password">Password baru</label>
+        <input type="password" id="field-new-password" name="new_password" required autocomplete="new-password">
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Reset password</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">Akses & penghapusan</h2>
+  </div>
+  <div class="card-body">
+    <p class="muted">Lihat hak akses database yang diperoleh user ini melalui keanggotaan group-nya.</p>
+    <a class="btn btn-secondary mt-3" href="/admin/users/{{.ID}}/access">Lihat akses efektif</a>
+
+    {{if .IsSelf}}
+    <p class="muted mt-4">Anda tidak bisa menghapus akun sendiri.</p>
+    {{else}}
+    <hr class="mt-4">
+    <p class="muted mt-4">Hapus user beserta keanggotaan group dan seluruh sesi aktifnya. User dengan riwayat migration hanya dapat dinonaktifkan, bukan dihapus.</p>
+    <form method="post" action="/admin/users/{{.ID}}/delete" class="form mt-3" data-confirm-form
+      data-confirm-value="{{.Username}}">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <div class="field">
+        <label for="confirm-delete">Ketik {{.Username}} untuk konfirmasi</label>
+        <input type="text" id="confirm-delete" name="confirm_name" autocomplete="off" data-confirm-name>
+      </div>
+      <label class="checkbox">
+        <input type="checkbox" name="confirm_delete" data-confirm-check>
+        <span>Saya memahami user ini akan dihapus dan seluruh sesinya berakhir.</span>
+      </label>
+      <div class="form-actions mt-4">
+        <button type="submit" class="btn btn-danger" data-confirm-submit disabled>Hapus user</button>
+      </div>
+    </form>
+    {{end}}
+  </div>
+</section>
 {{end}}
 {{end}}

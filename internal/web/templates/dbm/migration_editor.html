@@ -1,0 +1,116 @@
+{{define "content"}}
+<div class="page-head">
+  <h1 class="page-title">Editor Migration</h1>
+  <p class="page-desc">1. Tulis draft {{template "icon" (dict "Name" "arrow-right" "Class" "inline")}} 2. Tinjau {{template "icon" (dict "Name" "arrow-right" "Class" "inline")}} 3. Jalankan</p>
+</div>
+
+{{if .Error}}
+<div class="alert alert-error" role="alert" tabindex="-1" id="error-summary">
+  <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Ada masalah</p>
+    <p class="alert-desc"><a href="#field-sql">{{.Error}}</a></p>
+  </div>
+</div>
+{{end}}
+
+<div class="with-aside">
+  <div class="stack">
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Draft migration</h2>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{{.FormAction}}" class="form" data-sql-form>
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+          <div class="field">
+            <label for="field-name">Nama migration <span aria-label="wajib">*</span></label>
+            <input type="text" id="field-name" name="name" value="{{.Name}}" required
+              placeholder="Contoh: Tambah catatan pelanggan"
+              aria-describedby="field-name-hint">
+            <p class="help-text" id="field-name-hint">Wajib diisi. Gunakan nama yang menjelaskan perubahan.</p>
+          </div>
+
+          <div class="field">
+            <div class="row-between">
+              <label for="field-sql">SQL <span aria-label="wajib">*</span></label>
+              <span class="badge badge-warning">{{template "icon" (dict "Name" "edit")}} draft</span>
+            </div>
+            <textarea class="sql-source" id="field-sql" name="sql" rows="14" data-sql-source
+              aria-describedby="field-sql-hint" spellcheck="false">{{.SQL}}</textarea>
+            <div class="sql-editor" data-sql-editor data-label="SQL migrasi" data-describedby="field-sql-hint"></div>
+            <p class="help-text" id="field-sql-hint">
+              SQL dapat berisi beberapa statement dan dijalankan dalam satu transaksi.
+            </p>
+          </div>
+
+          <div class="form-actions">
+            <a class="btn btn-secondary"
+              href="{{if .IsNew}}/databases/{{.Connection.ID}}/migrations{{else}}/databases/{{.Connection.ID}}/migrations/{{.Migration.ID}}{{end}}">
+              Batal
+            </a>
+            <div class="form-actions-primary">
+              <button type="submit" class="btn btn-primary">Simpan Draft</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="sql-panel">
+      <div class="sql-panel-head">
+        <span class="sql-panel-title">SQL · {{.Connection.Name}}</span>
+        <span class="badge badge-neutral">SQL · Teks biasa</span>
+      </div>
+      <pre class="sql-panel-body"><code>{{if .SQL}}{{.SQL}}{{else}}-- Tulis SQL di editor di atas{{end}}</code></pre>
+    </section>
+
+    <div class="alert alert-info">
+      <span class="alert-icon">{{template "icon" (dict "Name" "info")}}</span>
+      <div class="alert-content">
+        <p class="alert-title">Simpan belum mengeksekusi</p>
+        <p class="alert-desc">Menyimpan draft tidak menjalankan SQL. Tinjau dan konfirmasikan secara terpisah sebelum eksekusi.</p>
+      </div>
+    </div>
+  </div>
+
+  <aside class="stack">
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Database tujuan</h2>
+      </div>
+      <div class="card-body">
+        <dl class="detail-list">
+          <div class="detail-row">
+            <dt>Nama</dt>
+            <dd><span class="mono">{{.Connection.Name}}</span></dd>
+          </div>
+          <div class="detail-row">
+            <dt>Host</dt>
+            <dd><span class="mono">{{.Connection.HostPort}}</span></dd>
+          </div>
+          {{if not .IsNew}}
+          <div class="detail-row">
+            <dt>Versi</dt>
+            <dd><span class="mono">{{.Migration.Version}}</span></dd>
+          </div>
+          {{end}}
+        </dl>
+        <span class="badge badge-primary-soft mt-4">View + Edit</span>
+        <p class="muted mt-2">Akses melalui Pengembang. Perubahan hanya melalui alur migration.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Perubahan yang direncanakan</h2>
+      </div>
+      <div class="card-body">
+        <p class="mono">public.customers → notes</p>
+        <p class="muted mt-2">Kolom ini belum ada di schema saat ini. Draft hanya tersedia untuk akses View + Edit.</p>
+      </div>
+    </section>
+  </aside>
+</div>
+{{end}}

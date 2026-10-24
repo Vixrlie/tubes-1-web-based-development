@@ -1,6 +1,7 @@
 package web
 
 type Shell struct {
+	Title      string     // judul tab (opsional; kosong = "Pathgres")
 	Nav        string     // "database" | "admin" -> mode header + pilihan sidebar
 	SideActive string     // item aktif sidebar admin: "users" | "groups" | "connections"
 	User       *ShellUser // nil = belum login

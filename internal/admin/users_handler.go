@@ -11,6 +11,7 @@ import (
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 )
 
 type userHandlers struct {
@@ -19,14 +20,12 @@ type userHandlers struct {
 	view    auth.Renderer
 }
 
-// WithUserAdmin mengaktifkan halaman kelola user. Dipasang dari main.go.
 func WithUserAdmin(store UserStore, revoker session.Revoker, view auth.Renderer) Option {
 	return func(h *Handlers) {
 		h.users = &userHandlers{store: store, revoker: revoker, view: view}
 	}
 }
 
-// Dipasang di bawah /admin dan sudah dibungkus RequireAdmin.
 func (h *Handlers) usersRoutes(r chi.Router) {
 	if h.users == nil {
 		return
@@ -40,6 +39,8 @@ func (h *Handlers) usersRoutes(r chi.Router) {
 	r.Post("/users/{id}/deactivate", u.deactivate)
 	r.Post("/users/{id}/activate", u.activate)
 	r.Post("/users/{id}/password", u.resetPassword)
+	r.Post("/users/{id}/delete", u.remove)
+	r.Get("/users/{id}/access", u.accessPage)
 }
 
 // Pesan sukses dipilih lewat kode di query string; teks bebas dari URL tidak pernah dirender.
@@ -49,18 +50,24 @@ var notices = map[string]string{
 	"deactivated": "User dinonaktifkan dan semua session-nya dicabut.",
 	"activated":   "User diaktifkan kembali.",
 	"password":    "Password direset dan semua session user dicabut.",
+	"deleted":     "User dihapus beserta keanggotaan dan session-nya.",
+}
+
+// userItem adalah baris daftar user: data akun plus keanggotaan group-nya.
+type userItem struct {
+	UserRow
+	Groups      []string
+	IsLastAdmin bool
 }
 
 type usersPage struct {
-	Me        auth.User
-	CSRFToken string
-	Users     []UserRow
-	Notice    string
+	web.AppShell
+	Users  []userItem
+	Notice string
 }
 
 type userFormPage struct {
-	Me              auth.User
-	CSRFToken       string
+	web.AppShell
 	IsNew           bool
 	IsSelf          bool
 	FormAction      string
@@ -74,15 +81,22 @@ type userFormPage struct {
 	Notice          string
 }
 
-func (u *userHandlers) base(r *http.Request) (auth.User, string) {
+func (u *userHandlers) shell(r *http.Request) web.AppShell {
 	me, _ := auth.UserFromContext(r.Context())
-	return me, session.CSRFToken(r.Context())
+	return web.AppShell{
+		Me:                   me,
+		CSRFToken:            session.CSRFToken(r.Context()),
+		Initials:             web.Initials(me.Username),
+		ActiveNav:            "users",
+		CanManageUsers:       true,
+		CanManageConnections: me.IsPlatformAdmin,
+	}
 }
 
 func (u *userHandlers) render(w http.ResponseWriter, status int, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	u.view.Render(w, name, data)
+	u.view.RenderApp(w, name, data)
 }
 
 func (u *userHandlers) serverError(w http.ResponseWriter, what string, err error) {
@@ -100,7 +114,6 @@ func isConflict(err error) bool {
 	return errors.Is(err, auth.ErrUsernameTaken) || errors.Is(err, auth.ErrEmailTaken)
 }
 
-// load membaca {id} dari URL lalu mengambil user. Sudah menulis respons bila gagal.
 func (u *userHandlers) load(w http.ResponseWriter, r *http.Request) (UserRow, bool) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil || id <= 0 {
@@ -119,12 +132,10 @@ func (u *userHandlers) load(w http.ResponseWriter, r *http.Request) (UserRow, bo
 	return t, true
 }
 
-func (u *userHandlers) editPage(r *http.Request, t UserRow) userFormPage {
-	me, csrf := u.base(r)
+func (u *userHandlers) editPage(sh web.AppShell, t UserRow) userFormPage {
 	return userFormPage{
-		Me:              me,
-		CSRFToken:       csrf,
-		IsSelf:          t.ID == me.ID,
+		AppShell:        sh,
+		IsSelf:          t.ID == sh.Me.ID,
 		FormAction:      "/admin/users/" + strconv.FormatInt(t.ID, 10),
 		ID:              t.ID,
 		Username:        t.Username,
@@ -139,29 +150,45 @@ func redirectUser(w http.ResponseWriter, r *http.Request, id int64, code string)
 	http.Redirect(w, r, "/admin/users/"+strconv.FormatInt(id, 10)+"?status="+code, http.StatusSeeOther)
 }
 
-// ---- daftar ----
-
 func (u *userHandlers) list(w http.ResponseWriter, r *http.Request) {
 	users, err := u.store.List(r.Context())
 	if err != nil {
 		u.serverError(w, "daftar user", err)
 		return
 	}
-	me, csrf := u.base(r)
+	groups, err := u.store.GroupNamesByUser(r.Context())
+	if err != nil {
+		u.serverError(w, "keanggotaan group", err)
+		return
+	}
+
+	// Tandai admin aktif terakhir — tidak boleh dihapus/dinonaktifkan.
+	var activeAdmins int
+	for _, t := range users {
+		if t.IsPlatformAdmin && t.IsActive {
+			activeAdmins++
+		}
+	}
+
+	items := make([]userItem, 0, len(users))
+	for _, t := range users {
+		items = append(items, userItem{
+			UserRow:     t,
+			Groups:      groups[t.ID],
+			IsLastAdmin: activeAdmins == 1 && t.IsPlatformAdmin && t.IsActive,
+		})
+	}
+
 	u.render(w, http.StatusOK, "admin/users.html", usersPage{
-		Me:        me,
-		CSRFToken: csrf,
-		Users:     users,
-		Notice:    notices[r.URL.Query().Get("status")],
+		AppShell: u.shell(r),
+		Users:    items,
+		Notice:   notices[r.URL.Query().Get("status")],
 	})
 }
 
-// ---- buat ----
-
 func (u *userHandlers) newForm(w http.ResponseWriter, r *http.Request) {
-	me, csrf := u.base(r)
 	u.render(w, http.StatusOK, "admin/user_form.html", userFormPage{
-		Me: me, CSRFToken: csrf, IsNew: true, FormAction: "/admin/users", IsActive: true,
+		AppShell: u.shell(r), IsNew: true, FormAction: "/admin/users", IsActive: true,
 	})
 }
 
@@ -195,23 +222,20 @@ func (u *userHandlers) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	me, csrf := u.base(r)
 	u.render(w, status, "admin/user_form.html", userFormPage{
-		Me: me, CSRFToken: csrf, IsNew: true, FormAction: "/admin/users", IsActive: true,
+		AppShell: u.shell(r), IsNew: true, FormAction: "/admin/users", IsActive: true,
 		Username: in.Username, FullName: in.FullName, Email: in.Email,
 		IsPlatformAdmin: in.IsPlatformAdmin,
 		Error:           err.Error(), // pesan sentinel auth, aman ditampilkan; password tidak dirender ulang
 	})
 }
 
-// ---- ubah ----
-
 func (u *userHandlers) editForm(w http.ResponseWriter, r *http.Request) {
 	t, ok := u.load(w, r)
 	if !ok {
 		return
 	}
-	page := u.editPage(r, t)
+	page := u.editPage(u.shell(r), t)
 	page.Notice = notices[r.URL.Query().Get("status")]
 	u.render(w, http.StatusOK, "admin/user_form.html", page)
 }
@@ -239,7 +263,7 @@ func (u *userHandlers) update(w http.ResponseWriter, r *http.Request) {
 
 	err := u.store.Update(r.Context(), t.ID, upd)
 	if isConflict(err) {
-		page := u.editPage(r, t)
+		page := u.editPage(u.shell(r), t)
 		page.FullName, page.Email = upd.FullName, upd.Email
 		page.Error = err.Error()
 		u.render(w, http.StatusConflict, "admin/user_form.html", page)
@@ -260,8 +284,6 @@ func (u *userHandlers) update(w http.ResponseWriter, r *http.Request) {
 	redirectUser(w, r, t.ID, "updated")
 }
 
-// ---- nonaktifkan / aktifkan ----
-
 func (u *userHandlers) deactivate(w http.ResponseWriter, r *http.Request) {
 	t, ok := u.load(w, r)
 	if !ok {
@@ -269,7 +291,7 @@ func (u *userHandlers) deactivate(w http.ResponseWriter, r *http.Request) {
 	}
 	me, _ := auth.UserFromContext(r.Context())
 	if t.ID == me.ID {
-		page := u.editPage(r, t)
+		page := u.editPage(u.shell(r), t)
 		page.Error = "Anda tidak bisa menonaktifkan akun sendiri."
 		u.render(w, http.StatusBadRequest, "admin/user_form.html", page)
 		return
@@ -298,8 +320,6 @@ func (u *userHandlers) activate(w http.ResponseWriter, r *http.Request) {
 	redirectUser(w, r, t.ID, "activated")
 }
 
-// ---- reset password ----
-
 func (u *userHandlers) resetPassword(w http.ResponseWriter, r *http.Request) {
 	t, ok := u.load(w, r)
 	if !ok {
@@ -311,7 +331,7 @@ func (u *userHandlers) resetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	pw := r.PostFormValue("new_password")
 	if err := auth.ValidatePassword(pw); err != nil {
-		page := u.editPage(r, t)
+		page := u.editPage(u.shell(r), t)
 		page.Error = err.Error()
 		u.render(w, http.StatusBadRequest, "admin/user_form.html", page)
 		return
@@ -331,4 +351,134 @@ func (u *userHandlers) resetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	redirectUser(w, r, t.ID, "password")
+}
+
+// remove menghapus user setelah konfirmasi ketik-nama + checkbox.
+// Ditolak untuk admin terakhir, user dengan riwayat migration, dan diri sendiri.
+func (u *userHandlers) remove(w http.ResponseWriter, r *http.Request) {
+	t, ok := u.load(w, r)
+	if !ok {
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "permintaan tidak valid", http.StatusBadRequest)
+		return
+	}
+	me, _ := auth.UserFromContext(r.Context())
+
+	page := func(msg string) {
+		p := u.editPage(u.shell(r), t)
+		p.Error = msg
+		u.render(w, http.StatusBadRequest, "admin/user_form.html", p)
+	}
+
+	if t.ID == me.ID {
+		page("Anda tidak bisa menghapus akun sendiri.")
+		return
+	}
+	confirmName := strings.TrimSpace(r.PostFormValue("confirm_name"))
+	confirmed := r.PostFormValue("confirm_delete") == "on"
+	if confirmName != t.Username || !confirmed {
+		page("Konfirmasi tidak cocok. Ketik username persis dan centang persetujuan sebelum menghapus.")
+		return
+	}
+
+	if err := u.store.Delete(r.Context(), t.ID); err != nil {
+		switch {
+		case errors.Is(err, ErrLastAdmin):
+			page("Ini adalah admin aktif terakhir. Tambahkan admin lain sebelum menghapus akun ini.")
+		case errors.Is(err, ErrUserHasHistory):
+			page("User ini memiliki riwayat migration dan hanya dapat dinonaktifkan, bukan dihapus.")
+		case errors.Is(err, auth.ErrUserNotFound):
+			http.NotFound(w, r)
+		default:
+			u.serverError(w, "hapus user", err)
+		}
+		return
+	}
+	http.Redirect(w, r, "/admin/users?status=deleted", http.StatusSeeOther)
+}
+
+// dbAccess adalah satu baris hasil gabungan grant untuk sebuah database.
+type dbAccess struct {
+	ConnectionName string
+	Effective      string // "View + Edit" | "View Only" | "Tidak ada akses"
+	Source         string // "group → level" untuk hak tertinggi
+	Others         []string
+	CanEdit        bool
+}
+
+// userAccessPage adalah data halaman akses efektif (admin/user_access.html).
+type userAccessPage struct {
+	web.AppShell
+	Target     UserRow
+	GroupNames []string
+	Rows       []dbAccess
+}
+
+// accessPage menampilkan hak akses efektif user: gabungan grant seluruh
+// group yang dianggoteinya, per database, dengan sumber hak tertingginya.
+func (u *userHandlers) accessPage(w http.ResponseWriter, r *http.Request) {
+	t, ok := u.load(w, r)
+	if !ok {
+		return
+	}
+	grants, err := u.store.EffectiveAccess(r.Context(), t.ID)
+	if err != nil {
+		u.serverError(w, "akses efektif", err)
+		return
+	}
+
+	// Kelompokkan per database; himpun nama group keanggotaan (urut unik).
+	byConn := map[int64]*dbAccess{}
+	var connOrder []int64
+	groupSeen := map[string]bool{}
+	var groupNames []string
+	for _, g := range grants {
+		if !groupSeen[g.GroupName] {
+			groupSeen[g.GroupName] = true
+			groupNames = append(groupNames, g.GroupName)
+		}
+		row, exists := byConn[g.ConnectionID]
+		if !exists {
+			row = &dbAccess{ConnectionName: g.ConnectionName}
+			byConn[g.ConnectionID] = row
+			connOrder = append(connOrder, g.ConnectionID)
+		}
+		label := "Tidak ada akses"
+		if g.Level == "edit" {
+			label = "View + Edit"
+		} else if g.Level == "view" {
+			label = "View Only"
+		}
+		entry := g.GroupName + " → " + label
+		// Hak tertinggi menang; yang pertama dicatat sebagai sumber.
+		if row.Effective == "" || (label == "View + Edit" && row.Effective != "View + Edit") ||
+			(label == "View Only" && row.Effective == "Tidak ada akses") {
+			row.Effective = label
+			row.Source = entry
+			row.CanEdit = label == "View + Edit"
+			continue
+		}
+		row.Others = append(row.Others, entry)
+	}
+
+	page := userAccessPage{
+		AppShell:    u.shell(r),
+		Target:      t,
+		GroupNames:  groupNames,
+	}
+	for _, id := range connOrder {
+		page.Rows = append(page.Rows, *byConn[id])
+	}
+
+	shell := page.AppShell
+	shell.Title = "Akses efektif · " + t.Username
+	shell.Breadcrumbs = []web.Crumb{
+		{Label: "Admin", Href: "/admin/users"},
+		{Label: "User", Href: "/admin/users"},
+		{Label: t.Username},
+	}
+	page.AppShell = shell
+	u.render(w, http.StatusOK, "admin/user_access.html", page)
 }

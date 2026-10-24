@@ -72,7 +72,7 @@ CREATE INDEX sessions_abs_expires_idx    ON sessions (absolute_expires_at);
 CREATE TABLE migration_history (
     id            BIGSERIAL   PRIMARY KEY,
     connection_id BIGINT      NOT NULL REFERENCES db_connections (id) ON DELETE CASCADE,
-    version       INTEGER     NOT NULL,
+    version       BIGINT      NOT NULL,
     sql           TEXT        NOT NULL,
     checksum      TEXT        NOT NULL,
     status        TEXT        NOT NULL CHECK (status IN ('draft', 'applied', 'failed')),

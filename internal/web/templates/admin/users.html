@@ -1,33 +1,91 @@
 {{define "content"}}
-<h1>Kelola User</h1>
-<p><a href="/">Beranda</a> | <a href="/admin/users/new">Buat user</a></p>
-{{if .Notice}}<p role="status">{{.Notice}}</p>{{end}}
-<table>
-    <thead>
+<div class="page-head row-between">
+  <div>
+    <h1 class="page-title">User</h1>
+    <p class="page-desc">Kelola akun, peran platform, dan keanggotaan group.</p>
+  </div>
+  <a class="btn btn-primary" href="/admin/users/new">Tambah user</a>
+</div>
+
+{{if .Notice}}
+<div class="flash-slot">
+  <div class="alert alert-success" role="status">
+    <span class="alert-icon">{{template "icon" (dict "Name" "check-circle")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">{{.Notice}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{if .Users}}
+<div class="alert alert-warning mt-4">
+  <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Perlindungan administrator</p>
+    <p class="alert-desc">Admin terakhir tidak dapat dihapus, dinonaktifkan, atau diturunkan perannya. User dengan riwayat migration hanya dapat dinonaktifkan, bukan dihapus.</p>
+  </div>
+</div>
+{{end}}
+
+<section class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">Akun platform</h2>
+    <span class="badge badge-neutral">{{len .Users}} item</span>
+  </div>
+
+  {{if .Users}}
+  <div class="table-wrap">
+    <table>
+      <thead>
         <tr>
-            <th>Username</th>
-            <th>Nama</th>
-            <th>Email</th>
-            <th>Peran</th>
-            <th>Status</th>
-            <th></th>
+          <th scope="col">Username</th>
+          <th scope="col">Status / peran platform</th>
+          <th scope="col">Group</th>
+          <th scope="col" class="table-cell-right"><span class="visually-hidden">Aksi</span></th>
         </tr>
-    </thead>
-    <tbody>
+      </thead>
+      <tbody>
         {{range .Users}}
         <tr>
-            <td>{{.Username}}</td>
-            <td>{{.FullName}}</td>
-            <td>{{.Email}}</td>
-            <td>{{if .IsPlatformAdmin}}Platform Admin{{else}}User{{end}}</td>
-            <td>{{if .IsActive}}Aktif{{else}}Nonaktif{{end}}</td>
-            <td><a href="/admin/users/{{.ID}}">Ubah</a></td>
-        </tr>
-        {{else}}
-        <tr>
-            <td colspan="6">Belum ada user.</td>
+          <td>
+            <span class="mono">{{.Username}}</span>
+            {{if .IsLastAdmin}}<span class="badge badge-neutral">Admin terakhir</span>{{end}}
+            {{if not .IsActive}}<span class="badge badge-error">Nonaktif</span>{{end}}
+          </td>
+          <td>
+            {{if .IsActive}}{{if .IsPlatformAdmin}}Aktif · Administrator{{else}}Aktif · Non-admin{{end}}{{else}}Nonaktif · Non-admin{{end}}
+          </td>
+          <td>
+            {{if .Groups}}{{range $i, $g := .Groups}}{{if $i}}, {{end}}{{$g}}{{end}}{{else}}<span class="muted">Tidak ada group</span>{{end}}
+          </td>
+          <td class="table-cell-actions">
+            <a class="link-as-text" href="/admin/users/{{.ID}}">Ubah</a>
+            <span aria-hidden="true">·</span>
+            <a class="link-as-text" href="/admin/users/{{.ID}}#reset-password">Reset password</a>
+            <span aria-hidden="true">·</span>
+            <a class="link-as-text" href="/admin/users/{{.ID}}/access">Akses efektif</a>
+          </td>
         </tr>
         {{end}}
-    </tbody>
-</table>
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <div class="card-empty">
+    <span class="card-empty-icon">{{template "icon" (dict "Name" "users")}}</span>
+    <p class="card-empty-title">Belum ada user</p>
+    <p class="card-empty-desc">Buat user pertama untuk mengakses platform.</p>
+    <a class="btn btn-primary mt-4" href="/admin/users/new">Tambah user</a>
+  </div>
+  {{end}}
+</section>
+
+<div class="alert alert-info mt-4">
+  <span class="alert-icon">{{template "icon" (dict "Name" "info")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Peran dan akses terpisah</p>
+    <p class="alert-desc">Status Admin mengelola platform, bukan akses database. Hak akses database diperoleh lewat keanggotaan group — periksa lewat tautan "Akses efektif" pada baris user.</p>
+  </div>
+</div>
 {{end}}
