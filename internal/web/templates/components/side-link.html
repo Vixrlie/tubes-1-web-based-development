@@ -1,0 +1,17 @@
+{{/*
+Satu baris link di sidebar (icon + label). Dipanggil lewat `dict`:
+
+{{template "side-link" (dict "Label" "Pengguna" "Icon" "user" "Href" "/admin/users" "Active" true)}}
+
+Parameter:
+Label teks link
+Href tujuan
+Icon nama icon (lihat components/icon.html), opsional
+Active true -> aria-current="page" (gaya aktif ikut dari CSS)
+*/}}
+{{define "side-link"}}
+<a class="side-link" href="{{.Href}}" {{if .Active}} aria-current="page" {{end}}>
+    {{- with .Icon}}{{template `icon` .}}{{end}}
+    <span class="side-link__label">{{.Label}}</span>
+</a>
+{{end}}

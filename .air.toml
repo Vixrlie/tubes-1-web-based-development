@@ -1,0 +1,9 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/main.exe ."
+  entrypoint = ["./tmp/main.exe"]
+  include_ext = ["go", "html", "css", "js", "svg"]
+  exclude_dir = ["tmp", "node_modules", ".git"]
+  delay = 300

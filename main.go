@@ -84,8 +84,12 @@ func run() error {
 	// Rute publik: belum ada session (login punya perlindungan Origin sendiri).
 	authHandlers.PublicRoutes(r)
 
-	// Rute terlindungi: session wajib valid, lalu token CSRF untuk request
-	// pengubah state. Fitur lain (viewer, migration, admin) dipasang di grup ini.
+	// Halaman uji komponen (khusus development, tanpa login).
+	if os.Getenv("DEV_COMPONENTS") == "1" {
+		web.DevRoutes{R: renderer}.Routes(r)
+	}
+
+	// Rute terlindungi: session wajib valid, ...
 	r.Group(func(r chi.Router) {
 		r.Use(auth.AuthMiddleware(auth.NewSessionValidator(sessions), cfg.CookieSecure))
 		r.Use(auth.CSRFProtect)

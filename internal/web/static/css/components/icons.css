@@ -1,0 +1,14 @@
+/* Icon inline. Warna dan ukuran bisa diubah per instance lewat CSS variable:
+   style="--icon-color: var(--color-danger); --icon-size: 1.5rem" */
+.icon {
+    width: var(--icon-size, 1.25rem);
+    height: var(--icon-size, 1.25rem);
+    flex: none;
+    color: var(--icon-color, var(--color-icon));
+}
+
+/* Di dalam button dan side-link, icon tetap ikut warna teks komponennya. */
+.btn .icon,
+.side-link .icon {
+    color: var(--icon-color, inherit);
+}

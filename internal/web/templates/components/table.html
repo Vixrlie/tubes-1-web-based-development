@@ -1,0 +1,57 @@
+{{/*
+Komponen tabel. Kolom dan baris datang dari backend (lihat table.go):
+
+{{template `table` .Table}}
+
+Table:
+Title judul di atas tabel (opsional)
+Columns daftar kolom: Key, Label, Align (center|right), Bold
+Rows daftar baris, tiap baris = map Key -> Cell
+Empty pesan kalau tidak ada baris (default "Belum ada data.")
+Class class tambahan
+
+Cell:
+Text teks sel
+Variant success|error|warning|info|neutral -> dirender sebagai label
+Href (tanpa Variant) -> dirender sebagai link
+*/}}
+
+{{define "table"}}
+<section class="table-card{{with .Class}} {{.}}{{end}}">
+    {{- with .Title}}
+    <h2 class="table-card__title">{{.}}</h2>
+    {{- end}}
+    <div class="table-card__scroll">
+        <table class="table">
+            <thead>
+                <tr>
+                    {{- range .Columns}}
+                    <th scope="col" {{with .Align}} class="is-{{.}}" {{end}}>{{.Label}}</th>
+                    {{- end}}
+                </tr>
+            </thead>
+            <tbody>
+                {{- range $row := .Rows}}
+                <tr>
+                    {{- range $col := $.Columns}}
+                    <td class="{{if $col.Bold}}is-bold{{end}}{{with $col.Align}} is-{{.}}{{end}}">
+                        {{- template `table-cell` (index $row $col.Key) -}}
+                    </td>
+                    {{- end}}
+                </tr>
+                {{- else}}
+                <tr>
+                    <td class="table__empty" colspan="{{len .Columns}}">{{or .Empty `Belum ada data.`}}</td>
+                </tr>
+                {{- end}}
+            </tbody>
+        </table>
+    </div>
+</section>
+{{end}}
+
+{{define "table-cell" -}}
+{{- if .Variant}}{{template `label` (dict `Label` .Text `Variant` .Variant)}}
+{{- else if .Href}}<a href="{{.Href}}">{{.Text}}</a>
+{{- else}}{{.Text}}{{end -}}
+{{- end}}

@@ -4,20 +4,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{if .Title}}{{.Title}} · {{end}}Pathgres</title>
+  <title>Tubes 1 WBD</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
   <link rel="stylesheet" href="/static/css/app.css">
   <script src="/static/htmx.min.js" defer></script>
   <script src="/static/js/htmx-init.js" defer></script>
 </head>
 
-<body class="layout-body">
-  <main class="layout-main" id="main-content">
-    {{template "content" .}}
-  </main>
+<body>
+  {{if .User}}{{template "header" .}}{{end}}
+  {{- $side := and .User (or (eq .Nav `admin`) (eq .Nav `database`))}}
+  <div class="app-shell{{if not $side}} app-shell--solo{{end}}">
+    {{- if $side}}
+    {{template "sidebar" .}}
+    {{- end}}
+    <main class="app-shell__main">
+      {{template "content" .}}
+    </main>
+  </div>
 </body>
 
 </html>

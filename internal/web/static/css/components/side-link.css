@@ -1,0 +1,30 @@
+.side-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-full);
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+    font-family: var(--font-family-cta);
+    font-size: var(--font-size-p3);
+    font-weight: var(--font-weight-regular);
+    color: var(--color-text);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.side-link .icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex: none;
+}
+
+.side-link:hover {
+    color: var(--color-link-hover);
+}
+
+.side-link[aria-current="page"] {
+    background: var(--color-primary-50);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-primary);
+}

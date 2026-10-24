@@ -1,0 +1,150 @@
+{{define "content"}}
+<style>
+    .dev h2 {
+        margin: 2rem 0 .75rem;
+        font-size: var(--font-size-t1);
+    }
+
+    .dev h3 {
+        margin: 1.25rem 0 .5rem;
+        font-size: var(--font-size-t4);
+        color: var(--color-text-muted);
+    }
+
+    .dev-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+        align-items: center;
+    }
+
+    .dev-icon {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-1);
+        font-size: var(--font-size-p4);
+    }
+
+    .dev-icon .icon {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+</style>
+
+<div class="dev">
+    <h1>Playground komponen</h1>
+    <p>
+        Mode:
+        <a href="?nav=none">tanpa sidebar</a> |
+        <a href="?nav=admin&amp;active=users">admin</a> |
+        <a href="?nav=admin&amp;active=users&amp;admin=0">admin (bukan platform admin)</a> |
+        <a href="?nav=database&amp;active=table:public.orders">database</a>
+    </p>
+
+    <h2>Button</h2>
+
+    <h3>Variant x state</h3>
+    {{range $v := (list `primary` `secondary` `tertiary`)}}
+    <div class="dev-row">
+        {{range $s := (list `default` `active` `disabled`)}}
+        {{template `button` (dict `Label` (print $v ` / ` $s) `Variant` $v `State` $s)}}
+        {{end}}
+    </div>
+    {{end}}
+
+    <h3>Dengan icon</h3>
+    <div class="dev-row">
+        {{template `button` (dict `Label` `Tambah` `IconLeft` `plus`)}}
+        {{template `button` (dict `Label` `Lanjut` `IconRight` `arrow-right` `Variant` `secondary`)}}
+        {{template `button` (dict `Label` `Simpan` `IconLeft` `check` `IconRight` `arrow-right` `Variant` `tertiary`)}}
+        {{template `button` (dict `IconLeft` `heart` `AriaLabel` `Suka` `Title` `Suka`)}}
+    </div>
+
+    <h3>Sebagai link (Href)</h3>
+    <div class="dev-row">
+        {{template `button` (dict `Label` `Link biasa` `Href` `?nav=none`)}}
+        {{template `button` (dict `Label` `Link disabled` `Href` `?nav=none` `State` `disabled`)}}
+    </div>
+
+    <h3>Custom warna dan padding</h3>
+    <div class="dev-row">
+        {{template `button` (dict `Label` `Hapus` `Fill` `var(--color-danger)` `Color` `var(--color-on-danger)` `Stroke`
+        `var(--color-danger)`)}}
+        {{template `button` (dict `Label` `Padding besar` `Padding` `6px 40px`)}}
+        {{template `button` (dict `Label` `PaddingX dan Y` `PaddingX` `var(--space-10)` `PaddingY` `var(--space-3)`
+        `Variant` `secondary`)}}
+        {{template `button` (dict `Label` `Custom disabled` `Fill` `#16a34a` `Color` `#ffffff` `State` `disabled`)}}
+    </div>
+
+    <h3>ID, Name, Value, Class, Attrs</h3>
+    <div class="dev-row">
+        {{template `button` (dict `Label` `Atribut` `ID` `btn-uji` `Name` `aksi` `Value` `1` `Class` `kelas-tambahan`
+        `Type` `submit` `Attrs` (attr `data-test="ok"`))}}
+    </div>
+
+    <h2>Label</h2>
+    <div class="dev-row">
+        {{template `label` (dict `Label` `Terhubung` `Variant` `success`)}}
+        {{template `label` (dict `Label` `Gagal terhubung` `Variant` `error`)}}
+        {{template `label` (dict `Label` `Menunggu` `Variant` `warning`)}}
+        {{template `label` (dict `Label` `View + Edit` `Variant` `info`)}}
+        {{template `label` (dict `Label` `View Only` `Variant` `neutral`)}}
+    </div>
+
+    <h2>DB Card</h2>
+    <div class="db-grid">
+        {{template `db-card` (dict `Name` `inventory_db` `Meta` `PostgreSQL · 1 schema · 7 tabel` `Access` `edit` `Href`
+        `#`)}}
+        {{template `db-card` (dict `Name` `shop_db` `Meta` `PostgreSQL · 2 schema · 12 tabel` `Href` `#`)}}
+        {{template `db-card` (dict `Name` `hr_db` `Meta` `PostgreSQL` `Status` `failed` `Error` `Tidak dapat terhubung
+        ke database. Coba lagi beberapa saat.`)}}
+    </div>
+
+    <h2>Input</h2>
+    <h3>Standar (kosong / terisi) | error | disabled</h3>
+    <div class="dev-row" style="align-items:flex-start">
+        {{template `input` (dict `Label` `Username` `Name` `in1` `Placeholder` `Masukkan username` `Helper` `Helper
+        Text` `IconLeft` `heart` `IconRight` `heart`)}}
+        {{template `input` (dict `Label` `Username` `Name` `in2` `Placeholder` `Masukkan username` `Value` `budi123`
+        `Helper` `Helper Text` `IconLeft` `heart` `IconRight` `heart`)}}
+        {{template `input` (dict `Label` `Username` `Name` `in3` `Placeholder` `Masukkan username` `Error` `Pesan error`
+        `IconLeft` `heart` `IconRight` `heart`)}}
+        {{template `input` (dict `Label` `Username` `Name` `in4` `Placeholder` `Masukkan username` `Helper` `Helper
+        Text` `State` `disabled` `IconLeft` `heart` `IconRight` `heart`)}}
+    </div>
+
+    <h2>Dropdown</h2>
+    <h3>Standar (kosong / terpilih) | error | disabled</h3>
+    {{$opts := list (dict `Value` `public` `Label` `public`) (dict `Value` `analytics` `Label` `analytics`) (dict
+    `Value` `archive` `Label` `archive` `Disabled` true)}}
+    <div class="dev-row" style="align-items:flex-start">
+        {{template `dropdown` (dict `Label` `Schema` `Name` `dd1` `Placeholder` `Pilih schema` `Helper` `Helper Text`
+        `IconLeft` `database` `Options` $opts)}}
+        {{template `dropdown` (dict `Label` `Schema` `Name` `dd2` `Placeholder` `Pilih schema` `Value` `public` `Helper`
+        `Helper Text` `IconLeft` `database` `Options` $opts)}}
+        {{template `dropdown` (dict `Label` `Schema` `Name` `dd3` `Placeholder` `Pilih schema` `Error` `Schema wajib
+        dipilih` `IconLeft` `database` `Options` $opts)}}
+        {{template `dropdown` (dict `Label` `Schema` `Name` `dd4` `Placeholder` `Pilih schema` `Helper` `Helper Text`
+        `State` `disabled` `IconLeft` `database` `Options` $opts)}}
+    </div>
+
+    <h2>Tabel</h2>
+    {{template `table` .Table}}
+
+    <h2>Action bar</h2>
+    {{template `action-bar` (dict `Message` `2 perubahan akses belum disimpan` `Class` `action-bar--static`)}}
+
+    <h2>Icon</h2>
+    <div class="dev-row">
+        {{range iconNames}}
+        <span class="dev-icon">{{template `icon` .}}{{.}}</span>
+        {{end}}
+    </div>
+
+    <h2>Avatar</h2>
+    <div class="dev-row">
+        {{range .Avatars}}{{template `avatar` .}}{{end}}
+    </div>
+</div>
+{{end}}

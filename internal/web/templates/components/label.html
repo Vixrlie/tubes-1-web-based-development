@@ -1,0 +1,10 @@
+{{/*
+Label kecil (badge) berwarna. Dipanggil lewat `dict`:
+
+{{template "label" (dict "Label" "Terhubung" "Variant" "success")}}
+
+Parameter:
+Label teks label
+Variant "success" (hijau) | "error" (merah) | "warning" (kuning) | "info" (biru) | "neutral" (abu, default)
+*/}}
+{{define "label"}}<span class="label label--{{or .Variant `neutral`}}">{{.Label}}</span>{{end}}
