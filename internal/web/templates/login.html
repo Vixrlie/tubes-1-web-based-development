@@ -1,17 +1,61 @@
 {{define "content"}}
-<h1>Masuk</h1>
-{{if .Error}}<p role="alert" class="error">{{.Error}}</p>{{end}}
-<form method="post" action="/login">
-    <p>
-        <label>Username
-            <input name="username" value="{{.Username}}" autocomplete="username" required autofocus>
-        </label>
-    </p>
-    <p>
-        <label>Password
-            <input type="password" name="password" autocomplete="current-password" required>
-        </label>
-    </p>
-    <button type="submit">Masuk</button>
-</form>
+<nav class="app-topbar">
+  <div class="topbar-brand">
+    {{template "icon" (dict "Name" "database")}}
+    <div>
+      <span class="topbar-brand-name">Database Platform</span>
+    </div>
+  </div>
+  <span class="breadcrumb" style="font-size:var(--text-caption); color:var(--color-link-default);">
+    POSTGRESQL / DATABASE PLATFORM
+  </span>
+
+</nav>
+
+<header class="page-head">
+  <h1 class="page-title">Masuk ke workspace</h1>
+  <p class="page-desc">Jelajahi struktur PostgreSQL dan kelola migration dengan kendali akses yang jelas.</p>
+</header>
+
+<div class="auth-card">
+  <h2 class="auth-card-title">Selamat datang kembali</h2>
+
+  {{if .Error}}
+  <div class="alert alert-error" role="alert">
+    <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">{{.Error}}</p>
+      <p class="alert-desc">Username atau password salah</p>
+    </div>
+  </div>
+  {{end}}
+
+  <form method="post" action="/login" class="form">
+    <div class="field">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" value="{{.Username}}" autocomplete="username" required autofocus
+        placeholder="Masukkan username">
+      <p class="help-text">Gunakan akun yang diberikan administrator.</p>
+    </div>
+
+    <div class="field">
+      <label for="password">Password</label>
+      <div class="input-with-icon">
+        <input type="password" id="password" name="password" autocomplete="current-password" required
+          placeholder="Masukkan password">
+        <button type="button" class="icon-btn icon-btn-border" aria-label="Tampilkan password"
+          title="Tampilkan password">{{template "icon" (dict "Name" "eye")}}</button>
+      </div>
+      <p class="help-text">Password disamarkan.</p>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary btn-lg btn-block">Masuk</button>
+    </div>
+  </form>
+
+  <p class="muted mt-4 text-center">
+    Akun dibuat oleh admin. Hubungi administrator untuk memperoleh atau memulihkan akses akun.
+  </p>
+</div>
 {{end}}

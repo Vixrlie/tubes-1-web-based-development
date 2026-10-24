@@ -1,8 +1,22 @@
 {{define "content"}}
-<h1>Halo, {{.Username}}</h1>
-<p>Halaman sementara. Akan diganti daftar database.</p>
-<form method="post" action="/logout">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    <button type="submit">Keluar</button>
-</form>
+<div class="page-head">
+  <h1 class="page-title">Halo, {{.Username}}</h1>
+  <p class="page-desc">Selamat datang di Pathgres. Pilih menu di sidebar untuk mulai mengelola database.</p>
+</div>
+
+<div class="grid-2">
+  <div class="card dashboard-card">
+    <p class="dashboard-card-title">Database</p>
+    <p class="dashboard-card-value">Lihat</p>
+    <a href="/databases" class="btn btn-primary mt-4">Buka daftar database</a>
+  </div>
+  <div class="card dashboard-card">
+    <p class="dashboard-card-title">Keluar</p>
+    <p class="dashboard-card-value">Akun</p>
+    <form method="post" action="/logout">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <button type="submit" class="btn btn-secondary mt-4">Logout</button>
+    </form>
+  </div>
+</div>
 {{end}}
