@@ -79,6 +79,10 @@ func run() error {
 	connLister := admin.NewPGConnectionLister(pool)
 	connStore := admin.NewPGConnectionStore(pool)
 	shellStore := dbm.NewPGShellStore(pool)
+	// Satu registry dipakai bersama oleh viewer dbm dan halaman koneksi
+	// admin, supaya Evict (ubah/hapus koneksi) benar-benar menutup pool.
+	registry := dbm.NewPGRegistry(pool)
+	defer registry.Close()
 	r := web.NewRouter()
 
 	// Rute publik: belum ada session (login punya perlindungan Origin sendiri).
@@ -95,11 +99,18 @@ func run() error {
 		r.Use(auth.CSRFProtect)
 
 		authHandlers.ProtectedRoutes(r)
-		dbm.NewHandlers(accessPolicy, dbm.NewPGRegistry(pool)).Routes(r)
+		dbm.NewHandlers(dbm.Config{
+			Platform: pool,
+			Policy:   accessPolicy,
+			Registry: registry,
+			Renderer: renderer,
+			Shell:    shellStore,
+		}).Routes(r)
 		admin.NewHandlers(
 			admin.WithUserAdmin(adminUsers, sessions, renderer),
 			admin.WithGroupAdmin(groupStore, adminUsers, connLister, sessions, renderer),
-			admin.WithConnectionAdmin(connStore, renderer, dbm.NewPGRegistry(pool), shellStore),
+			admin.WithConnectionAdmin(connStore, renderer, registry, shellStore),
+			admin.WithAccessAdmin(groupStore, connLister, sessions, renderer),
 		).Routes(r)
 	})
 
