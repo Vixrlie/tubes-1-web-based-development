@@ -1,0 +1,62 @@
+{{/*
+Dropdown (<select> bawaan browser yang di-style, jadi aksesibel dan ikut form/HTMX).
+    Tampilannya memakai gaya input (components/input.css). Dipanggil lewat `dict`:
+
+    {{template `dropdown` (dict `Label` `Schema` `Name` `schema` `Placeholder` `Pilih schema` `Options` .Options)}}
+
+    Parameter (semua opsional kecuali Options):
+    Options daftar pilihan: Value, Label, Disabled (lihat dropdown.go). Bisa juga
+    (list (dict `Value` `a` `Label` `A`) (dict `Value` `b` `Label` `B`))
+    Value nilai yang sedang terpilih. Kosong -> placeholder tampil (neutral-500)
+    Placeholder teks saat belum ada pilihan
+    Label teks label di atas
+    Name, ID name & id select (ID default = Name)
+    Helper teks bantuan di bawah
+    Error pesan error. OPSIONAL: kosong -> normal; terisi -> merah dan menggantikan Helper
+    State "default" (default) | "disabled"
+    Required true -> atribut required
+    IconLeft icon di kiri (lihat components/icon.html)
+    IconRight icon tambahan di kanan, di sebelah kiri chevron
+    Class class tambahan
+    Attrs atribut mentah, mis. (attr `hx-get="/x" hx-trigger="change" hx-target="#y"`)
+
+    CATATAN: string di dalam tag HTML pakai backtick (`...`), lihat button.html.
+    */}}
+
+    {{define "dropdown"}}
+    {{- $id := or .ID .Name -}}
+    <div class="{{template `dropdown-class` .}}">
+        {{- with .Label}}<label class="input__label" for="{{$id}}">{{.}}</label>{{end}}
+        <div class="input__box">
+            <select class="input__control dropdown__control" {{with $id}} id="{{.}}" {{end}}{{with .Name}} name="{{.}}"
+                {{end}}{{if eq (or .State `default`) `disabled`}} disabled{{end}}{{if .Required}} required{{end}}{{if
+                .Error}} aria-invalid="true" {{end}}{{if or .Error .Helper}} aria-describedby="{{$id}}-msg"
+                {{end}}{{with .Attrs}} {{.}}{{end}}>
+                {{- with .Placeholder}}
+                <option value="" disabled hidden {{if not $.Value}} selected{{end}}>{{.}}</option>
+                {{- end}}
+                {{- range .Options}}
+                <option value="{{.Value}}" {{if .Disabled}} disabled{{end}}{{if $.Value}}{{if eq .Value $.Value}}
+                    selected{{end}}{{end}}>{{.Label}}</option>
+                {{- end}}
+            </select>
+            {{- with .IconLeft}}<span class="dropdown__icon dropdown__icon--left">{{template `icon` .}}</span>{{end}}
+            {{- with .IconRight}}<span class="dropdown__icon dropdown__icon--right">{{template `icon` .}}</span>{{end}}
+            <span class="dropdown__icon dropdown__icon--chevron">{{template `icon` `chevron-down`}}</span>
+        </div>
+        {{- if .Error}}
+        <p class="input__helper" id="{{$id}}-msg" role="alert">{{.Error}}</p>
+        {{- else if .Helper}}
+        <p class="input__helper" id="{{$id}}-msg">{{.Helper}}</p>
+        {{- end}}
+    </div>
+    {{end}}
+
+    {{define "dropdown-class" -}}
+    input dropdown
+    {{- if .IconLeft}} dropdown--icon-left{{end}}
+    {{- if .IconRight}} dropdown--icon-right{{end}}
+    {{- if .Error}} is-error{{end}}
+    {{- if eq (or .State `default`) `disabled`}} is-disabled{{end}}
+    {{- with .Class}} {{.}}{{end}}
+    {{- end}}

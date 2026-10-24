@@ -114,8 +114,26 @@
         Text` `State` `disabled` `IconLeft` `heart` `IconRight` `heart`)}}
     </div>
 
+    <h2>Dropdown</h2>
+    <h3>Standar (kosong / terpilih) | error | disabled</h3>
+    {{$opts := list (dict `Value` `public` `Label` `public`) (dict `Value` `analytics` `Label` `analytics`) (dict
+    `Value` `archive` `Label` `archive` `Disabled` true)}}
+    <div class="dev-row" style="align-items:flex-start">
+        {{template `dropdown` (dict `Label` `Schema` `Name` `dd1` `Placeholder` `Pilih schema` `Helper` `Helper Text`
+        `IconLeft` `database` `Options` $opts)}}
+        {{template `dropdown` (dict `Label` `Schema` `Name` `dd2` `Placeholder` `Pilih schema` `Value` `public` `Helper`
+        `Helper Text` `IconLeft` `database` `Options` $opts)}}
+        {{template `dropdown` (dict `Label` `Schema` `Name` `dd3` `Placeholder` `Pilih schema` `Error` `Schema wajib
+        dipilih` `IconLeft` `database` `Options` $opts)}}
+        {{template `dropdown` (dict `Label` `Schema` `Name` `dd4` `Placeholder` `Pilih schema` `Helper` `Helper Text`
+        `State` `disabled` `IconLeft` `database` `Options` $opts)}}
+    </div>
+
     <h2>Tabel</h2>
     {{template `table` .Table}}
+
+    <h2>Action bar</h2>
+    {{template `action-bar` (dict `Message` `2 perubahan akses belum disimpan` `Class` `action-bar--static`)}}
 
     <h2>Icon</h2>
     <div class="dev-row">
