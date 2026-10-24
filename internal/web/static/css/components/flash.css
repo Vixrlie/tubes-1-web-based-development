@@ -1,0 +1,110 @@
+.alert {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-default);
+    color: var(--color-fg);
+    font-size: var(--text-body);
+}
+
+.alert-icon {
+    flex: none;
+    margin-top: 0.1em;
+}
+
+.alert-icon .icon {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-title {
+    font-weight: var(--font-weight-semibold);
+}
+
+.alert-desc {
+    margin-top: var(--space-1);
+    color: var(--color-fg-muted);
+}
+
+.alert-info {
+    background: var(--color-info-bg);
+    border-color: var(--color-info-border);
+    color: var(--color-info-text);
+}
+
+.alert-info .alert-desc {
+    color: var(--color-info-text);
+}
+
+.alert-success {
+    background: var(--color-success-bg);
+    border-color: var(--color-success-border);
+    color: var(--color-success-text);
+}
+
+.alert-success .alert-desc {
+    color: var(--color-success-text);
+}
+
+.alert-warning {
+    background: var(--color-warning-bg);
+    border-color: var(--color-warning-border);
+    color: var(--color-warning-text);
+}
+
+.alert-warning .alert-desc {
+    color: var(--color-warning-text);
+}
+
+.alert-error {
+    background: var(--color-error-bg);
+    border-color: var(--color-error-border);
+    color: var(--color-error-text);
+}
+
+.alert-error .alert-desc {
+    color: var(--color-error-text);
+}
+
+.alert-dismissible {
+    padding-right: var(--space-8);
+    position: relative;
+}
+
+.alert-close {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    color: currentColor;
+    background: transparent;
+    opacity: 0.7;
+}
+
+.alert-close:hover {
+    opacity: 1;
+}
+
+.field-error {
+    color: var(--color-error-text);
+    font-size: var(--text-caption);
+    margin-top: var(--space-1);
+}
+
+.form-errors {
+    margin-bottom: var(--space-4);
+}
+
+.form-errors .alert {
+    margin-bottom: var(--space-2);
+}
+
+.form-errors .alert:last-child {
+    margin-bottom: 0;
+}

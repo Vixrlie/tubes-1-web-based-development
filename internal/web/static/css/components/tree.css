@@ -1,0 +1,119 @@
+.tree {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.tree ul {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 var(--space-4);
+}
+
+.tree-node {
+    margin: 0;
+}
+
+.tree-node details > summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.tree-node details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.tree-node details[open] > summary .tree-toggle .icon {
+    transform: rotate(0deg);
+}
+
+.tree-node details:not([open]) > summary .tree-toggle .icon {
+    transform: rotate(-90deg);
+}
+
+.tree-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-fg-subtle);
+    flex: none;
+}
+
+.tree-toggle:hover {
+    color: var(--color-fg);
+}
+
+.tree-toggle[aria-expanded="false"] .icon,
+.tree-toggle[aria-expanded="false"] svg {
+    transform: rotate(-90deg);
+}
+
+.tree-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 2rem;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    color: var(--color-fg);
+    text-decoration: none;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.tree-link:hover {
+    background: var(--color-surface-subtle);
+}
+
+.tree-link[aria-current="page"] {
+    background: var(--color-primary-soft);
+    color: var(--color-primary-active);
+    font-weight: var(--font-weight-medium);
+}
+
+.tree-node-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.tree-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tree-icon {
+    flex: none;
+    color: var(--color-fg-subtle);
+}
+
+.tree-link[aria-current="page"] .tree-icon {
+    color: var(--color-primary-default);
+}
+
+.tree-node[open] > .tree-node-head .tree-toggle .icon,
+.tree-node[open] > .tree-node-head .tree-toggle svg {
+    transform: rotate(0deg);
+}
+
+.schema-tree {
+    padding: var(--space-3);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-default);
+}
+
+.schema-tree-title {
+    padding: var(--space-2) var(--space-3);
+    color: var(--color-fg-muted);
+    font-size: var(--text-caption);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
