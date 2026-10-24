@@ -1,126 +1,52 @@
-/* Text style classes (pakai di elemen apa saja) */
-.text-t1,
-.text-t2,
-.text-t3,
-.text-t4,
-.text-t5,
-.text-t6 {
-    font-family: var(--font-family-heading);
+.text-h1, .text-h2, .text-h3, .text-h4, .text-h5, .text-h6,
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
     font-weight: var(--font-weight-semibold);
-    /* asumsi: title = semibold, cek di Figma */
-    line-height: var(--line-height-auto);
+    line-height: var(--line-height-tight);
+    color: var(--color-fg);
 }
 
-.text-t1 {
-    font-size: var(--font-size-t1);
+h1, .text-h1 { font-size: var(--text-h1); }
+h2, .text-h2 { font-size: var(--text-h2); }
+h3, .text-h3 { font-size: var(--text-h3); }
+h4, .text-h4 { font-size: var(--text-h4); }
+h5, .text-h5 { font-size: var(--text-h5); }
+h6, .text-h6 { font-size: var(--text-h6); }
+
+.t-heading {
+    font-family: var(--font-heading);
+    font-size: var(--text-h4);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-tight);
+    color: var(--color-fg);
 }
 
-.text-t2 {
-    font-size: var(--font-size-t2);
-}
-
-.text-t3 {
-    font-size: var(--font-size-t3);
-}
-
-.text-t4 {
-    font-size: var(--font-size-t4);
-}
-
-.text-t5 {
-    font-size: var(--font-size-t5);
-}
-
-.text-t6 {
-    font-size: var(--font-size-t6);
-}
-
-.text-p1,
-.text-p2,
-.text-p3,
-.text-p4,
-.text-p5,
-.text-p6 {
-    font-family: var(--font-family-paragraph);
+.t-body {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
     font-weight: var(--font-weight-regular);
-    line-height: var(--line-height-auto);
+    line-height: var(--line-height-normal);
+    color: var(--color-fg);
 }
 
-.text-p1 {
-    font-size: var(--font-size-p1);
+.t-caption {
+    font-family: var(--font-body);
+    font-size: var(--text-caption);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-normal);
+    color: var(--color-fg-muted);
 }
 
-.text-p2 {
-    font-size: var(--font-size-p2);
-}
+.text-body-lg { font-size: var(--text-body-lg); }
+.text-caption { font-size: var(--text-caption); }
+.text-small { font-size: var(--text-small); }
 
-.text-p3 {
-    font-size: var(--font-size-p3);
-}
-
-.text-p4 {
-    font-size: var(--font-size-p4);
-}
-
-.text-p5 {
-    font-size: var(--font-size-p5);
-}
-
-.text-p6 {
-    font-size: var(--font-size-p6);
-}
-
-/* Heading default (elemen semantik) */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    font-family: var(--font-family-heading);
-    font-weight: var(--font-weight-semibold);
-    line-height: var(--line-height-auto);
-    color: var(--color-text);
-}
-
-h1 {
-    font-size: var(--font-size-t1);
-}
-
-/* 22 */
-h2 {
-    font-size: var(--font-size-t3);
-}
-
-/* 20 */
-h3 {
-    font-size: var(--font-size-t2);
-}
-
-/* 18 */
-h4 {
-    font-size: var(--font-size-t4);
-}
-
-/* 16 */
-h5 {
-    font-size: var(--font-size-t5);
-}
-
-/* 14 */
-h6 {
-    font-size: var(--font-size-t6);
-}
-
-/* 12 */
-
-/* Modifier */
-.text-muted {
-    color: var(--color-text-muted);
+.muted {
+    color: var(--color-fg-muted);
 }
 
 .text-subtle {
-    color: var(--color-text-subtle);
+    color: var(--color-fg-subtle);
 }
 
 .text-danger {
@@ -131,22 +57,30 @@ h6 {
     color: var(--color-success-text);
 }
 
-.font-regular {
-    font-weight: var(--font-weight-regular);
+.text-warning {
+    color: var(--color-warning-text);
 }
 
-.font-medium {
-    font-weight: var(--font-weight-medium);
-}
-
-.font-semibold {
-    font-weight: var(--font-weight-semibold);
-}
-
-.font-bold {
-    font-weight: var(--font-weight-bold);
-}
-
+.mono,
 .font-mono {
-    font-family: var(--font-family-mono);
+    font-family: var(--font-mono);
+}
+
+.font-regular { font-weight: var(--font-weight-regular); }
+.font-medium { font-weight: var(--font-weight-medium); }
+.font-semibold { font-weight: var(--font-weight-semibold); }
+.font-bold { font-weight: var(--font-weight-bold); }
+
+.truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.break-all {
+    word-break: break-all;
+}
+
+.hash {
+    overflow-wrap: anywhere;
 }
