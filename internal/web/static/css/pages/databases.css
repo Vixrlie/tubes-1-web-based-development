@@ -3,13 +3,6 @@
    Semua kartu ditampilkan sekaligus; halaman di-scroll kalau banyak.
    ========================================================================== */
 
-/* latar gradasi diagonal: kiri bawah primary-200 -> kanan atas primary-50.
-   "fixed" = gradasi menempel di layar, tidak ikut ter-scroll. Header tetap putih. */
-body:has(.db-page) {
-    min-height: 100vh;
-    background: linear-gradient(to top right, var(--color-primary-200) 0%, var(--color-primary-50) 100%) fixed;
-}
-
 /* halaman ini mengatur padding sendiri (layout bawaan .app-shell dinolkan) */
 .app-shell:has(.db-page) {
     padding: 0;

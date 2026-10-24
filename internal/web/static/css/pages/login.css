@@ -10,6 +10,11 @@
     gap: 0;
 }
 
+/* login tidak memakai gradasi latar global */
+body:has(.login) {
+    background: var(--color-bg);
+}
+
 .login {
     display: grid;
     grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
@@ -33,15 +38,19 @@
     background-repeat: no-repeat;
 }
 
+/* Logo dibungkus div supaya gambar bukan item flex langsung (item flex di
+   kolom ikut melebar = stretch). Lebar otomatis dari rasio asli gambar. */
+.login__brand {
+    align-self: flex-start;
+}
+
 .login__logo {
     display: block;
     width: auto;
+    max-width: 100%;
     height: 2.5rem;
-}
-
-.login__logo--mobile {
-    display: none;
-    margin-bottom: var(--space-8);
+    aspect-ratio: 781 / 180;
+    object-fit: contain;
 }
 
 .login__tagline {
@@ -116,26 +125,28 @@
     font-size: var(--font-size-p4);
 }
 
-/* tombol Masuk: lebar penuh, sudut 8px sesuai desain (bukan pill) */
+/* tombol Masuk: lebar penuh, tetap pill (radius-full) bawaan komponen button */
 .login .btn.login__submit {
     width: 100%;
     margin-top: var(--space-2);
     padding-block: var(--space-3);
-    border-radius: var(--radius-md);
 }
 
-/* ---------- Layar sempit ---------- */
+/* ---------- Layar sempit: panel gambar jadi bar logo saja ---------- */
 @media (max-width: 900px) {
     .login {
         grid-template-columns: minmax(0, 1fr);
         padding: var(--space-4);
+        gap: var(--space-4);
     }
 
     .login__aside {
-        display: none;
+        padding: 0;
+        background: none;
+        border-radius: 0;
     }
 
-    .login__logo--mobile {
-        display: block;
+    .login__tagline {
+        display: none;
     }
 }

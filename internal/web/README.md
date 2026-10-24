@@ -66,6 +66,13 @@ Token semantik yang sering dipakai:
 
 Title: `--font-size-t1` (22px) ... `--font-size-t6` (10px). Paragraf: `--font-size-p1` (18px) ... `--font-size-p6` (8px).
 
+### Latar halaman
+
+Semua halaman memakai gradasi diagonal (`--page-bg` di `layout.css`): `--color-primary-50` di kiri atas ke
+`--color-primary-200` di kanan bawah, menempel di layar. Header dan kartu punya latar sendiri. Login
+mengecualikan diri dengan `body:has(.login) { background: var(--color-bg); }`. Halaman lain yang butuh latar
+polos cukup menimpa `body` dengan cara yang sama.
+
 ### Konvensi penulisan CSS komponen
 
 1. **Satu komponen = satu file** di `static/css/components/<nama>.css`, lalu daftarkan di `app.css`:
