@@ -13,6 +13,7 @@ type DevRoutes struct{ R *Renderer }
 func (d DevRoutes) Routes(r chi.Router) {
 	r.Get("/dev/components", d.components)
 	r.Get("/dev/databases", d.databases)
+	r.Get("/dev/schema", d.schema)
 }
 
 type devData struct {
@@ -127,4 +128,48 @@ func devDatabases() DatabasesPage {
 // Halaman Daftar Database dengan data contoh: /dev/databases
 func (d DevRoutes) databases(w http.ResponseWriter, r *http.Request) {
 	d.R.Render(w, "databases.html", devDatabases())
+}
+
+// devSchema membuat data contoh halaman Schema (dipakai route dev dan test).
+func devSchema() SchemaPage {
+	c := func(t string) TableCell { return TableCell{Text: t} }
+	return SchemaPage{
+		Shell: devShell("database", "schema:public", true),
+		Title: "Schema public",
+		Crumbs: []Crumb{
+			{Label: "shop_db", Href: "/dev/databases"},
+			{Label: "public"},
+		},
+		Tables: Table{
+			Title: "Daftar Tabel",
+			Columns: []TableColumn{
+				{Key: "name", Label: "Nama", Bold: true},
+				{Key: "cols", Label: "Kolom"},
+				{Key: "rows", Label: "Perkiraan Baris"},
+				{Key: "pk", Label: "Primary Key"},
+			},
+			Rows: []TableRow{
+				{"name": c("users"), "cols": c("5"), "rows": c("1.240"), "pk": c("id")},
+				{"name": c("orders"), "cols": c("7"), "rows": c("8.412"), "pk": c("id")},
+				{"name": c("products"), "cols": c("6"), "rows": c("320"), "pk": c("id")},
+			},
+		},
+		Relations: Table{
+			Title: "Relasi (Foreign Key)",
+			Columns: []TableColumn{
+				{Key: "name", Label: "Nama"},
+				{Key: "from", Label: "Dari"},
+				{Key: "to", Label: "Mengacu ke"},
+			},
+			Rows: []TableRow{
+				{"name": c("orders_user_id_fkey"), "from": c("orders.user_id"), "to": {Text: "users.id", Variant: "info"}},
+				{"name": c("orders_product_id_fkey"), "from": c("orders.product_id"), "to": {Text: "products.id", Variant: "info"}},
+			},
+		},
+	}
+}
+
+// Halaman Schema dengan data contoh: /dev/schema
+func (d DevRoutes) schema(w http.ResponseWriter, r *http.Request) {
+	d.R.Render(w, "schema.html", devSchema())
 }

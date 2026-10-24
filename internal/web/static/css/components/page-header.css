@@ -1,0 +1,46 @@
+/* ==========================================================================
+   page-header.css  -  judul halaman + breadcrumb (templates/components/page-header.html)
+   ========================================================================== */
+
+.page-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-bottom: var(--space-6);
+}
+
+.page-header__title {
+    margin: 0;
+    font-family: var(--font-family-heading);
+    font-size: 2.5rem;
+    font-weight: var(--font-weight-bold);
+    line-height: 1.2;
+    color: var(--color-primary-900);
+}
+
+.breadcrumb__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-p4);
+    color: var(--color-text-muted);
+}
+
+/* pemisah ">" antar item */
+.breadcrumb__item+.breadcrumb__item::before {
+    content: "\203A";
+    margin-inline: var(--space-2);
+}
+
+.breadcrumb__item a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.breadcrumb__item a:hover {
+    color: var(--color-text);
+    text-decoration: underline;
+}
