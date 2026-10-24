@@ -1,0 +1,170 @@
+{{define "content"}}
+<div class="page-head row-between">
+  <div>
+    <h1 class="page-title">Group & anggota</h1>
+    <p class="page-desc">Atur keanggotaan dan akses database melalui group.</p>
+  </div>
+  <a class="btn btn-primary" href="/admin/groups/new">Tambah group</a>
+</div>
+
+{{if .Notice}}
+<div class="flash-slot">
+  <div class="alert alert-warning" role="alert">
+    <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">{{.Notice}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{if .Error}}
+<div class="flash-slot">
+  <div class="alert alert-error" role="alert">
+    <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">{{.Error}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
+
+<section class="card">
+  <div class="card-header">
+    <h2 class="card-title">Group platform</h2>
+    <span class="badge badge-neutral">{{len .Groups}} item</span>
+  </div>
+
+  {{if .Groups}}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Nama group</th>
+          <th scope="col">Anggota</th>
+          <th scope="col">Ringkasan akses</th>
+          <th scope="col" class="table-cell-right"><span class="visually-hidden">Aksi</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Groups}}
+        <tr>
+          <td><span class="mono">{{.Name}}</span></td>
+          <td>{{if .MemberNames}}{{range $i, $m := .MemberNames}}{{if $i}}, {{end}}{{$m}}{{end}}{{else}}Tidak ada anggota{{end}}</td>
+          <td><span class="muted">{{.AccessSummary}}</span></td>
+          <td class="table-cell-actions">
+            <a class="link-as-text" href="/admin/groups?group={{.ID}}">Kelola anggota</a>
+            <span aria-hidden="true">·</span>
+            <a class="link-as-text" href="/admin/groups?group={{.ID}}">Ubah nama</a>
+            <span aria-hidden="true">·</span>
+            <form method="post" action="/admin/groups/{{.ID}}/delete" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+              <button type="submit" class="link-as-text">Hapus...</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <div class="card-empty">
+    <span class="card-empty-icon">{{template "icon" (dict "Name" "group")}}</span>
+    <p class="card-empty-title">Belum ada group</p>
+    <p class="card-empty-desc">Buat group pertama untuk mengelola keanggotaan dan akses database.</p>
+    <a class="btn btn-primary mt-4" href="/admin/groups/new">Tambah group</a>
+  </div>
+  {{end}}
+</section>
+
+<div class="with-aside mt-4">
+  <div class="stack">
+    {{if .Selected}}
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Tambah / ubah nama group</h2>
+      </div>
+      <div class="card-body">
+        <form method="post" action="/admin/groups/{{$.Selected.ID}}" class="form">
+          <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+          <div class="field">
+            <label for="group-name">Nama group <span aria-label="wajib">*</span></label>
+            <input type="text" id="group-name" name="name" value="{{$.Selected.Name}}" required placeholder="Contoh: Analis">
+            <p class="help-text">Wajib disisipkan dan unik di platform.</p>
+          </div>
+          <div class="form-actions mt-4">
+            <button type="submit" class="btn btn-primary">Simpan nama group</button>
+            <a class="btn btn-secondary" href="/admin/groups">Batal</a>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="card" id="hapus-group">
+      <div class="card-header">
+        <h2 class="card-title">Anggota · {{$.Selected.Name}}</h2>
+      </div>
+      <div class="card-body">
+        <div class="row-start mt-4 gap-3">
+          <select disabled><option>Pilih user aktif lain</option></select>
+          <button class="btn btn-secondary">Tambah anggota</button>
+        </div>
+        <p class="t-caption muted mt-3">Anggota group dapat mengakses database berdasarkan ringkasan akses group.</p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Username</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="table-cell-right"><span class="visually-hidden">Aksi</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {{range $.Selected.Members}}
+            <tr>
+              <td><span class="mono">{{.Username}}</span></td>
+              <td>{{if .IsActive}}Aktif{{else}}Nonaktif{{end}}</td>
+              <td class="table-cell-right">
+                <form method="post" action="/admin/groups/{{$.Selected.ID}}/members/{{.ID}}/delete" style="display:inline">
+                  <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                  <button type="submit" class="link-as-text">Hapus dari group</button>
+                </form>
+              </td>
+            </tr>
+            {{else}}
+            <tr><td colspan="3" class="table-empty">Belum ada anggota.</td></tr>
+            {{end}}
+          </tbody>
+        </table>
+        <div class="form-actions mt-4">
+          <form method="post" action="/admin/groups/{{$.Selected.ID}}/delete" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <button type="submit" class="btn btn-danger">Hapus group…</button>
+          </form>
+          <a class="btn btn-secondary" href="/admin/groups">Batal</a>
+        </div>
+      </div>
+    </section>
+    {{else}}
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Tambah / ubah nama group</h2>
+      </div>
+      <div class="card-body">
+        <form method="post" action="/admin/groups" class="form">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <div class="field">
+            <label for="group-name">Nama group <span aria-label="wajib">*</span></label>
+            <input type="text" id="group-name" name="name" required placeholder="Contoh: Analis">
+            <p class="help-text">Wajib disisipkan dan unik di platform.</p>
+          </div>
+          <div class="form-actions mt-4">
+            <button type="submit" class="btn btn-primary">Simpan nama group</button>
+            <a class="btn btn-secondary" href="/admin/groups">Batal</a>
+          </div>
+        </form>
+      </div>
+    </section>
+    {{end}}
+  </div>
+</div>
+{{end}}
