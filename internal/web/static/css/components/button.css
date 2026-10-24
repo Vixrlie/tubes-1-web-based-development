@@ -48,6 +48,15 @@
     border-radius: var(--radius-full);
 }
 
+.btn:link,
+.btn:visited,
+.btn:hover,
+.btn:active,
+.btn:focus-visible {
+    color: var(--btn-fg, var(--_fg));
+    text-decoration: none;
+}
+
 /* ---------- Primary (fill) ---------- */
 .btn--primary {
     --_fill: var(--color-primary);
