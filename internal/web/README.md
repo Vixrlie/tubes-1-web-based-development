@@ -13,6 +13,7 @@ web/
 ├── shell.go           # Data layout (header, sidebar) dan tipe pendukungnya
 ├── table.go           # Tipe data untuk komponen tabel
 ├── dropdown.go        # Tipe data untuk opsi dropdown
+├── databases.go       # Tipe data halaman Daftar Database (DBCard, DatabasesPage)
 ├── devpage.go         # Route /dev/components (halaman uji komponen)
 ├── router.go
 ├── static/
@@ -277,3 +278,11 @@ Route ini hanya boleh dipasang saat development.
   tidak ikut berubah di dark theme. Idealnya dibuatkan token semantik di `themes.css`, misalnya
   `--color-primary-soft` (sudah ada) atau `--color-border-hover`.
 - Di `themes.css`, `--color-text-muted` di dark theme dipetakan ke neutral-300, bukan neutral-500, supaya terbaca.
+
+## 8. CSS khusus halaman
+
+CSS yang hanya dipakai satu halaman ditaruh di `static/css/pages/<halaman>.css`. Ada dua cara memuatnya:
+
+- lewat `@import "pages/<halaman>.css";` di `app.css` (dipakai `login.css`), atau
+- lewat `<link rel="stylesheet" href="/static/css/pages/<halaman>.css">` di awal template halamannya
+  (dipakai `databases.css`, jadi tidak bergantung pada `app.css`).

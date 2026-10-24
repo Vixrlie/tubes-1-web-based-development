@@ -1,0 +1,64 @@
+/* ==========================================================================
+   databases.css  -  halaman Daftar Database (templates/databases.html)
+   Semua kartu ditampilkan sekaligus; halaman di-scroll kalau banyak.
+   ========================================================================== */
+
+/* latar gradasi diagonal: kiri bawah primary-200 -> kanan atas primary-50.
+   "fixed" = gradasi menempel di layar, tidak ikut ter-scroll. Header tetap putih. */
+body:has(.db-page) {
+    min-height: 100vh;
+    background: linear-gradient(to top right, var(--color-primary-200) 0%, var(--color-primary-50) 100%) fixed;
+}
+
+/* halaman ini mengatur padding sendiri (layout bawaan .app-shell dinolkan) */
+.app-shell:has(.db-page) {
+    padding: 0;
+    gap: 0;
+}
+
+/* padding kiri-kanan 160px, atas 64px */
+.db-page {
+    padding: 4rem 10rem;
+}
+
+.db-page__title {
+    margin: 0 0 var(--space-8);
+    font-family: var(--font-family-heading);
+    font-size: 2.5rem;
+    font-weight: var(--font-weight-bold);
+    line-height: 1.2;
+    color: var(--color-primary-900);
+}
+
+/* maksimal 3 kolom (bukan auto-fill) */
+.db-page .db-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.75rem;
+}
+
+.db-page__empty {
+    margin: var(--space-8) 0;
+    color: var(--color-text-muted);
+}
+
+/* layar sedang: 2 kolom, padding samping dikurangi */
+@media (max-width: 1100px) {
+    .db-page {
+        padding-inline: var(--space-8);
+    }
+
+    .db-page .db-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* layar kecil: 1 kolom */
+@media (max-width: 640px) {
+    .db-page {
+        padding: var(--space-8) var(--space-4);
+    }
+
+    .db-page .db-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

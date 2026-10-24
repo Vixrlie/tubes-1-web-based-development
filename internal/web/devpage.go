@@ -2,6 +2,7 @@ package web
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -11,6 +12,7 @@ type DevRoutes struct{ R *Renderer }
 
 func (d DevRoutes) Routes(r chi.Router) {
 	r.Get("/dev/components", d.components)
+	r.Get("/dev/databases", d.databases)
 }
 
 type devData struct {
@@ -30,20 +32,23 @@ func devAvatars() []*ShellUser {
 // nav: "none" | "admin" | "database"
 func devShell(nav, active string, admin bool) Shell {
 	s := Shell{Nav: nav}
-	if nav != "admin" && nav != "database" {
+	if nav != "admin" && nav != "database" && nav != "databases" {
 		return s // User nil -> tanpa header & sidebar
 	}
 	s.User = &ShellUser{Username: "arin", FullName: "Arin Dev", IsPlatformAdmin: admin}
-	if nav == "admin" {
+	switch nav {
+	case "admin":
 		s.SideActive = active // users | groups | connections
-	} else {
+	case "database":
 		s.Sidebar = devSidebar(active)
 	}
 	return s
 }
 
 func devSidebar(active string) *SidebarDB {
-	href := func(a string) string { return "?nav=database&active=" + a }
+	// QueryEscape: ":" di "table:public.orders" jadi %3A. Tanpa ini html/template
+	// menganggap "...active=table" sebagai skema URL dan mengganti href jadi #ZgotmplZ.
+	href := func(a string) string { return "?nav=database&active=" + url.QueryEscape(a) }
 	schema := func(name string, tables ...string) SidebarSchema {
 		sc := SidebarSchema{Name: name, Href: href("schema:" + name), Active: active == "schema:"+name}
 		for _, t := range tables {
@@ -101,4 +106,25 @@ func devTable() Table {
 			row("log_db", "10.0.0.7 : 5432", "Gagal terhubung", "error", "View Only", "neutral", "Tim Analisis"),
 		},
 	}
+}
+
+// devDatabases membuat data contoh halaman Daftar Database (dipakai route dev dan test).
+// Banyak kartu supaya terlihat perilaku scroll.
+func devDatabases() DatabasesPage {
+	var cards []DBCard
+	for i := 0; i < 2; i++ {
+		cards = append(cards,
+			DBCard{Name: "inventory_db", Meta: "PostgreSQL · 1 schema · 7 tabel", Access: "edit", Href: "#"},
+			DBCard{Name: "shop_db", Meta: "PostgreSQL · 2 schema · 12 tabel", Access: "edit", Href: "#"},
+			DBCard{Name: "logs_db", Meta: "PostgreSQL · 1 schema · 3 tabel", Access: "view", Href: "#"},
+			DBCard{Name: "hr_db", Meta: "PostgreSQL", Access: "view", Status: "failed",
+				Error: "Tidak dapat terhubung ke database. Coba lagi beberapa saat.", RetryHref: "#"},
+		)
+	}
+	return DatabasesPage{Shell: devShell("databases", "", true), Cards: cards}
+}
+
+// Halaman Daftar Database dengan data contoh: /dev/databases
+func (d DevRoutes) databases(w http.ResponseWriter, r *http.Request) {
+	d.R.Render(w, "databases.html", devDatabases())
 }

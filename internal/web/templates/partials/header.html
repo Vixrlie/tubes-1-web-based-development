@@ -9,7 +9,8 @@
             <nav aria-label="Navigasi utama">
                 <ul class="app-header__links" role="list">
                     <li>
-                        <a class="nav-link" href="/" {{if eq .Nav "database" }}aria-current="page" {{end}}>Database</a>
+                        <a class="nav-link" href="/" {{if or (eq .Nav "database" ) (eq .Nav "databases"
+                            )}}aria-current="page" {{end}}>Database</a>
                     </li>
                     {{if .User.IsPlatformAdmin}}
                     <li>
