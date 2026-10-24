@@ -17,6 +17,7 @@ type Handlers struct {
 	users       *userHandlers       // Arin
 	groups      *groupHandlers      // Vincent
 	connections *connectionHandlers // Majiid
+	dashboard   *dashboardHandlers  // ringkasan /admin
 }
 
 func NewHandlers(opts ...Option) *Handlers {
@@ -31,6 +32,7 @@ func NewHandlers(opts ...Option) *Handlers {
 func (h *Handlers) Routes(r chi.Router) {
 	r.Route("/admin", func(r chi.Router) {
 		r.Use(auth.RequireAdmin)
+		h.dashboardRoutes(r)   // ringkasan platform (/admin/)
 		h.usersRoutes(r)       // Arin
 		h.groupsRoutes(r)      // Vincent
 		h.connectionsRoutes(r) // Majiid
