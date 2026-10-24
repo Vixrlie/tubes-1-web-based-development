@@ -17,7 +17,7 @@ Isi sidebar database : .Sidebar (lihat SidebarDB di shell.go)
         <ul class="sidebar__list" role="list">
             <li>{{template `side-link` (dict `Label` `Pengguna` `Icon` `user` `Href` `/admin/users` `Active` (eq
                 .SideActive `users`))}}</li>
-            <li>{{template `side-link` (dict `Label` `Grup` `Icon` `users` `Href` `/admin/groups` `Active` (eq
+            <li>{{template `side-link` (dict `Label` `Grup` `Icon` `group` `Href` `/admin/groups` `Active` (eq
                 .SideActive `groups`))}}</li>
             <li>{{template `side-link` (dict `Label` `Koneksi Database` `Icon` `link` `Href` `/admin/connections`
                 `Active` (eq .SideActive `connections`))}}</li>

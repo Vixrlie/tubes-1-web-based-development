@@ -16,6 +16,7 @@ func (d DevRoutes) Routes(r chi.Router) {
 type devData struct {
 	Shell
 	Avatars []*ShellUser
+	Table   Table
 }
 
 func devAvatars() []*ShellUser {
@@ -67,5 +68,37 @@ func (d DevRoutes) components(w http.ResponseWriter, r *http.Request) {
 	d.R.Render(w, "dev/components.html", devData{
 		Shell:   devShell(q.Get("nav"), q.Get("active"), q.Get("admin") != "0"),
 		Avatars: devAvatars(),
+		Table:   devTable(),
 	})
+}
+
+// Data contoh untuk tabel di halaman dev.
+func devTable() Table {
+	c := func(t string) TableCell { return TableCell{Text: t} }
+	row := func(name, hp, conn, connV, acc, accV, group string) TableRow {
+		return TableRow{
+			"name":   c(name),
+			"host":   c(hp),
+			"engine": c("PostgreSQL"),
+			"conn":   {Text: conn, Variant: connV},
+			"access": {Text: acc, Variant: accV},
+			"group":  c(group),
+		}
+	}
+	return Table{
+		Title: "Daftar Tabel",
+		Columns: []TableColumn{
+			{Key: "name", Label: "Nama", Bold: true},
+			{Key: "host", Label: "Host : Port"},
+			{Key: "engine", Label: "Engine"},
+			{Key: "conn", Label: "Koneksi"},
+			{Key: "access", Label: "Akses"},
+			{Key: "group", Label: "Nama Grup"},
+		},
+		Rows: []TableRow{
+			row("hr_db", "10.0.0.6 : 5432", "Terhubung", "success", "View Only", "neutral", "Tim Analis"),
+			row("shop_db", "10.0.0.6 : 5432", "Terhubung", "success", "View + Edit", "info", "Tim Backend"),
+			row("log_db", "10.0.0.7 : 5432", "Gagal terhubung", "error", "View Only", "neutral", "Tim Analisis"),
+		},
+	}
 }

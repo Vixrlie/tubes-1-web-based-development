@@ -101,6 +101,22 @@
         ke database. Coba lagi beberapa saat.`)}}
     </div>
 
+    <h2>Input</h2>
+    <h3>Standar (kosong / terisi) | error | disabled</h3>
+    <div class="dev-row" style="align-items:flex-start">
+        {{template `input` (dict `Label` `Username` `Name` `in1` `Placeholder` `Masukkan username` `Helper` `Helper
+        Text` `IconLeft` `heart` `IconRight` `heart`)}}
+        {{template `input` (dict `Label` `Username` `Name` `in2` `Placeholder` `Masukkan username` `Value` `budi123`
+        `Helper` `Helper Text` `IconLeft` `heart` `IconRight` `heart`)}}
+        {{template `input` (dict `Label` `Username` `Name` `in3` `Placeholder` `Masukkan username` `Error` `Pesan error`
+        `IconLeft` `heart` `IconRight` `heart`)}}
+        {{template `input` (dict `Label` `Username` `Name` `in4` `Placeholder` `Masukkan username` `Helper` `Helper
+        Text` `State` `disabled` `IconLeft` `heart` `IconRight` `heart`)}}
+    </div>
+
+    <h2>Tabel</h2>
+    {{template `table` .Table}}
+
     <h2>Icon</h2>
     <div class="dev-row">
         {{range iconNames}}
