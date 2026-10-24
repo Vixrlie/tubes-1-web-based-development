@@ -1,0 +1,20 @@
+{{/*
+Halaman Form Group: tambah group peserta.
+Data: admin.groupFormPage (lihat admin/group_form.go): .Shell, .Title, .Crumbs,
+.FormAction, .Error, .Fields ([]dict utk komponen `input`), .Actions ([]web.Button)
+CSRF: .User.CSRFToken (dari Shell).
+*/}}
+{{define "content"}}
+{{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs)}}
+
+<form class="stack" method="post" action="{{.FormAction}}">
+    <input type="hidden" name="csrf_token" value="{{.User.CSRFToken}}">
+
+    <section class="card">
+        {{template `card-head` (dict `Title` `Detail group` `Actions` .Actions)}}
+        <p class="card__note">Izin akses per koneksi diatur di halaman detail group.</p>
+        {{with .Error}}<p role="alert">{{.}}</p>{{end}}
+        {{range .Fields}}{{template `input` .}}{{end}}
+    </section>
+</form>
+{{end}}

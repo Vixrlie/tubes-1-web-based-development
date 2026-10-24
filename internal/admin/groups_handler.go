@@ -54,17 +54,14 @@ func (h *Handlers) groupsRoutes(r chi.Router) {
 	}
 	g := h.groups
 	r.Get("/groups", g.list)
-	// Form "Grup Baru"/rename belum tersedia di FE; arahkan agar tidak 404.
-	r.Get("/groups/new", g.redirectToList)
+	// Form "Grup Baru": tampilan (GET) + simpan (POST).
+	r.Get("/groups/new", g.createForm)
+	r.Post("/groups", g.create)
 	r.Get("/groups/{id}", g.detail)
 	r.Post("/groups/{id}/delete", g.delete)
 	r.Post("/groups/{id}/members", g.addMember)
 	r.Post("/groups/{id}/members/{userID}/delete", g.removeMember)
 	r.Post("/groups/{id}/access", g.saveAccess)
-}
-
-func (g *groupHandlers) redirectToList(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/admin/groups", http.StatusSeeOther)
 }
 
 // shell membangun data shell FE (layout.html: header + sidebar admin).
