@@ -163,8 +163,9 @@ func (h *Handlers) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 type homePage struct {
-	Username  string
-	CSRFToken string
+	Username        string
+	CSRFToken       string
+	IsPlatformAdmin bool
 }
 
 // home adalah halaman sementara sebagai tujuan setelah login dan tempat
@@ -172,7 +173,8 @@ type homePage struct {
 func (h *Handlers) home(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFromContext(r.Context())
 	h.view.Render(w, "home.html", homePage{
-		Username:  u.Username,
-		CSRFToken: session.CSRFToken(r.Context()),
+		Username:        u.Username,
+		CSRFToken:       session.CSRFToken(r.Context()),
+		IsPlatformAdmin: u.IsPlatformAdmin,
 	})
 }
