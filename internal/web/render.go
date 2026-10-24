@@ -13,32 +13,6 @@ import (
 	"sync"
 )
 
-var funcMap = template.FuncMap{
-	"dict": func(values ...any) (map[string]any, error) {
-		if len(values)%2 != 0 {
-			return nil, nil
-		}
-		m := make(map[string]any, len(values)/2)
-		for i := 0; i < len(values); i += 2 {
-			key, ok := values[i].(string)
-			if !ok {
-				continue
-			}
-			m[key] = values[i+1]
-		}
-		return m, nil
-	},
-	"default": func(def, val any) any {
-		if val == nil {
-			return def
-		}
-		if s, ok := val.(string); ok && s == "" {
-			return def
-		}
-		return val
-	},
-}
-
 //go:embed all:templates
 var TemplatesFS embed.FS
 
@@ -56,21 +30,49 @@ var iconCache sync.Map
 // iconSVG membaca static/icons/<nama>.svg dan menyisipkan class "icon"
 // ke tag <svg>, jadi ukuran diatur CSS (.btn .icon, .side-link .icon)
 // dan warna ikut currentColor. Nama hanya dari literal template.
-func iconSVG(name string) (template.HTML, error) {
+func iconSVG(params any) (template.HTML, error) {
+	var name, class, alt string
+	switch v := params.(type) {
+	case string:
+		name = v
+	case map[string]any:
+		if n, ok := v["Name"].(string); ok {
+			name = n
+		}
+		if c, ok := v["Class"].(string); ok {
+			class = c
+		}
+		if a, ok := v["Alt"].(string); ok {
+			alt = a
+		}
+	default:
+		return "", fmt.Errorf("icon: argumen tidak valid %T", params)
+	}
 	if !iconNameRe.MatchString(name) {
 		return "", fmt.Errorf("icon: nama tidak valid %q", name)
 	}
-	if v, ok := iconCache.Load(name); ok {
+	key := name
+	if class != "" {
+		key = name + "|" + class
+	}
+	if v, ok := iconCache.Load(key); ok {
 		return v.(template.HTML), nil
 	}
 	b, err := StaticFS.ReadFile("static/icons/" + name + ".svg")
 	if err != nil {
 		return "", fmt.Errorf("icon %q tidak ditemukan di static/icons", name)
 	}
+	svgClass := "icon"
+	if class != "" {
+		svgClass += " " + class
+	}
 	s := strings.Replace(strings.TrimSpace(string(b)), "<svg",
-		`<svg class="icon" aria-hidden="true" focusable="false"`, 1)
+		fmt.Sprintf(`<svg class="%s" aria-hidden="true" focusable="false"`, svgClass), 1)
+	if alt != "" {
+		s = strings.Replace(s, ">", fmt.Sprintf("><title>%s</title>", template.HTMLEscapeString(alt)), 1)
+	}
 	h := template.HTML(s)
-	iconCache.Store(name, h)
+	iconCache.Store(key, h)
 	return h, nil
 }
 
@@ -109,6 +111,16 @@ var funcs = template.FuncMap{
 	},
 	// list membuat slice untuk {{range}}: {{range (list "a" "b")}}
 	"list": func(v ...any) []any { return v },
+	// default mengembalikan val, atau def bila val kosong (string "" atau nil).
+	"default": func(def, val any) any {
+		if val == nil {
+			return def
+		}
+		if s, ok := val.(string); ok && s == "" {
+			return def
+		}
+		return val
+	},
 	// css menandai nilai CSS tepercaya supaya var(--x) tidak diblokir
 	// sanitizer html/template (jadi "ZgotmplZ"). Hanya untuk literal di template.
 	"css": func(s string) template.CSS { return template.CSS(s) },
@@ -155,11 +167,22 @@ func NewRenderer() (*Renderer, error) {
 		}
 		files := append([]string{"templates/layout.html"}, sharedGlobs...)
 		files = append(files, p)
-		t, err := template.New("layout.html").Funcs(funcs).ParseFS(TemplatesFS, files...)
+		name := strings.TrimPrefix(p, "templates/")
+		isApp := usesAppShell(p)
+		root := "layout.html"
+		if isApp {
+			root = "app.html"
+			files[0] = "templates/app.html"
+		}
+		t, err := template.New(root).Funcs(funcs).ParseFS(TemplatesFS, files...)
 		if err != nil {
 			return err
 		}
-		target[strings.TrimPrefix(p, "templates/")] = t
+		if isApp {
+			r.appPages[name] = t
+		} else {
+			r.pages[name] = t
+		}
 		return nil
 	})
 	return r, err
