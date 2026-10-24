@@ -102,7 +102,11 @@ func (s *PGConnectionStore) Create(ctx context.Context, in ConnectionInput, crea
 		 VALUES ($1, NULLIF($2, ''), $3, $4)
 		 RETURNING `+connectionCols,
 		in.Name, in.Description, rawURL, createdBy)
-	return scanConnection(row)
+	c, err := scanConnection(row)
+	if isNameConflict(err) {
+		return ConnectionRow{}, ErrConnectionNameTaken
+	}
+	return c, err
 }
 
 func (s *PGConnectionStore) Update(ctx context.Context, id int64, in ConnectionInput) (ConnectionRow, error) {
@@ -126,7 +130,11 @@ func (s *PGConnectionStore) Update(ctx context.Context, id int64, in ConnectionI
 		  WHERE id = $1
 		  RETURNING `+connectionCols,
 		id, in.Name, in.Description, rawURL)
-	return scanConnection(row)
+	c, err := scanConnection(row)
+	if isNameConflict(err) {
+		return ConnectionRow{}, ErrConnectionNameTaken
+	}
+	return c, err
 }
 
 func (s *PGConnectionStore) Delete(ctx context.Context, id int64) error {
@@ -249,7 +257,8 @@ func ValidateConnection(in ConnectionInput, requirePassword bool) map[string]str
 	return errorsByField
 }
 
-func isConnectionConflict(err error) bool {
+// isNameConflict menandai pelanggaran unique pada nama koneksi.
+func isNameConflict(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "db_connections_name_key"
 }

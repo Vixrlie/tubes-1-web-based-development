@@ -75,8 +75,9 @@ var groupNotices = map[string]string{
 
 type groupsPage struct {
 	web.AppShell
-	Groups []Group
-	Notice string
+	Groups    []Group
+	Summaries map[int64][]string
+	Notice    string
 }
 
 type groupFormPage struct {
@@ -251,10 +252,16 @@ func (g *groupHandlers) list(w http.ResponseWriter, r *http.Request) {
 		g.serverError(w, "daftar group", err)
 		return
 	}
+	summaries, err := g.store.AccessSummaries(r.Context())
+	if err != nil {
+		g.serverError(w, "ringkasan akses", err)
+		return
+	}
 	g.render(w, http.StatusOK, "admin/groups.html", groupsPage{
-		AppShell: g.shell(r, "Kelola Group"),
-		Groups:   groups,
-		Notice:   groupNotices[r.URL.Query().Get("status")],
+		AppShell:  g.shell(r, "Kelola Group"),
+		Groups:    groups,
+		Summaries: summaries,
+		Notice:    groupNotices[r.URL.Query().Get("status")],
 	})
 }
 

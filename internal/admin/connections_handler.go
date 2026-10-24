@@ -198,7 +198,7 @@ func (c *connectionHandlers) create(w http.ResponseWriter, r *http.Request) {
 
 	me, _ := auth.UserFromContext(r.Context())
 	if _, err := c.store.Create(r.Context(), in, me.ID); err != nil {
-		if isConnectionConflict(err) {
+		if errors.Is(err, ErrConnectionNameTaken) {
 			fieldErrors := map[string]string{"name": ErrConnectionNameTaken.Error()}
 			c.renderForm(w, r, http.StatusConflict, true, "/admin/connections", in, fieldErrors)
 			return
@@ -250,7 +250,7 @@ func (c *connectionHandlers) update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := c.store.Update(r.Context(), row.ID, in); err != nil {
-		if isConnectionConflict(err) {
+		if errors.Is(err, ErrConnectionNameTaken) {
 			fieldErrors := map[string]string{"name": ErrConnectionNameTaken.Error()}
 			c.renderForm(w, r, http.StatusConflict, false, "/admin/connections/"+strconv.FormatInt(row.ID, 10), in, fieldErrors)
 			return

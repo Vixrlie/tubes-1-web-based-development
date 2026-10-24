@@ -39,6 +39,8 @@ func (h *Handlers) usersRoutes(r chi.Router) {
 	r.Post("/users/{id}/deactivate", u.deactivate)
 	r.Post("/users/{id}/activate", u.activate)
 	r.Post("/users/{id}/password", u.resetPassword)
+	r.Post("/users/{id}/delete", u.remove)
+	r.Get("/users/{id}/access", u.accessPage)
 }
 
 // Pesan sukses dipilih lewat kode di query string; teks bebas dari URL tidak pernah dirender.
@@ -48,11 +50,19 @@ var notices = map[string]string{
 	"deactivated": "User dinonaktifkan dan semua session-nya dicabut.",
 	"activated":   "User diaktifkan kembali.",
 	"password":    "Password direset dan semua session user dicabut.",
+	"deleted":     "User dihapus beserta keanggotaan dan session-nya.",
+}
+
+// userItem adalah baris daftar user: data akun plus keanggotaan group-nya.
+type userItem struct {
+	UserRow
+	Groups      []string
+	IsLastAdmin bool
 }
 
 type usersPage struct {
 	web.AppShell
-	Users  []UserRow
+	Users  []userItem
 	Notice string
 }
 
@@ -146,9 +156,32 @@ func (u *userHandlers) list(w http.ResponseWriter, r *http.Request) {
 		u.serverError(w, "daftar user", err)
 		return
 	}
+	groups, err := u.store.GroupNamesByUser(r.Context())
+	if err != nil {
+		u.serverError(w, "keanggotaan group", err)
+		return
+	}
+
+	// Tandai admin aktif terakhir — tidak boleh dihapus/dinonaktifkan.
+	var activeAdmins int
+	for _, t := range users {
+		if t.IsPlatformAdmin && t.IsActive {
+			activeAdmins++
+		}
+	}
+
+	items := make([]userItem, 0, len(users))
+	for _, t := range users {
+		items = append(items, userItem{
+			UserRow:     t,
+			Groups:      groups[t.ID],
+			IsLastAdmin: activeAdmins == 1 && t.IsPlatformAdmin && t.IsActive,
+		})
+	}
+
 	u.render(w, http.StatusOK, "admin/users.html", usersPage{
 		AppShell: u.shell(r),
-		Users:    users,
+		Users:    items,
 		Notice:   notices[r.URL.Query().Get("status")],
 	})
 }
@@ -318,4 +351,134 @@ func (u *userHandlers) resetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	redirectUser(w, r, t.ID, "password")
+}
+
+// remove menghapus user setelah konfirmasi ketik-nama + checkbox.
+// Ditolak untuk admin terakhir, user dengan riwayat migration, dan diri sendiri.
+func (u *userHandlers) remove(w http.ResponseWriter, r *http.Request) {
+	t, ok := u.load(w, r)
+	if !ok {
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "permintaan tidak valid", http.StatusBadRequest)
+		return
+	}
+	me, _ := auth.UserFromContext(r.Context())
+
+	page := func(msg string) {
+		p := u.editPage(u.shell(r), t)
+		p.Error = msg
+		u.render(w, http.StatusBadRequest, "admin/user_form.html", p)
+	}
+
+	if t.ID == me.ID {
+		page("Anda tidak bisa menghapus akun sendiri.")
+		return
+	}
+	confirmName := strings.TrimSpace(r.PostFormValue("confirm_name"))
+	confirmed := r.PostFormValue("confirm_delete") == "on"
+	if confirmName != t.Username || !confirmed {
+		page("Konfirmasi tidak cocok. Ketik username persis dan centang persetujuan sebelum menghapus.")
+		return
+	}
+
+	if err := u.store.Delete(r.Context(), t.ID); err != nil {
+		switch {
+		case errors.Is(err, ErrLastAdmin):
+			page("Ini adalah admin aktif terakhir. Tambahkan admin lain sebelum menghapus akun ini.")
+		case errors.Is(err, ErrUserHasHistory):
+			page("User ini memiliki riwayat migration dan hanya dapat dinonaktifkan, bukan dihapus.")
+		case errors.Is(err, auth.ErrUserNotFound):
+			http.NotFound(w, r)
+		default:
+			u.serverError(w, "hapus user", err)
+		}
+		return
+	}
+	http.Redirect(w, r, "/admin/users?status=deleted", http.StatusSeeOther)
+}
+
+// dbAccess adalah satu baris hasil gabungan grant untuk sebuah database.
+type dbAccess struct {
+	ConnectionName string
+	Effective      string // "View + Edit" | "View Only" | "Tidak ada akses"
+	Source         string // "group → level" untuk hak tertinggi
+	Others         []string
+	CanEdit        bool
+}
+
+// userAccessPage adalah data halaman akses efektif (admin/user_access.html).
+type userAccessPage struct {
+	web.AppShell
+	Target     UserRow
+	GroupNames []string
+	Rows       []dbAccess
+}
+
+// accessPage menampilkan hak akses efektif user: gabungan grant seluruh
+// group yang dianggoteinya, per database, dengan sumber hak tertingginya.
+func (u *userHandlers) accessPage(w http.ResponseWriter, r *http.Request) {
+	t, ok := u.load(w, r)
+	if !ok {
+		return
+	}
+	grants, err := u.store.EffectiveAccess(r.Context(), t.ID)
+	if err != nil {
+		u.serverError(w, "akses efektif", err)
+		return
+	}
+
+	// Kelompokkan per database; himpun nama group keanggotaan (urut unik).
+	byConn := map[int64]*dbAccess{}
+	var connOrder []int64
+	groupSeen := map[string]bool{}
+	var groupNames []string
+	for _, g := range grants {
+		if !groupSeen[g.GroupName] {
+			groupSeen[g.GroupName] = true
+			groupNames = append(groupNames, g.GroupName)
+		}
+		row, exists := byConn[g.ConnectionID]
+		if !exists {
+			row = &dbAccess{ConnectionName: g.ConnectionName}
+			byConn[g.ConnectionID] = row
+			connOrder = append(connOrder, g.ConnectionID)
+		}
+		label := "Tidak ada akses"
+		if g.Level == "edit" {
+			label = "View + Edit"
+		} else if g.Level == "view" {
+			label = "View Only"
+		}
+		entry := g.GroupName + " → " + label
+		// Hak tertinggi menang; yang pertama dicatat sebagai sumber.
+		if row.Effective == "" || (label == "View + Edit" && row.Effective != "View + Edit") ||
+			(label == "View Only" && row.Effective == "Tidak ada akses") {
+			row.Effective = label
+			row.Source = entry
+			row.CanEdit = label == "View + Edit"
+			continue
+		}
+		row.Others = append(row.Others, entry)
+	}
+
+	page := userAccessPage{
+		AppShell:    u.shell(r),
+		Target:      t,
+		GroupNames:  groupNames,
+	}
+	for _, id := range connOrder {
+		page.Rows = append(page.Rows, *byConn[id])
+	}
+
+	shell := page.AppShell
+	shell.Title = "Akses efektif · " + t.Username
+	shell.Breadcrumbs = []web.Crumb{
+		{Label: "Admin", URL: "/admin/users"},
+		{Label: "User", URL: "/admin/users"},
+		{Label: t.Username},
+	}
+	page.AppShell = shell
+	u.render(w, http.StatusOK, "admin/user_access.html", page)
 }

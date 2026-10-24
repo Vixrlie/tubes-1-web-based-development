@@ -14,6 +14,7 @@ type Handlers struct {
 	users       *userHandlers
 	groups      *groupHandlers
 	connections *connectionHandlers
+	access      *accessHandlers
 }
 
 func NewHandlers(opts ...Option) *Handlers {
@@ -30,5 +31,6 @@ func (h *Handlers) Routes(r chi.Router) {
 		h.usersRoutes(r)
 		h.groupsRoutes(r)
 		h.connectionsRoutes(r)
+		h.accessRoutes(r)
 	})
 }

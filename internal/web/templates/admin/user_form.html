@@ -131,5 +131,37 @@
     </form>
   </div>
 </section>
+
+<section class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">Akses & penghapusan</h2>
+  </div>
+  <div class="card-body">
+    <p class="muted">Lihat hak akses database yang diperoleh user ini melalui keanggotaan group-nya.</p>
+    <a class="btn btn-secondary mt-3" href="/admin/users/{{.ID}}/access">Lihat akses efektif</a>
+
+    {{if .IsSelf}}
+    <p class="muted mt-4">Anda tidak bisa menghapus akun sendiri.</p>
+    {{else}}
+    <hr class="mt-4">
+    <p class="muted mt-4">Hapus user beserta keanggotaan group dan seluruh sesi aktifnya. User dengan riwayat migration hanya dapat dinonaktifkan, bukan dihapus.</p>
+    <form method="post" action="/admin/users/{{.ID}}/delete" class="form mt-3" data-confirm-form
+      data-confirm-value="{{.Username}}">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <div class="field">
+        <label for="confirm-delete">Ketik {{.Username}} untuk konfirmasi</label>
+        <input type="text" id="confirm-delete" name="confirm_name" autocomplete="off" data-confirm-name>
+      </div>
+      <label class="checkbox">
+        <input type="checkbox" name="confirm_delete" data-confirm-check>
+        <span>Saya memahami user ini akan dihapus dan seluruh sesinya berakhir.</span>
+      </label>
+      <div class="form-actions mt-4">
+        <button type="submit" class="btn btn-danger" data-confirm-submit disabled>Hapus user</button>
+      </div>
+    </form>
+    {{end}}
+  </div>
+</section>
 {{end}}
 {{end}}

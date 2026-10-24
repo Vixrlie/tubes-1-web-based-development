@@ -9,8 +9,8 @@
 
 {{if .Notice}}
 <div class="flash-slot">
-  <div class="alert alert-warning" role="alert">
-    <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+  <div class="alert alert-success" role="status">
+    <span class="alert-icon">{{template "icon" (dict "Name" "check-circle")}}</span>
     <div class="alert-content">
       <p class="alert-title">{{.Notice}}</p>
     </div>
@@ -18,18 +18,7 @@
 </div>
 {{end}}
 
-{{if .Error}}
-<div class="flash-slot">
-  <div class="alert alert-error" role="alert">
-    <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
-    <div class="alert-content">
-      <p class="alert-title">{{.Error}}</p>
-    </div>
-  </div>
-</div>
-{{end}}
-
-<section class="card">
+<section class="card mt-4">
   <div class="card-header">
     <h2 class="card-title">Group platform</h2>
     <span class="badge badge-neutral">{{len .Groups}} item</span>
@@ -50,17 +39,20 @@
         {{range .Groups}}
         <tr>
           <td><span class="mono">{{.Name}}</span></td>
-          <td>{{if .MemberNames}}{{range $i, $m := .MemberNames}}{{if $i}}, {{end}}{{$m}}{{end}}{{else}}Tidak ada anggota{{end}}</td>
-          <td><span class="muted">{{.AccessSummary}}</span></td>
+          <td>{{.MemberCount}}</td>
+          <td>
+            {{with index $.Summaries .ID}}
+            {{range $i, $line := .}}{{if $i}}<br>{{end}}<span class="mono">{{$line}}</span>{{end}}
+            {{else}}
+            <span class="muted">Belum ada akses</span>
+            {{end}}
+          </td>
           <td class="table-cell-actions">
-            <a class="link-as-text" href="/admin/groups?group={{.ID}}">Kelola anggota</a>
+            <a class="link-as-text" href="/admin/groups/{{.ID}}">Kelola anggota</a>
             <span aria-hidden="true">·</span>
-            <a class="link-as-text" href="/admin/groups?group={{.ID}}">Ubah nama</a>
+            <a class="link-as-text" href="/admin/groups/{{.ID}}">Ubah nama</a>
             <span aria-hidden="true">·</span>
-            <form method="post" action="/admin/groups/{{.ID}}/delete" style="display:inline">
-              <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-              <button type="submit" class="link-as-text">Hapus...</button>
-            </form>
+            <a class="link-as-text" href="/admin/access">Ubah akses</a>
           </td>
         </tr>
         {{end}}
@@ -77,119 +69,11 @@
   {{end}}
 </section>
 
-<div class="with-aside mt-4">
-  <div class="stack">
-    {{if .Selected}}
-    <section class="card">
-      <div class="card-header">
-        <h2 class="card-title">Tambah / ubah nama group</h2>
-      </div>
-      <div class="card-body">
-        <form method="post" action="/admin/groups/{{$.Selected.ID}}" class="form">
-          <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-          <div class="field">
-            <label for="group-name">Nama group <span aria-label="wajib">*</span></label>
-            <input type="text" id="group-name" name="name" value="{{$.Selected.Name}}" required placeholder="Contoh: Analis">
-            <p class="help-text">Wajib disisipkan dan unik di platform.</p>
-          </div>
-          <div class="form-actions mt-4">
-            <button type="submit" class="btn btn-primary">Simpan nama group</button>
-            <a class="btn btn-secondary" href="/admin/groups">Batal</a>
-          </div>
-        </form>
-      </div>
-    </section>
-
-    <section class="card" id="hapus-group">
-      <div class="card-header">
-        <h2 class="card-title">Anggota · {{$.Selected.Name}}</h2>
-      </div>
-      <div class="card-body">
-        <div class="row-start mt-4 gap-3">
-          <select disabled><option>Pilih user aktif lain</option></select>
-          <button class="btn btn-secondary">Tambah anggota</button>
-        </div>
-        <p class="t-caption muted mt-3">Anggota group dapat mengakses database berdasarkan ringkasan akses group.</p>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Username</th>
-              <th scope="col">Status</th>
-              <th scope="col" class="table-cell-right"><span class="visually-hidden">Aksi</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {{range $.Selected.Members}}
-            <tr>
-              <td><span class="mono">{{.Username}}</span></td>
-              <td>{{if .IsActive}}Aktif{{else}}Nonaktif{{end}}</td>
-              <td class="table-cell-right">
-                <form method="post" action="/admin/groups/{{$.Selected.ID}}/members/{{.ID}}/delete" style="display:inline">
-                  <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-                  <button type="submit" class="link-as-text">Hapus dari group</button>
-                </form>
-              </td>
-            </tr>
-            {{else}}
-            <tr><td colspan="3" class="table-empty">Belum ada anggota.</td></tr>
-            {{end}}
-          </tbody>
-        </table>
-        <div class="form-actions mt-4">
-          <form method="post" action="/admin/groups/{{$.Selected.ID}}/delete" style="display:inline">
-            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-            <button type="submit" class="btn btn-danger">Hapus group…</button>
-          </form>
-          <a class="btn btn-secondary" href="/admin/groups">Batal</a>
-        </div>
-      </div>
-    </section>
-    {{else}}
-    <section class="card">
-      <div class="card-header">
-        <h2 class="card-title">Tambah / ubah nama group</h2>
-      </div>
-      <div class="card-body">
-        <form method="post" action="/admin/groups" class="form">
-          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-          <div class="field">
-            <label for="group-name">Nama group <span aria-label="wajib">*</span></label>
-            <input type="text" id="group-name" name="name" required placeholder="Contoh: Analis">
-            <p class="help-text">Wajib disisipkan dan unik di platform.</p>
-          </div>
-          <div class="form-actions mt-4">
-            <button type="submit" class="btn btn-primary">Simpan nama group</button>
-            <a class="btn btn-secondary" href="/admin/groups">Batal</a>
-          </div>
-        </form>
-      </div>
-    </section>
-    {{end}}
+<div class="alert alert-info mt-4">
+  <span class="alert-icon">{{template "icon" (dict "Name" "info")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Akses melalui group</p>
+    <p class="alert-desc">Kelola anggota dan nama group melalui halaman detail group. Ubah level akses group ke database lewat halaman Akses Group.</p>
   </div>
 </div>
-<h1>Kelola Group</h1>
-<p><a href="/">Beranda</a> | <a href="/admin/users">Kelola user</a> | <a href="/admin/groups/new">Buat group</a></p>
-{{if .Notice}}<p role="status">{{.Notice}}</p>{{end}}
-<table>
-    <thead>
-        <tr>
-            <th>Nama</th>
-            <th>Anggota</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        {{range .Groups}}
-        <tr>
-            <td>{{.Name}}</td>
-            <td>{{.MemberCount}}</td>
-            <td><a href="/admin/groups/{{.ID}}">Ubah</a></td>
-        </tr>
-        {{else}}
-        <tr>
-            <td colspan="3">Belum ada group.</td>
-        </tr>
-        {{end}}
-    </tbody>
-</table>
 {{end}}

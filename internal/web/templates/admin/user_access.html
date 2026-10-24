@@ -1,0 +1,103 @@
+{{define "content"}}
+<div class="page-head row-between">
+  <div>
+    <h1 class="page-title">Akses efektif user</h1>
+    <p class="page-desc">Hasil gabungan grant dari semua group. Level tertinggi berlaku per database.</p>
+  </div>
+  <a class="btn btn-secondary" href="/admin/users">Kembali ke User</a>
+</div>
+
+<section class="card mt-4">
+  <div class="card-body">
+    <h2 class="card-title"><span class="mono">{{.Target.Username}}</span></h2>
+    <div class="grid-2 mt-3">
+      <div>
+        <p class="text-caption muted">STATUS / PERAN PLATFORM</p>
+        <p class="mono">{{if .Target.IsActive}}Aktif{{else}}Nonaktif{{end}} · {{if .Target.IsPlatformAdmin}}Administrator{{else}}Non-admin{{end}}</p>
+      </div>
+      <div>
+        <p class="text-caption muted">KEANGGOTAAN GROUP</p>
+        <p class="mono">{{if .GroupNames}}{{range $i, $g := .GroupNames}}{{if $i}}, {{end}}{{$g}}{{end}}{{else}}Tidak ada group{{end}}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">Akses database efektif</h2>
+    <span class="badge badge-neutral">{{len .Rows}} item</span>
+  </div>
+  <div class="card-body card-body-p0">
+    {{if .Rows}}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Database</th>
+            <th scope="col">Akses efektif</th>
+            <th scope="col">Sumber hak tertinggi</th>
+            <th scope="col">Grant group lainnya</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Rows}}
+          <tr>
+            <td><span class="mono">{{.ConnectionName}}</span></td>
+            <td>
+              {{if .CanEdit}}
+              <span class="badge badge-primary">{{template "icon" (dict "Name" "edit")}} View + Edit</span>
+              {{else if eq .Effective "View Only"}}
+              <span class="badge badge-neutral">{{template "icon" (dict "Name" "eye")}} View Only</span>
+              {{else}}
+              <span class="badge badge-error">Tidak ada akses</span>
+              {{end}}
+            </td>
+            <td><span class="mono">{{.Source}}</span></td>
+            <td>
+              {{if .Others}}
+              {{range $i, $o := .Others}}{{if $i}}<br>{{end}}<span class="mono muted">{{$o}}</span>{{end}}
+              {{else}}
+              <span class="muted">—</span>
+              {{end}}
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <div class="card-empty">
+      <span class="card-empty-icon">{{template "icon" (dict "Name" "database")}}</span>
+      <p class="card-empty-title">Belum ada koneksi database</p>
+      <p class="card-empty-desc">User ini tidak memiliki akses karena belum ada koneksi database yang terdaftar di platform.</p>
+    </div>
+    {{end}}
+  </div>
+</section>
+
+<div class="alert alert-info mt-4">
+  <span class="alert-icon">{{template "icon" (dict "Name" "info")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Peran dan data terpisah</p>
+    <p class="alert-desc">Status Admin tidak memberi akses database otomatis. Halaman ini hanya menampilkan hak hasil keanggotaan group, bukan grant langsung ke user.</p>
+  </div>
+</div>
+
+{{range .Rows}}
+<section class="card mt-4">
+  <div class="card-header">
+    <h2 class="card-title">{{if .CanEdit}}Akses penuh di {{.ConnectionName}}{{else}}Batas akses di {{.ConnectionName}}{{end}}</h2>
+  </div>
+  <div class="card-body">
+    {{if .CanEdit}}
+    <p class="muted">{{$.Target.Username}} dapat membaca schema, data, dan riwayat {{.ConnectionName}}, membuat draft, serta menjalankan migration. Data table tetap hanya-baca.</p>
+    {{else if eq .Effective "View Only"}}
+    <p class="muted">{{$.Target.Username}} dapat membaca schema, data, dan riwayat {{.ConnectionName}}. Membuat atau menjalankan migration tidak tersedia karena akses efektifnya View Only.</p>
+    {{else}}
+    <p class="muted">{{$.Target.Username}} tidak dapat membuka {{.ConnectionName}}. Tambahkan user ini ke group yang memiliki akses ke database tersebut.</p>
+    {{end}}
+  </div>
+</section>
+{{end}}
+{{end}}

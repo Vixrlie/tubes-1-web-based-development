@@ -60,6 +60,20 @@ type GroupStore interface {
 	GetGrant(ctx context.Context, groupID, connID int64) (access.Action, bool, error)
 	SetGrant(ctx context.Context, groupID, connID int64, level access.Action) error
 	RevokeGrant(ctx context.Context, groupID, connID int64) error
+
+	// AccessSummaries mengembalikan ringkasan akses per group untuk daftar
+	// group: "nama-koneksi: View Only" / "nama-koneksi: View + Edit".
+	AccessSummaries(ctx context.Context) (map[int64][]string, error)
+	// AllGrants mengembalikan level per (group, connection) untuk matriks akses.
+	AllGrants(ctx context.Context) (map[int64]map[int64]access.Action, error)
+}
+
+// levelLabel menerjemahkan level grant untuk tampilan.
+func levelLabel(level access.Action) string {
+	if level == access.ActionEdit {
+		return "View + Edit"
+	}
+	return "View Only"
 }
 
 type PGGroupStore struct {
@@ -282,6 +296,55 @@ func (s *PGGroupStore) RevokeGrant(ctx context.Context, groupID, connID int64) e
 		return ErrGrantNotFound
 	}
 	return nil
+}
+
+// AccessSummaries mengembalikan ringkasan akses per group dalam bentuk
+// "nama-koneksi: Level" per baris, urut nama koneksi.
+func (s *PGGroupStore) AccessSummaries(ctx context.Context) (map[int64][]string, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT gr.group_id, dc.name, gr.level
+		   FROM grants gr
+		   JOIN db_connections dc ON dc.id = gr.connection_id
+		  ORDER BY dc.name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := map[int64][]string{}
+	for rows.Next() {
+		var groupID int64
+		var connName, level string
+		if err := rows.Scan(&groupID, &connName, &level); err != nil {
+			return nil, err
+		}
+		out[groupID] = append(out[groupID], connName+": "+levelLabel(access.Action(level)))
+	}
+	return out, rows.Err()
+}
+
+// AllGrants mengembalikan level grant per (group, connection) untuk matriks akses.
+func (s *PGGroupStore) AllGrants(ctx context.Context) (map[int64]map[int64]access.Action, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT group_id, connection_id, level FROM grants`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := map[int64]map[int64]access.Action{}
+	for rows.Next() {
+		var groupID, connID int64
+		var level string
+		if err := rows.Scan(&groupID, &connID, &level); err != nil {
+			return nil, err
+		}
+		if out[groupID] == nil {
+			out[groupID] = map[int64]access.Action{}
+		}
+		out[groupID][connID] = access.Action(level)
+	}
+	return out, rows.Err()
 }
 
 type PGConnectionLister struct {

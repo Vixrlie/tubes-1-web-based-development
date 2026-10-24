@@ -1,0 +1,117 @@
+{{define "content"}}
+<div class="page-head">
+  <h1 class="page-title">Akses group</h1>
+  <p class="page-desc">Group × database. Pilih level akses pada setiap sel, lalu simpan konfigurasi.</p>
+</div>
+
+{{if .Notice}}
+<div class="flash-slot">
+  <div class="alert alert-success" role="status">
+    <span class="alert-icon">{{template "icon" (dict "Name" "check-circle")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">{{.Notice}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{if .Error}}
+<div class="flash-slot">
+  <div class="alert alert-error" role="alert">
+    <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">Ada masalah</p>
+      <p class="alert-desc">{{.Error}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{if and .Groups .Conns}}
+<section class="card mt-4">
+  <div class="card-body card-body-p0">
+    <form method="post" action="/admin/access" class="form">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Group</th>
+              {{range .Conns}}
+              <th scope="col"><span class="mono">{{.Name}}</span></th>
+              {{end}}
+            </tr>
+          </thead>
+          <tbody>
+            {{range .Groups}}
+            {{$group := .}}
+            <tr>
+              <td>
+                <strong>{{$group.Name}}</strong>
+                <p class="t-caption muted">{{$group.MemberCount}} anggota</p>
+              </td>
+              {{range $.Conns}}
+              <td>
+                <div class="field">
+                  <label class="field-label" for="level_{{$group.ID}}_{{.ID}}">Level akses</label>
+                  <select class="select" id="level_{{$group.ID}}_{{.ID}}" name="level_{{$group.ID}}_{{.ID}}">
+                    {{$current := index (index $.Levels $group.ID) .ID}}
+                    <option value="" {{if eq $current ""}}selected{{end}}>Tidak ada akses</option>
+                    <option value="view" {{if eq $current "view"}}selected{{end}}>View Only</option>
+                    <option value="edit" {{if eq $current "edit"}}selected{{end}}>View + Edit</option>
+                  </select>
+                  <p class="help-text">Ubah level akses group</p>
+                </div>
+              </td>
+              {{end}}
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      <div class="form-actions mt-4 row-between">
+        <button type="submit" class="btn btn-primary">Simpan akses</button>
+        <p class="t-caption muted">{{len .Groups}} group · {{len .Conns}} database · semua kolom ditampilkan</p>
+      </div>
+    </form>
+  </div>
+</section>
+{{else if not .Groups}}
+<div class="card-empty mt-4">
+  <span class="card-empty-icon">{{template "icon" (dict "Name" "group")}}</span>
+  <p class="card-empty-title">Belum ada group</p>
+  <p class="card-empty-desc">Buat group terlebih dahulu di halaman Group sebelum mengatur akses.</p>
+  <a class="btn btn-primary mt-4" href="/admin/groups/new">Tambah group</a>
+</div>
+{{else}}
+<div class="card-empty mt-4">
+  <span class="card-empty-icon">{{template "icon" (dict "Name" "database")}}</span>
+  <p class="card-empty-title">Belum ada koneksi database</p>
+  <p class="card-empty-desc">Daftarkan koneksi database di halaman Koneksi database sebelum memberi akses ke group.</p>
+  <a class="btn btn-primary mt-4" href="/admin/connections/new">Tambah koneksi</a>
+</div>
+{{end}}
+
+<div class="grid-2 mt-4">
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Level akses</h2>
+    </div>
+    <div class="card-body">
+      <p><strong>Tidak ada akses</strong> — tidak dapat membuka database.</p>
+      <p class="mt-2"><strong>View Only</strong> — baca schema, data, dan riwayat.</p>
+      <p class="mt-2"><strong>View + Edit</strong> — baca, buat draft, dan jalankan migration. Data tetap hanya-baca.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Hak efektif melalui group</h2>
+    </div>
+    <div class="card-body">
+      <p class="muted">Tidak ada grant langsung ke user. Admin juga harus menjadi anggota group untuk memperoleh akses database.</p>
+      <p class="muted mt-3">Jika beberapa group memberi akses ke database yang sama, level tertinggi berlaku.</p>
+    </div>
+  </section>
+</div>
+{{end}}

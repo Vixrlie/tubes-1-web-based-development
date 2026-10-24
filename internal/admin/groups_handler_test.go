@@ -27,6 +27,9 @@ type fakeGroupStore struct {
 	getGrant     func(context.Context, int64, int64) (access.Action, bool, error)
 	setGrant     func(context.Context, int64, int64, access.Action) error
 	revokeGrant  func(context.Context, int64, int64) error
+
+	accessSummaries func(context.Context) (map[int64][]string, error)
+	allGrants       func(context.Context) (map[int64]map[int64]access.Action, error)
 }
 
 func (f *fakeGroupStore) ListGroups(ctx context.Context) ([]Group, error) {
@@ -118,6 +121,20 @@ func (f *fakeGroupStore) RevokeGrant(ctx context.Context, groupID, connID int64)
 		return f.revokeGrant(ctx, groupID, connID)
 	}
 	return nil
+}
+
+func (f *fakeGroupStore) AccessSummaries(ctx context.Context) (map[int64][]string, error) {
+	if f.accessSummaries != nil {
+		return f.accessSummaries(ctx)
+	}
+	return map[int64][]string{}, nil
+}
+
+func (f *fakeGroupStore) AllGrants(ctx context.Context) (map[int64]map[int64]access.Action, error) {
+	if f.allGrants != nil {
+		return f.allGrants(ctx)
+	}
+	return map[int64]map[int64]access.Action{}, nil
 }
 
 type fakeUserLister struct {
