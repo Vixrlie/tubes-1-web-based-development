@@ -82,10 +82,10 @@ docker compose exec platform-db psql -U platform -d platform -c "SELECT id, user
 Harus ada satu baris admin dengan `is_platform_admin = t` dan `hash_prefix` `$2a$12$` (bcrypt cost 12).
 
 ```bash
-curl -i http://localhost:8080/static/style.css   # 200
+curl -i http://localhost:8080/static/css/app.css   # 200
 ```
 
-Di Windows PowerShell, `curl` adalah alias `Invoke-WebRequest`. Pakai `curl.exe` supaya yang dipanggil curl asli: `curl.exe -i http://localhost:8080/static/style.css`.
+Di Windows PowerShell, `curl` adalah alias `Invoke-WebRequest`. Pakai `curl.exe` supaya yang dipanggil curl asli: `curl.exe -i http://localhost:8080/static/css/app.css`.
 
 Route `/login` sudah aktif. Route `/admin/*` belum punya halaman, jadi tanpa session valid diarahkan ke `/login`, dan untuk non-admin mengembalikan 403.
 
