@@ -1,79 +1,8 @@
+{{/*
+Halaman Kelola Grup: daftar grup + tombol "Grup Baru".
+Data: web.GroupsPage (lihat groups.go): .PageHeader, .Groups
+*/}}
 {{define "content"}}
-<div class="page-head row-between">
-  <div>
-    <h1 class="page-title">Group & anggota</h1>
-    <p class="page-desc">Atur keanggotaan dan akses database melalui group.</p>
-  </div>
-  <a class="btn btn-primary" href="/admin/groups/new">Tambah group</a>
-</div>
-
-{{if .Notice}}
-<div class="flash-slot">
-  <div class="alert alert-success" role="status">
-    <span class="alert-icon">{{template "icon" (dict "Name" "check-circle")}}</span>
-    <div class="alert-content">
-      <p class="alert-title">{{.Notice}}</p>
-    </div>
-  </div>
-</div>
-{{end}}
-
-<section class="card mt-4">
-  <div class="card-header">
-    <h2 class="card-title">Group platform</h2>
-    <span class="badge badge-neutral">{{len .Groups}} item</span>
-  </div>
-
-  {{if .Groups}}
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">Nama group</th>
-          <th scope="col">Anggota</th>
-          <th scope="col">Ringkasan akses</th>
-          <th scope="col" class="table-cell-right"><span class="visually-hidden">Aksi</span></th>
-        </tr>
-      </thead>
-      <tbody>
-        {{range .Groups}}
-        <tr>
-          <td><span class="mono">{{.Name}}</span></td>
-          <td>{{.MemberCount}}</td>
-          <td>
-            {{with index $.Summaries .ID}}
-            {{range $i, $line := .}}{{if $i}}<br>{{end}}<span class="mono">{{$line}}</span>{{end}}
-            {{else}}
-            <span class="muted">Belum ada akses</span>
-            {{end}}
-          </td>
-          <td class="table-cell-actions">
-            <a class="link-as-text" href="/admin/groups/{{.ID}}">Kelola anggota</a>
-            <span aria-hidden="true">·</span>
-            <a class="link-as-text" href="/admin/groups/{{.ID}}">Ubah nama</a>
-            <span aria-hidden="true">·</span>
-            <a class="link-as-text" href="/admin/access">Ubah akses</a>
-          </td>
-        </tr>
-        {{end}}
-      </tbody>
-    </table>
-  </div>
-  {{else}}
-  <div class="card-empty">
-    <span class="card-empty-icon">{{template "icon" (dict "Name" "group")}}</span>
-    <p class="card-empty-title">Belum ada group</p>
-    <p class="card-empty-desc">Buat group pertama untuk mengelola keanggotaan dan akses database.</p>
-    <a class="btn btn-primary mt-4" href="/admin/groups/new">Tambah group</a>
-  </div>
-  {{end}}
-</section>
-
-<div class="alert alert-info mt-4">
-  <span class="alert-icon">{{template "icon" (dict "Name" "info")}}</span>
-  <div class="alert-content">
-    <p class="alert-title">Akses melalui group</p>
-    <p class="alert-desc">Kelola anggota dan nama group melalui halaman detail group. Ubah level akses group ke database lewat halaman Akses Group.</p>
-  </div>
-</div>
+{{template `page-header` .PageHeader}}
+{{template `table` .Groups}}
 {{end}}

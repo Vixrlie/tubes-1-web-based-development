@@ -1,0 +1,98 @@
+/* ==========================================================================
+   access-editor.css  -  kartu "Akses Database" mode ubah
+   (templates/components/access-editor.html + static/js/access-editor.js)
+   Baris: [nama db | dropdown level] [Cabut]
+   State baris: data-state="removed" -> nama dicoret, dropdown hilang, muncul "Batal Cabut".
+   ========================================================================== */
+
+.access-editor__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.access-editor__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(9rem, 12rem) 6.5rem;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-top: 1px solid var(--color-border);
+}
+
+.access-editor__row:first-child {
+    border-top: 0;
+}
+
+.access-editor__name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: var(--font-size-p3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text);
+}
+
+/* dropdown tanpa label terlihat, lebih rapat dari input biasa */
+.access-editor__level .input__box {
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size-p3);
+}
+
+.access-editor__level .dropdown__control {
+    padding-block: var(--space-2);
+}
+
+/* baris database baru: dropdown nama menggantikan teks nama */
+.access-editor__row--new {
+    grid-template-columns: minmax(0, 1fr) minmax(9rem, 12rem) 6.5rem;
+}
+
+.access-editor__row [data-restore] {
+    display: none;
+}
+
+.access-editor__row[data-state="removed"] [data-restore] {
+    display: inline-flex;
+}
+
+.access-editor__row[data-state="removed"] [data-remove] {
+    display: none;
+}
+
+.access-editor__row[data-state="removed"] .access-editor__name {
+    text-decoration: line-through;
+    color: var(--color-text-subtle);
+}
+
+/* dropdown disembunyikan tapi tetap memegang ruang, supaya kolom tidak bergeser */
+.access-editor__row[data-state="removed"] .access-editor__level {
+    visibility: hidden;
+}
+
+/* "Batal Cabut": teks biru muda tanpa garis bawah */
+.access-editor__restore {
+    --btn-fg: var(--color-primary-300);
+}
+
+.access-editor__restore .btn__label {
+    text-decoration: none;
+}
+
+.access-editor__foot {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 640px) {
+    .access-editor__row,
+    .access-editor__row--new {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .access-editor__name,
+    .access-editor__row--new > .dropdown:first-child {
+        grid-column: 1 / -1;
+    }
+}

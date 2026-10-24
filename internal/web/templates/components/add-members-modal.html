@@ -1,0 +1,61 @@
+{{/*
+Pop up "Tambah Anggota": kotak cari + daftar pengguna berkotak centang + tombol "Tambahkan N anggota".
+Dibuka oleh tombol ber-atribut data-modal-open="add-members-modal" (lihat NewMembersCard di groups.go).
+Data: *web.AddMembersModal (lihat groups.go):
+
+{{with .AddMembers}}{{template `add-members-modal` .}}{{end}}
+
+Form di-POST ke FormAction dengan field:
+
+csrf_token token csrf
+user_id ID pengguna yang dipilih (berulang, satu per anggota)
+
+Pencarian dan hitungan tombol dijalankan static/js/add-members.js. Pengguna nonaktif tampil
+redup dan kotaknya tidak bisa dicentang. Halaman perlu memuat static/js/modal.js dan add-members.js.
+*/}}
+
+{{define "add-members-modal"}}
+<dialog class="modal" id="add-members-modal" aria-labelledby="add-members-modal-title" data-add-members
+    data-label-zero="Tambahkan" data-label-format="Tambahkan {n} anggota">
+    <div class="modal__panel">
+        {{template `modal-head` (dict `ID` `add-members-modal` `Title` `Tambah Anggota`)}}
+        <form class="modal__form" method="post" action="{{.FormAction}}" data-modal-reset>
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <div class="modal__body">
+                {{template `input` (dict `ID` `member-search` `Type` `text` `Placeholder` `Cari nama atau username`
+                `Class` `member-picker__search` `Attrs` (attr `autocomplete="off" autofocus aria-label="Cari nama atau
+                username" data-member-search`))}}
+                <ul class="member-picker__list" role="list">
+                    {{- range .Candidates}}
+                    <li class="member-picker__item{{if .Inactive}} is-disabled{{end}}" data-member-item
+                        data-search="{{.SearchKey}}">
+                        <label class="member-picker__row">
+                            <span class="member-picker__text">
+                                <span class="member-picker__name">{{.DisplayName}}</span>
+                                {{- if .FullName}}
+                                <span class="member-picker__username">{{.Username}}{{if .Inactive}}
+                                    (nonaktif){{end}}</span>
+                                {{- else if .Inactive}}
+                                <span class="member-picker__username">(nonaktif)</span>
+                                {{- end}}
+                            </span>
+                            <input class="member-picker__input" type="checkbox" name="user_id" value="{{.ID}}" {{if
+                                .Inactive}} disabled{{end}}>
+                            <span class="member-picker__box" aria-hidden="true">{{template `icon` `check`}}</span>
+                        </label>
+                    </li>
+                    {{- else}}
+                    <li class="member-picker__empty">Semua pengguna sudah menjadi anggota grup ini.</li>
+                    {{- end}}
+                    <li class="member-picker__empty" data-member-nomatch hidden>Tidak ada pengguna yang cocok.</li>
+                </ul>
+            </div>
+            <div class="modal__foot">
+                {{template `button` (dict `Label` `Batal` `Variant` `secondary` `Attrs` (attr `data-modal-close`))}}
+                {{template `button` (dict `Label` `Tambahkan` `Type` `submit` `State` `disabled` `Attrs` (attr
+                `data-member-submit`))}}
+            </div>
+        </form>
+    </div>
+</dialog>
+{{end}}

@@ -23,7 +23,7 @@ CATATAN: string di dalam tag HTML pakai backtick (`...`), lihat button.html.
 <div class="action-bar{{with .Class}} {{.}}{{end}}" role="region" aria-label="Perubahan belum disimpan" {{with .ID}}
     id="{{.}}" {{end}}{{if .Hidden}} hidden{{end}}>
     <p class="action-bar__message" role="status">
-        <span class="action-bar__dot" aria-hidden="true"></span>{{.Message}}
+        <span class="action-bar__dot" aria-hidden="true"></span><span class="action-bar__text">{{.Message}}</span>
     </p>
     <div class="action-bar__actions">
         {{template `button` (dict `Label` (or .CancelLabel `Batal`) `Variant` `secondary` `Href` .CancelHref `Attrs`

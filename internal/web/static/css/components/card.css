@@ -1,101 +1,33 @@
+/* ==========================================================================
+   card.css  -  kartu putih umum + kepala kartu (templates/components/card.html)
+   Dipakai bersama oleh list-card dan access-editor.
+   ========================================================================== */
+
 .card {
-    background: var(--color-surface-default);
-    border: 1px solid var(--color-border-default);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
+    padding: var(--space-6);
+    background: var(--color-surface-raised);
+    border-radius: var(--radius-xl);
 }
 
-.card-raised {
-    box-shadow: var(--shadow-md);
-}
-
-.card-header {
+.card__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-3);
-    padding: var(--space-4) var(--space-5);
-    border-bottom: 1px solid var(--color-border-default);
-    flex-wrap: wrap;
-}
-
-.card-title {
-    font-size: var(--text-h4);
-    font-weight: var(--font-weight-semibold);
-    line-height: var(--line-height-tight);
-}
-
-.card-subtitle {
-    margin-top: var(--space-1);
-    color: var(--color-fg-muted);
-    font-size: var(--text-caption);
-}
-
-.card-body {
-    padding: var(--space-5);
-}
-
-.card-body-p0 {
-    padding: 0;
-}
-
-.card-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    padding: var(--space-3) var(--space-5);
-    border-top: 1px solid var(--color-border-default);
-    background: var(--color-surface-subtle);
-    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-    flex-wrap: wrap;
-}
-
-.card-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: var(--space-10);
-    color: var(--color-fg-muted);
-}
-
-.card-empty-icon {
-    color: var(--color-fg-subtle);
     margin-bottom: var(--space-4);
 }
 
-.card-empty-icon .icon,
-.card-empty-icon svg {
-    width: 3rem;
-    height: 3rem;
-}
-
-.card-empty-title {
-    color: var(--color-fg);
+.card__title {
+    margin: 0;
+    font-family: var(--font-family-heading);
+    font-size: var(--font-size-t3);
     font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
 }
 
-.card-empty-desc {
-    margin-top: var(--space-2);
-    max-width: 24rem;
-}
-
-.dashboard-card {
-    padding: var(--space-5);
-}
-
-.dashboard-card-title {
-    color: var(--color-fg-muted);
-    font-size: var(--text-caption);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.dashboard-card-value {
-    margin-top: var(--space-2);
-    font-size: var(--text-h2);
-    font-weight: var(--font-weight-bold);
-    color: var(--color-fg);
+.card__actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-3);
 }

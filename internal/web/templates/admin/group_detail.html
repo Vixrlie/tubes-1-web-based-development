@@ -1,115 +1,47 @@
+{{/*
+Halaman Detail Grup: kartu Anggota + kartu Akses Database. Dua mode dalam satu template:
+lihat (Editor == nil) dan ubah akses (Editor != nil, lengkap dengan action bar).
+Pop up: "Tambah Anggota" (AddMembers != nil) dan "Tambah Database" (di dalam access-editor).
+Data: web.GroupDetailPage (lihat groups.go)
+*/}}
 {{define "content"}}
-<p><a href="/admin/groups">&larr; Daftar group</a></p>
-<h1>Group: {{.Group.Name}}</h1>
-{{if .Notice}}<p role="status">{{.Notice}}</p>{{end}}
-{{if .Error}}<p role="alert" class="error">{{.Error}}</p>{{end}}
+<div {{if .Editor}}class="has-action-bar" {{end}}>
+    {{template `page-header` .PageHeader}}
 
-<h2>Ubah nama</h2>
-<form method="post" action="/admin/groups/{{.Group.ID}}">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    <p><label>Nama group <input name="name" value="{{.Group.Name}}" required></label></p>
-    <button type="submit">Simpan</button>
-</form>
+    {{- with .DeleteAction}}
+    {{/* Form tersembunyi; tombol "Hapus Grup" di kepala halaman men-submit-nya lewat atribut form= */}}
+    <form id="delete-group-form" method="post" action="{{.}}"
+        onsubmit="return confirm('Hapus grup ini? Tindakan ini tidak dapat dibatalkan.')" hidden>
+        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+    </form>
+    {{- end}}
 
-<h2>Anggota ({{.Group.MemberCount}})</h2>
-<table>
-    <thead>
-        <tr>
-            <th>Username</th>
-            <th>Nama</th>
-            <th>Peran</th>
-            <th>Status</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        {{range .Members}}
-        <tr>
-            <td>{{.Username}}</td>
-            <td>{{.FullName}}</td>
-            <td>{{if .IsPlatformAdmin}}Platform Admin{{else}}User{{end}}</td>
-            <td>{{if .IsActive}}Aktif{{else}}Nonaktif{{end}}</td>
-            <td>
-                <form method="post" action="/admin/groups/{{$.Group.ID}}/members/{{.ID}}/delete"
-                      onsubmit="return confirm('Hapus anggota ini dari group?')">
-                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-                    <button type="submit">Hapus</button>
-                </form>
-            </td>
-        </tr>
-        {{else}}
-        <tr>
-            <td colspan="5">Belum ada anggota.</td>
-        </tr>
-        {{end}}
-    </tbody>
-</table>
-<form method="post" action="/admin/groups/{{.Group.ID}}/members">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    <p>
-        <label>Tambah anggota
-            <select name="user_id" required>
-                <option value="">Pilih user</option>
-                {{range .AvailableUsers}}<option value="{{.ID}}">{{.Username}}</option>{{end}}
-            </select>
-        </label>
-        <button type="submit">Tambah</button>
-    </p>
-</form>
+    <div class="split split--start">
+        {{template `list-card` .Members}}
+        {{- if .Editor}}
+        {{template `access-editor` .Editor}}
+        {{- else}}
+        {{template `list-card` .Access}}
+        {{- end}}
+    </div>
 
-<h2>Akses database</h2>
-<table>
-    <thead>
-        <tr>
-            <th>Database</th>
-            <th>Level</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        {{range .Grants}}
-        <tr>
-            <td>{{.ConnectionName}}</td>
-            <td>{{if eq .Level "edit"}}View + Edit{{else}}View Only{{end}}</td>
-            <td>
-                <form method="post" action="/admin/groups/{{$.Group.ID}}/grants/{{.ConnectionID}}/delete"
-                      onsubmit="return confirm('Cabut akses group ke database ini?')">
-                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-                    <button type="submit">Cabut</button>
-                </form>
-            </td>
-        </tr>
-        {{else}}
-        <tr>
-            <td colspan="3">Belum ada akses.</td>
-        </tr>
-        {{end}}
-    </tbody>
-</table>
-<form method="post" action="/admin/groups/{{.Group.ID}}/grants">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    <p>
-        <label>Database
-            <select name="connection_id" required>
-                <option value="">Pilih database</option>
-                {{range .AvailableConnections}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
-            </select>
-        </label>
-        <label>Level
-            <select name="level" required>
-                <option value="view">View Only</option>
-                <option value="edit">View + Edit</option>
-            </select>
-        </label>
-        <button type="submit">Simpan akses</button>
-    </p>
-</form>
+    {{- with .AddMembers}}
+    {{template `add-members-modal` .}}
+    {{- end}}
 
-<hr>
-<h2>Hapus group</h2>
-<form method="post" action="/admin/groups/{{.Group.ID}}/delete"
-      onsubmit="return confirm('Hapus group ini? Semua anggota dan akses group akan dihapus.')">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    <p><button type="submit">Hapus group</button></p>
-</form>
+    {{- with .Editor}}
+    {{template `action-bar` (dict `Message` .Message `ID` `access-bar` `Hidden` true `CancelHref` .CancelHref
+    `SubmitAttrs`
+    (attr `form="access-form"`))}}
+    {{- end}}
+
+    {{/* Urutan penting: modal.js dulu (buka / tutup pop up), baru JS komponen */}}
+    <script src="/static/js/modal.js" defer></script>
+    {{- if .AddMembers}}
+    <script src="/static/js/add-members.js" defer></script>
+    {{- end}}
+    {{- if .Editor}}
+    <script src="/static/js/access-editor.js" defer></script>
+    {{- end}}
+</div>
 {{end}}
