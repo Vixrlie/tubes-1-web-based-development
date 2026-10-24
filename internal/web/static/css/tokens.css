@@ -96,14 +96,14 @@
     /* 22 */
     --font-size-t2: 1.125rem;
     /* 18 */
-    --font-size-t3: 1.25rem;
-    /* 20 */
-    --font-size-t4: 1rem;
+    --font-size-t3: 1rem;
     /* 16 */
-    --font-size-t5: 0.875rem;
+    --font-size-t4: 0.875rem;
     /* 14 */
-    --font-size-t6: 0.75rem;
+    --font-size-t5: 0.75rem;
     /* 12 */
+    --font-size-t6: 0.625rem;
+    /* 10 */
 
     /* text styles / paragraph */
     --font-size-p1: 1.125rem;

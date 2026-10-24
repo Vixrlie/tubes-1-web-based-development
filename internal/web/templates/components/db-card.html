@@ -1,0 +1,56 @@
+{{/*
+Kartu database (terhubung / gagal terhubung). Dipanggil lewat `dict`:
+
+{{template "db-card" (dict `Name` `inventory_db` `Meta` `PostgreSQL · 1 schema · 7 tabel`
+`Access` `edit` `Href` `/db/inventory_db`)}}
+
+{{template "db-card" (dict `Name` `hr_db` `Meta` `PostgreSQL` `Status` `failed`
+`Error` `Tidak dapat terhubung ke database. Coba lagi beberapa saat.` `RetryHref` `/db/hr_db/retry`)}}
+
+Parameter:
+Name nama database (wajib)
+Meta teks kecil di bawah nama, mis. engine, jumlah schema dan tabel
+Status "connected" (default) | "failed"
+Access "view" (default, label View Only) | "edit" (label View + Edit)
+Href tujuan tombol "Buka" (status connected)
+Error pesan galat (hanya tampil saat status failed)
+RetryHref tujuan tombol "Coba lagi" (status failed), opsional
+RetryAttrs atribut mentah tombol "Coba lagi", mis. (attr `hx-post="/x" hx-target="closest article"`)
+*/}}
+{{define "db-card"}}
+{{- $failed := eq (or .Status `connected`) `failed` -}}
+<article class="db-card{{if $failed}} db-card--failed{{end}}">
+    <header class="db-card__head">
+        <span class="db-card__icon">{{template `icon` `database`}}</span>
+        {{- if $failed}}
+        {{template `label` (dict `Label` `Gagal terhubung` `Variant` `error`)}}
+        {{- else}}
+        {{template `label` (dict `Label` `Terhubung` `Variant` `success`)}}
+        {{- end}}
+    </header>
+
+    <div class="db-card__body">
+        <h3 class="db-card__name">{{.Name}}</h3>
+        {{- with .Meta}}
+        <p class="db-card__meta">{{.}}</p>
+        {{- end}}
+        {{- if eq (or .Access `view`) `edit`}}
+        {{template `label` (dict `Label` `View + Edit` `Variant` `info`)}}
+        {{- else}}
+        {{template `label` (dict `Label` `View Only` `Variant` `neutral`)}}
+        {{- end}}
+        {{- if and $failed .Error}}
+        <p class="db-card__error" role="alert">{{.Error}}</p>
+        {{- end}}
+    </div>
+
+    <footer class="db-card__foot">
+        {{- if $failed}}
+        {{template `button` (dict `Label` `Coba lagi` `Variant` `secondary` `Href` .RetryHref `Attrs` .RetryAttrs
+        `PaddingY` `var(--space-3)`)}}
+        {{- else}}
+        {{template `button` (dict `Label` `Buka` `Href` .Href `PaddingY` `var(--space-3)`)}}
+        {{- end}}
+    </footer>
+</article>
+{{end}}

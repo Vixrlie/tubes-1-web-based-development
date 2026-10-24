@@ -92,9 +92,20 @@
         {{template `label` (dict `Label` `View Only` `Variant` `neutral`)}}
     </div>
 
+    <h2>DB Card</h2>
+    <div class="db-grid">
+        {{template `db-card` (dict `Name` `inventory_db` `Meta` `PostgreSQL · 1 schema · 7 tabel` `Access` `edit` `Href`
+        `#`)}}
+        {{template `db-card` (dict `Name` `shop_db` `Meta` `PostgreSQL · 2 schema · 12 tabel` `Href` `#`)}}
+        {{template `db-card` (dict `Name` `hr_db` `Meta` `PostgreSQL` `Status` `failed` `Error` `Tidak dapat terhubung
+        ke database. Coba lagi beberapa saat.`)}}
+    </div>
+
     <h2>Icon</h2>
     <div class="dev-row">
         {{range iconNames}}
+        <span class="dev-icon">{{template `icon` .}}{{.}}</span>
+        {{end}}
     </div>
 
     <h2>Avatar</h2>

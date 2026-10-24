@@ -1,6 +1,6 @@
 /* Kerangka halaman: header (sticky) + [sidebar | konten] */
 :root {
-    --sidebar-w: 17.375rem;
+    --sidebar-w: 16rem;
     --shell-pad-y: var(--space-6);
 }
 
