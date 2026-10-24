@@ -199,3 +199,31 @@
     --_fg: var(--color-disabled-fg);
     --_stroke: var(--color-disabled-border);
 }
+
+
+/* ---------- Hover isi penuh (Tes Koneksi, Edit Koneksi) ----------
+   Dipasang lewat Class "btn--hover-fill" bersama variant secondary / outline.
+   Default : latar putih, garis & tulisan sesuai variant.
+   Hover   : latar = warna tulisan, tulisan putih. */
+.btn--hover-fill {
+    --_fill: var(--color-surface-raised);
+}
+
+.btn--hover-fill.btn--secondary {
+    --_fg: var(--color-text-muted);
+    --_stroke: var(--color-text-muted);
+}
+
+.btn--hover-fill:not(.is-disabled):hover {
+    --_fg: var(--color-on-primary);
+}
+
+.btn--hover-fill.btn--secondary:not(.is-disabled):hover {
+    --_fill: var(--color-text-muted);
+    --_stroke: var(--color-text-muted);
+}
+
+.btn--hover-fill.btn--outline:not(.is-disabled):hover {
+    --_fill: var(--color-primary);
+    --_stroke: var(--color-primary);
+}

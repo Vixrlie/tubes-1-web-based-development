@@ -21,6 +21,7 @@
 .page-header__actions {
     display: flex;
     flex: none;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-3);
 }

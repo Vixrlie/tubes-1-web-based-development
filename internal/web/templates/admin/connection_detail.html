@@ -1,0 +1,26 @@
+{{/*
+Halaman Detail Koneksi: kartu Parameter Koneksi + kartu Group dengan Akses.
+Tombol Tes Koneksi dan Hapus di kepala halaman men-submit form tersembunyi lewat atribut form=.
+Data: web.ConnectionDetailPage (lihat connections.go)
+*/}}
+{{define "content"}}
+{{template `page-header` .PageHeader}}
+
+{{- with .TestAction}}
+<form id="test-connection-form" method="post" action="{{.}}" hidden>
+    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+</form>
+{{- end}}
+
+{{- with .DeleteAction}}
+<form id="delete-connection-form" method="post" action="{{.}}"
+    onsubmit="return confirm('Hapus koneksi ini? Tindakan ini tidak dapat dibatalkan.')" hidden>
+    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+</form>
+{{- end}}
+
+<div class="split split--lead split--start">
+    {{template `detail-card` .Params}}
+    {{template `list-card` .Groups}}
+</div>
+{{end}}

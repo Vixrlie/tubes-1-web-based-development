@@ -34,6 +34,7 @@ type ListItem struct {
 
 type ListCard struct {
 	Title     string
+	Note      string   // opsional; keterangan kecil di kanan judul, mis. "Diatur dari halaman Groups"
 	Actions   []Button // tombol di kanan judul (opsional)
 	Items     []ListItem
 	Empty     string // pesan kalau Items kosong (default "Belum ada data.")
