@@ -152,3 +152,133 @@
 .btn--custom.is-disabled {
     opacity: 0.5;
 }
+
+/* --- Varian tombol untuk halaman produksi (gaya desain dbm/Figma,
+       dilengkungkan di atas base .btn versi fe-components) --- */
+.btn-primary {
+    background: var(--color-primary-default);
+    color: var(--color-on-primary);
+    border-color: var(--color-primary-default);
+}
+
+.btn-primary:hover {
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
+.btn-primary:disabled {
+    background: var(--color-disabled-bg);
+    color: var(--color-disabled-fg);
+    border-color: var(--color-disabled-border);
+}
+
+.btn-secondary {
+    background: var(--color-surface-default);
+    color: var(--color-fg);
+    border-color: var(--color-border-strong);
+}
+
+.btn-secondary:hover {
+    background: var(--color-surface-subtle);
+}
+
+.btn-secondary:disabled {
+    background: var(--color-disabled-bg);
+    color: var(--color-disabled-fg);
+    border-color: var(--color-disabled-border);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--color-fg);
+    border-color: transparent;
+}
+
+.btn-ghost:hover {
+    background: var(--color-surface-subtle);
+}
+
+.btn-block {
+    width: 100%;
+}
+
+.btn-sm {
+    min-height: var(--control-h-sm);
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-caption);
+}
+
+.btn-lg {
+    min-height: var(--control-h-lg);
+    padding: var(--space-3) var(--space-6);
+}
+
+.btn-group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.btn-group-separated {
+    gap: var(--space-3);
+}
+
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-fg-muted);
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.icon-btn:hover {
+    background: var(--color-surface-subtle);
+    color: var(--color-fg);
+}
+
+.icon-btn:disabled {
+    color: var(--color-disabled-fg);
+    cursor: not-allowed;
+}
+
+.icon-btn .icon {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.icon-btn-border {
+    border-color: var(--color-border-strong);
+}
+
+.btn-danger {
+    background: var(--color-danger-default);
+    color: var(--color-on-danger);
+    border-color: var(--color-danger-default);
+}
+
+.btn-danger:hover {
+    background: var(--color-danger-hover);
+    border-color: var(--color-danger-hover);
+}
+
+.btn-danger:disabled {
+    background: var(--color-disabled-bg);
+    color: var(--color-disabled-fg);
+    border-color: var(--color-disabled-border);
+}
+
+.btn-danger-secondary {
+    background: var(--color-surface-default);
+    color: var(--color-danger-default);
+    border-color: var(--color-error-border);
+}
+
+.btn-danger-secondary:hover {
+    background: var(--color-error-bg);
+}

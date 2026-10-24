@@ -28,3 +28,10 @@
     font-weight: var(--font-weight-semibold);
     color: var(--color-primary);
 }
+/* Label teks di samping ikon pada side-link. */
+.side-link__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

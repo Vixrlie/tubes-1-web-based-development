@@ -15,6 +15,10 @@
 @import "components/pager.css";
 @import "components/tabs.css";
 @import "components/flash.css";
+@import "components/badge.css";
+@import "components/card.css";
+@import "components/tree.css";
+@import "components/sql-panel.css";
 @import "components/avatar.css";
 @import "components/nav-link.css";
 @import "components/side-link.css";

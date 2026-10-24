@@ -141,3 +141,51 @@
     --z-modal: 400;
     --z-toast: 500;
 }
+
+/* --- Token warisan desain dbm (00770ba): dipertahankan agar gaya
+   shell/table/button restore tetap ter-resolve. Nama tidak tumpang
+   tindih dengan token fe-components di atas. --- */
+:root {
+    --color-border-default: var(--color-border);
+    --color-danger-default: var(--color-danger);
+    --color-fg: var(--color-ink);
+    --color-fg-inverse: var(--color-white);
+    --color-fg-muted: var(--color-muted);
+    --color-fg-subtle: var(--color-subtle);
+    --color-link-default: var(--color-link);
+    --color-primary-default: var(--color-primary);
+    --color-surface-default: var(--color-surface);
+    --color-surface-subtle: var(--color-surface-muted);
+    --focus-ring-error: 0 0 0 3px var(--color-error-border);
+    --font-body: var(--font-family-paragraph);
+    --font-cta: var(--font-family-cta);
+    --font-heading: var(--font-family-heading);
+    --font-mono: var(--font-family-mono);
+    --font-size-h1: 1.75rem;
+    --font-size-h2: 1.5rem;
+    --font-size-h3: 1.25rem;
+    --font-size-h4: 1.125rem;
+    --font-size-h5: 1rem;
+    --font-size-h6: 0.875rem;
+    --sidebar-active-bg: var(--color-primary);
+    --sidebar-bg: var(--color-sidebar-bg);
+    --sidebar-border: var(--color-sidebar-border);
+    --sidebar-hover: var(--color-sidebar-hover);
+    --sidebar-text: var(--color-sidebar-text);
+    --sidebar-text-active: var(--color-sidebar-text-active);
+    --sidebar-text-hover: var(--color-sidebar-text-hover);
+    --sql-bg: var(--color-sql-bg);
+    --sql-line-number: var(--color-sql-line-number);
+    --sql-muted: var(--color-sql-muted);
+    --sql-text: var(--color-sql-text);
+    --text-body: var(--font-size-body);
+    --text-body-lg: var(--font-size-body-lg);
+    --text-caption: var(--font-size-caption);
+    --text-h1: var(--font-size-h1);
+    --text-h2: var(--font-size-h2);
+    --text-h3: var(--font-size-h3);
+    --text-h4: var(--font-size-h4);
+    --text-h5: var(--font-size-h5);
+    --text-h6: var(--font-size-h6);
+    --text-small: var(--font-size-small);
+}
