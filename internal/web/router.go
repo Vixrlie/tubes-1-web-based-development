@@ -13,7 +13,6 @@ type Routes interface {
 	Routes(r chi.Router)
 }
 
-// Base router
 func NewRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
