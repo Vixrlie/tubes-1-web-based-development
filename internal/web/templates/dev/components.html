@@ -85,7 +85,11 @@
 
     <h2>Icon</h2>
     <div class="dev-row">
-        {{range (list `heart` `plus` `arrow-right` `check` `user` `users` `link` `database` `table` `migration`)}}
+        {{range (list
+        `alert` `arrow-right` `check` `check-circle` `chevron-down` `chevron-left` `chevron-right`
+        `close` `database` `database-logo` `edit` `eye` `file-diff` `folder` `group` `info` `key`
+        `layout-dashboard` `lock` `logout` `menu` `minus` `play` `plug` `plus` `refresh` `search`
+        `shield` `table` `trash` `users`)}}
         <span class="dev-icon">{{template `icon` .}}{{.}}</span>
         {{end}}
     </div>

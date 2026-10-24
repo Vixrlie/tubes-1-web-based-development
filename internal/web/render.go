@@ -3,11 +3,14 @@ package web
 import (
 	"embed"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
+	"sync"
 )
 
 //go:embed all:templates
@@ -15,6 +18,51 @@ var TemplatesFS embed.FS
 
 //go:embed static/*
 var StaticFS embed.FS
+
+// iconNameRe membatasi nama icon (huruf kecil, angka, strip) supaya
+// tidak bisa dipakai untuk path traversal.
+var iconNameRe = regexp.MustCompile(`^[a-z0-9-]+$`)
+
+// iconCache menyimpan hasil baca static/icons/<nama>.svg supaya
+// file tidak dibaca ulang tiap render.
+var iconCache sync.Map
+
+// iconSVG membaca static/icons/<nama>.svg dan menyisipkan class "icon"
+// ke tag <svg>, jadi ukuran diatur CSS (.btn .icon, .side-link .icon)
+// dan warna ikut currentColor. Nama hanya dari literal template.
+func iconSVG(name string) (template.HTML, error) {
+	if !iconNameRe.MatchString(name) {
+		return "", fmt.Errorf("icon: nama tidak valid %q", name)
+	}
+	if v, ok := iconCache.Load(name); ok {
+		return v.(template.HTML), nil
+	}
+	b, err := StaticFS.ReadFile("static/icons/" + name + ".svg")
+	if err != nil {
+		return "", fmt.Errorf("icon %q tidak ditemukan di static/icons", name)
+	}
+	s := strings.Replace(strings.TrimSpace(string(b)), "<svg",
+		`<svg class="icon" aria-hidden="true" focusable="false"`, 1)
+	h := template.HTML(s)
+	iconCache.Store(name, h)
+	return h, nil
+}
+
+// iconNames mengembalikan nama semua icon di static/icons (tanpa ".svg"),
+// dipakai halaman dev/components untuk menampilkan daftar icon otomatis.
+func iconNames() []string {
+	entries, err := fs.ReadDir(StaticFS, "static/icons")
+	if err != nil {
+		return nil
+	}
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".svg") {
+			names = append(names, strings.TrimSuffix(e.Name(), ".svg"))
+		}
+	}
+	return names
+}
 
 // funcs dipakai semua template. `dict` untuk memanggil komponen dengan
 // parameter bernama: {{template "button" (dict "Label" "Simpan")}}
@@ -41,6 +89,10 @@ var funcs = template.FuncMap{
 	// attr menandai string sebagai atribut HTML tepercaya (hanya untuk
 	// literal di template, JANGAN dari input user).
 	"attr": func(s string) template.HTMLAttr { return template.HTMLAttr(s) },
+	// icon menyisipkan SVG inline dari static/icons/<nama>.svg.
+	"icon": iconSVG,
+	// iconNames daftar nama icon yang tersedia (untuk halaman dev).
+	"iconNames": iconNames,
 }
 
 // Folder yang berisi potongan template (bukan halaman). Di-parse bersama
