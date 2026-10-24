@@ -163,6 +163,8 @@
 
    /* Breakpoint tidak bisa pakai var() di @media. Nilai acuan:
      sm 640px, md 768px, lg 1024px, xl 1280px */
+
+   --color-icon: var(--color-neutral-500);
 }
 
 /* ==========================================================================
@@ -231,4 +233,6 @@
    --color-label-info-fg: var(--color-primary-100);
    --color-label-neutral-bg: var(--color-neutral-700);
    --color-label-neutral-fg: var(--color-neutral-100);
+
+   --color-icon: var(--color-neutral-300);
 }

@@ -1,8 +1,10 @@
-<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M14.167 11.1668V13.6668C14.167 17.0002 12.8337 18.3335 9.50033 18.3335H6.33366C3.00033 18.3335 1.66699 17.0002 1.66699 13.6668V10.5002C1.66699 7.16683 3.00033 5.8335 6.33366 5.8335H8.83366" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke="#317BFF"/>
-<path d="M14.1663 11.1668H11.4997C9.49967 11.1668 8.83301 10.5002 8.83301 8.50016V5.8335L14.1663 11.1668Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke="#317BFF"/>
-<path d="M9.66699 1.6665H13.0003" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke="#317BFF"/>
-<path d="M5.83301 4.1665C5.83301 2.78317 6.94967 1.6665 8.33301 1.6665H10.5163" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke="#317BFF"/>
-<path d="M18.3329 6.6665V11.8248C18.3329 13.1165 17.2829 14.1665 15.9912 14.1665" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke="#317BFF"/>
-<path d="M18.333 6.6665H15.833C13.958 6.6665 13.333 6.0415 13.333 4.1665V1.6665L18.333 6.6665Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke="#317BFF"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
+<g transform="scale(1.2)">
+  <path d="M14.167 11.1668V13.6668C14.167 17.0002 12.8337 18.3335 9.50033 18.3335H6.33366C3.00033 18.3335 1.66699 17.0002 1.66699 13.6668V10.5002C1.66699 7.16683 3.00033 5.8335 6.33366 5.8335H8.83366" stroke="currentColor"/>
+  <path d="M14.1663 11.1668H11.4997C9.49967 11.1668 8.83301 10.5002 8.83301 8.50016V5.8335L14.1663 11.1668Z" stroke="currentColor"/>
+  <path d="M9.66699 1.6665H13.0003" stroke="currentColor"/>
+  <path d="M5.83301 4.1665C5.83301 2.78317 6.94967 1.6665 8.33301 1.6665H10.5163" stroke="currentColor"/>
+  <path d="M18.3329 6.6665V11.8248C18.3329 13.1165 17.2829 14.1665 15.9912 14.1665" stroke="currentColor"/>
+  <path d="M18.333 6.6665H15.833C13.958 6.6665 13.333 6.0415 13.333 4.1665V1.6665L18.333 6.6665Z" stroke="currentColor"/>
+</g>
 </svg>
