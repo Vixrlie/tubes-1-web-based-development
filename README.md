@@ -82,10 +82,10 @@ docker compose exec platform-db psql -U platform -d platform -c "SELECT id, user
 Harus ada satu baris admin dengan `is_platform_admin = t` dan `hash_prefix` `$2a$12$` (bcrypt cost 12).
 
 ```bash
-curl -i http://localhost:8080/static/style.css   # 200
+curl -i http://localhost:8080/static/css/app.css   # 200
 ```
 
-Di Windows PowerShell, `curl` adalah alias `Invoke-WebRequest`. Pakai `curl.exe` supaya yang dipanggil curl asli: `curl.exe -i http://localhost:8080/static/style.css`.
+Di Windows PowerShell, `curl` adalah alias `Invoke-WebRequest`. Pakai `curl.exe` supaya yang dipanggil curl asli: `curl.exe -i http://localhost:8080/static/css/app.css`.
 
 Route `/login` sudah aktif. Route `/admin/*` belum punya halaman, jadi tanpa session valid diarahkan ke `/login`, dan untuk non-admin mengembalikan 403.
 
@@ -237,15 +237,46 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 
 - [x] Skema database sesuai spesifikasi
 - [x] Config (termasuk pembacaan `.env`), koneksi database, runner migrasi, server dasar
-- [x] Kontrak auth, session, dan access (masih stub yang fail-closed)
+- [x] Kontrak auth, session, dan access
 - [x] Autentikasi: repository user, validasi, seed admin
-- [ ] Autentikasi: login dan logout
-- [ ] Session: pembuatan, validasi, rotasi, revoke, CSRF
-- [ ] Platform Admin: kelola user, group, koneksi, akses
-- [ ] Database viewer dan migration
-- [ ] Unit dan integration test
+- [x] Autentikasi: login dan logout
+- [x] Session: pembuatan, validasi, rotasi berkala + grace period, revoke, CSRF
+- [x] Platform Admin: kelola user, group, koneksi, pemberian akses (grants)
+- [x] Database viewer: `/databases`, schema, table (columns/constraints/indexes), data berpaginasi
+- [x] Migration: draft, editor, preview + konfirmasi, eksekusi transaksional (commit/rollback), riwayat + filter status
+- [x] Halaman 403 (akses ditolak) dan koneksi gagal yang aman tanpa kredensial
+- [x] Unit dan integration test (akses, admin, auth, session, config, db, dbm, web)
 
-Login dan logout sudah terpasang di `main.go` (tes handler menyusul). Halaman `/` masih sementara, dan route `/admin/*` belum punya halaman.
+Alur minimum (GEN-07) berjalan end-to-end: Login → Access Control → Pilih Database → Lihat Schema/Data → Buat Migration → Execute → Commit/Rollback → Riwayat Migration ter-update.
+
+Route database management:
+
+| Route | Fungsi |
+|-------|--------|
+| `/databases` | Daftar database yang boleh diakses user (lewat group) |
+| `/databases/{id}` | Redirect ke penjelajah schema |
+| `/databases/{id}/schema` | Pohon schema/tabel + pratinjau kolom (`?table=schema.nama`) |
+| `/databases/{id}/tables/{schema.nama}` | Detail tabel: `?tab=columns\|constraints\|indexes` |
+| `/databases/{id}/tables/{schema.nama}/data` | Data tabel dengan paginasi |
+| `/databases/{id}/migrations` | Riwayat migration (`?status=draft\|applied\|failed`) |
+| `/databases/{id}/migrations/new` | Editor draft (View + Edit) |
+| `/databases/{id}/migrations/{mid}` | Detail migration |
+| `/databases/{id}/migrations/{mid}/edit` | Ubah draft (View + Edit) |
+| `/databases/{id}/migrations/{mid}/preview` | Pratinjau + konfirmasi ketik-nama (View + Edit) |
+| `/databases/{id}/migrations/{mid}/execute` | Eksekusi transaksional (View + Edit) |
+
+Setiap route memeriksa `access.Policy` di backend; penolakan dirender sebagai halaman 403 dengan level akses efektif. Kegagalan koneksi ke database target menampilkan halaman "koneksi gagal" tanpa kredensial. Pool database target di-cache per koneksi (`PGRegistry`) dan ditutup saat koneksi diubah/dihapus atau aplikasi berhenti.
+
+Halaman Platform Admin:
+
+| Route | Fungsi |
+|-------|--------|
+| `/admin/users` | Daftar user: status, group, tautan ubah/reset password/akses efektif |
+| `/admin/users/{id}/access` | Akses efektif user: gabungan grant seluruh group-nya, per database, dengan sumber hak tertinggi |
+| `/admin/users/{id}/delete` | Hapus user (konfirmasi ketik-nama); ditolak untuk admin terakhir, user dengan riwayat migration, dan diri sendiri |
+| `/admin/groups` | Daftar group dengan jumlah anggota dan ringkasan akses per database |
+| `/admin/groups/{id}` | Detail group: kelola anggota dan grant per koneksi |
+| `/admin/access` | Matriks akses group × database (Tidak ada akses / View Only / View + Edit), satu formulir simpan; penurunan atau pencabutan level otomatis mencabut session anggota group |
 
 ## Alur Kerja Git
 

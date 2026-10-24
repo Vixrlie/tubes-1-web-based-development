@@ -15,7 +15,7 @@ func CSRFToken(ctx context.Context) string {
 	return t
 }
 
-// Revoker dipakai Vincent saat akses atau keanggotaan group berubah,
+// Revoker mencabut session ketika akses atau keanggotaan group berubah,
 // dan saat admin menonaktifkan user.
 type Revoker interface {
 	RevokeSessionsByUser(ctx context.Context, userID int64) error

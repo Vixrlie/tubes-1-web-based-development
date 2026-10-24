@@ -22,13 +22,11 @@ const (
 	msgLoginFailed = "Username atau password salah."
 )
 
-// SessionManager adalah bagian dari session.Manager yang dipakai handler.
 type SessionManager interface {
 	Create(ctx context.Context, userID int64) (string, error)
 	Revoke(ctx context.Context, token string) error
 }
 
-// Renderer dipenuhi oleh web.Renderer.
 type Renderer interface {
 	Render(w http.ResponseWriter, name string, data any)
 }
@@ -51,22 +49,22 @@ func NewHandlers(store Store, sessions SessionManager, view Renderer, secureCook
 	}
 }
 
-// PublicRoutes dipasang DI LUAR AuthMiddleware (belum punya session).
 func (h *Handlers) PublicRoutes(r chi.Router) {
 	r.Get(loginPath, h.showLogin)
 	r.Post(loginPath, h.login)
 }
 
-// ProtectedRoutes dipasang di grup AuthMiddleware -> CSRFProtect.
 func (h *Handlers) ProtectedRoutes(r chi.Router) {
 	r.Get("/", h.home)
 	r.Post("/logout", h.logout)
 }
 
 type loginPage struct {
+	Title    string
 	Username string
 	Error    string
 
+	// Field layout FE (layout.html header/sidebar); kosong untuk tamu.
 	User any
 	Nav  string
 }
@@ -75,7 +73,7 @@ func (h *Handlers) renderLogin(w http.ResponseWriter, status int, username, errM
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8") // harus sebelum WriteHeader
 	w.WriteHeader(status)
-	h.view.Render(w, "login.html", loginPage{Username: username, Error: errMsg})
+	h.view.Render(w, "login.html", loginPage{Title: "Masuk", Username: username, Error: errMsg})
 }
 
 func (h *Handlers) showLogin(w http.ResponseWriter, r *http.Request) {
@@ -166,19 +164,22 @@ func (h *Handlers) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 type homePage struct {
-	Username  string
-	CSRFToken string
+	Title           string
+	Username        string
+	CSRFToken       string
+	IsPlatformAdmin bool
 
+	// Field layout FE (layout.html header/sidebar).
 	User any
 	Nav  string
 }
 
-// home adalah halaman sementara sebagai tujuan setelah login dan tempat
-// tombol logout. Ganti dengan /databases saat fitur viewer selesai.
 func (h *Handlers) home(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFromContext(r.Context())
 	h.view.Render(w, "home.html", homePage{
-		Username:  u.Username,
-		CSRFToken: session.CSRFToken(r.Context()),
+		Title:           "Beranda",
+		Username:        u.Username,
+		CSRFToken:       session.CSRFToken(r.Context()),
+		IsPlatformAdmin: u.IsPlatformAdmin,
 	})
 }

@@ -31,7 +31,6 @@ func WithUser(ctx context.Context, u User) context.Context {
 }
 
 // UserFromContext memberikan user yang sedang login (identifikasi principal).
-// Dipakai Vincent dan Majiid.
 func UserFromContext(ctx context.Context) (User, bool) {
 	u, ok := ctx.Value(contextKey{}).(User)
 	return u, ok
