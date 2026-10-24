@@ -1,0 +1,53 @@
+{{/*
+Sidebar. Dipilih otomatis dari .Nav (sama dengan mode header):
+"admin" -> sidebar-admin (Pengguna, Grup, Koneksi Database)
+"database" -> sidebar-database (nama database, schema > tabel, Migrasi)
+Item aktif admin : .SideActive = "users" | "groups" | "connections"
+Isi sidebar database : .Sidebar (lihat SidebarDB di shell.go)
+*/}}
+{{define "sidebar"}}
+{{- if eq .Nav `admin`}}{{template `sidebar-admin` .}}
+{{- else if eq .Nav `database`}}{{template `sidebar-database` .}}
+{{- end}}
+{{end}}
+
+{{define "sidebar-admin"}}
+<aside class="sidebar" aria-label="Navigasi admin">
+    <nav>
+        <ul class="sidebar__list" role="list">
+            <li>{{template `side-link` (dict `Label` `Pengguna` `Icon` `user` `Href` `/admin/users` `Active` (eq
+                .SideActive `users`))}}</li>
+            <li>{{template `side-link` (dict `Label` `Grup` `Icon` `users` `Href` `/admin/groups` `Active` (eq
+                .SideActive `groups`))}}</li>
+            <li>{{template `side-link` (dict `Label` `Koneksi Database` `Icon` `link` `Href` `/admin/connections`
+                `Active` (eq .SideActive `connections`))}}</li>
+        </ul>
+    </nav>
+</aside>
+{{end}}
+
+{{define "sidebar-database"}}
+{{- with .Sidebar}}
+<aside class="sidebar" aria-label="Navigasi database">
+    <h2 class="sidebar__title">{{.Name}}</h2>
+    <nav>
+        <ul class="sidebar__list" role="list">
+            {{- range .Schemas}}
+            <li>
+                {{template `side-link` (dict `Label` .Name `Icon` `database` `Href` .Href `Active` .Active)}}
+                {{- if .Tables}}
+                <ul class="sidebar__list sidebar__list--nested" role="list">
+                    {{- range .Tables}}
+                    <li>{{template `side-link` (dict `Label` .Name `Icon` `table` `Href` .Href `Active` .Active)}}</li>
+                    {{- end}}
+                </ul>
+                {{- end}}
+            </li>
+            {{- end}}
+            <li>{{template `side-link` (dict `Label` `Migrasi` `Icon` `migration` `Href` .MigrationsHref `Active`
+                .MigrationsActive)}}</li>
+        </ul>
+    </nav>
+</aside>
+{{- end}}
+{{end}}

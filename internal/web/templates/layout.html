@@ -15,9 +15,15 @@
 
 <body>
   {{if .User}}{{template "header" .}}{{end}}
-  <main>
-    {{template "content" .}}
-  </main>
+  {{- $side := and .User (or (eq .Nav `admin`) (eq .Nav `database`))}}
+  <div class="app-shell{{if not $side}} app-shell--solo{{end}}">
+    {{- if $side}}
+    {{template "sidebar" .}}
+    {{- end}}
+    <main class="app-shell__main">
+      {{template "content" .}}
+    </main>
+  </div>
 </body>
 
 </html>

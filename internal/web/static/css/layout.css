@@ -1,0 +1,29 @@
+/* Kerangka halaman: header (sticky) + [sidebar | konten] */
+:root {
+    --sidebar-w: 17.375rem;
+    --shell-pad-y: var(--space-6);
+}
+
+.app-shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-6);
+    padding: var(--shell-pad-y) 1.75rem var(--shell-pad-y) 2.8125rem;
+}
+
+/* halaman tanpa sidebar (login, dll) */
+.app-shell--solo {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.app-shell__main {
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .app-shell {
+        grid-template-columns: minmax(0, 1fr);
+        padding-inline: var(--space-4);
+    }
+}
