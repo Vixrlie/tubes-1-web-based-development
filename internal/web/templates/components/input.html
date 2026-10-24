@@ -34,6 +34,12 @@ Name, ID name & id input (ID default = Name, dipakai juga untuk <label for>)
                 .Required}} required{{end}}{{if .Error}} aria-invalid="true" {{end}}{{if or .Error .Helper}}
                 aria-describedby="{{$id}}-msg" {{end}}{{with .Attrs}} {{.}}{{end}}>
             {{- with .IconRight}}{{template `icon` .}}{{end}}
+            {{- if .PasswordToggle}}
+            <button type="button" class="input__toggle" data-password-toggle aria-pressed="false"
+                aria-label="Tampilkan password" {{if eq (or .State `default`) `disabled`}} disabled{{end}}>
+                {{- template `icon` `eye-slash`}}{{template `icon` `eye` -}}
+            </button>
+            {{- end}}
         </div>
         {{- if .Error}}
         <p class="input__helper" id="{{$id}}-msg" role="alert">{{.Error}}</p>

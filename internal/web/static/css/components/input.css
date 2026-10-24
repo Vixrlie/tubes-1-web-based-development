@@ -30,7 +30,6 @@
     border-radius: var(--radius-md);
     color: var(--color-text);
     font-size: var(--font-size-p2);
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 /* ukuran icon ikut ukuran teks, warna ikut warna teks */
@@ -67,13 +66,23 @@
 }
 
 /* ---------- Hover & focus ---------- */
-.input:not(.is-disabled):not(.is-error) .input__box:hover {
+/* hover tidak boleh menimpa warna fokus: tanpa :not(:focus-within), selector hover
+   (lebih spesifik daripada aturan fokus) menang selama kursor masih di atas field */
+.input:not(.is-disabled):not(.is-error) .input__box:hover:not(:focus-within) {
     border-color: var(--color-neutral-400);
+}
+
+/* fokus: cukup border berubah warna, tanpa ring/glow. Ring global
+   (:focus-visible di base.css) dimatikan untuk field-nya supaya tidak dobel. */
+.input .input__control:focus,
+.input .input__control:focus-visible {
+    outline: 0;
+    box-shadow: none;
+    border-radius: 0;
 }
 
 .input:not(.is-disabled) .input__box:focus-within {
     border-color: var(--color-focus);
-    box-shadow: var(--focus-ring);
 }
 
 /* ---------- Error ---------- */
@@ -91,7 +100,6 @@
 
 .input.is-error .input__box:focus-within {
     border-color: var(--color-danger);
-    box-shadow: var(--focus-ring-danger);
 }
 
 /* ---------- Disabled ---------- */
@@ -110,4 +118,27 @@
 
 .input.is-disabled .input__control {
     cursor: not-allowed;
+}
+
+/* ---------- Tombol tampil/sembunyikan password ---------- */
+.input__toggle {
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.input__toggle:focus-visible {
+    outline: 0;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--focus-ring);
+}
+
+/* terlihat -> icon "eye"; tersembunyi -> icon "eye-slash" */
+.input__toggle[aria-pressed="false"] .icon:last-child,
+.input__toggle[aria-pressed="true"] .icon:first-child {
+    display: none;
 }

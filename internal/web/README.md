@@ -23,7 +23,9 @@ web/
 │   │   ├── tokens.css # TOKEN MENTAH dari Figma (palet warna, font, ukuran teks)
 │   │   ├── base.css, typography.css, layout.css
 │   │   └── components/<nama>.css   # 1 komponen = 1 file CSS
-│   └── js/ ...
+│   ├── img/           # logo-full.png, logogram.png, login-page-image.png
+│   ├── js/            # password-toggle.js
+│   └── css/pages/     # CSS per halaman (login.css)
 └── templates/
     ├── layout.html    # Kerangka halaman
     ├── components/    # Komponen reusable (dipanggil lewat {{template ...}})
@@ -157,6 +159,8 @@ atau `fill="currentColor"`) supaya ikut warna teks.
 
 - `Error` opsional. Kosong = tampilan normal dan pesan tidak muncul. Terisi = field merah dan pesan menggantikan `Helper`.
 - Placeholder (kosong) berwarna neutral-500, teks terisi neutral-900. Otomatis lewat CSS, tanpa JS.
+- `PasswordToggle` `true` menambah tombol mata untuk tampil/sembunyikan password. Halaman harus memuat
+  `<script src="/static/js/password-toggle.js" defer></script>` (sudah ada di `login.html`).
 
 ### Dropdown
 

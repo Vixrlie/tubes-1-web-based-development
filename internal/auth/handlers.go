@@ -66,6 +66,9 @@ func (h *Handlers) ProtectedRoutes(r chi.Router) {
 type loginPage struct {
 	Username string
 	Error    string
+
+	User any
+	Nav  string
 }
 
 func (h *Handlers) renderLogin(w http.ResponseWriter, status int, username, errMsg string) {
@@ -165,6 +168,9 @@ func (h *Handlers) logout(w http.ResponseWriter, r *http.Request) {
 type homePage struct {
 	Username  string
 	CSRFToken string
+
+	User any
+	Nav  string
 }
 
 // home adalah halaman sementara sebagai tujuan setelah login dan tempat

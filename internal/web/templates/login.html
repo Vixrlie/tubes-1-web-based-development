@@ -1,17 +1,38 @@
+{{/*
+Halaman login (split layout: panel gambar di kiri, form di kanan).
+Data dari handler: .Username (isi ulang saat gagal) dan .Error (pesan gagal, boleh kosong).
+Aset: /static/img/login-page-image.png (latar panel kiri), /static/img/logo-full.png.
+*/}}
 {{define "content"}}
-<h1>Masuk</h1>
-{{if .Error}}<p role="alert" class="error">{{.Error}}</p>{{end}}
-<form method="post" action="/login">
-    <p>
-        <label>Username
-            <input name="username" value="{{.Username}}" autocomplete="username" required autofocus>
-        </label>
-    </p>
-    <p>
-        <label>Password
-            <input type="password" name="password" autocomplete="current-password" required>
-        </label>
-    </p>
-    <button type="submit">Masuk</button>
-</form>
+<div class="login">
+    <aside class="login__aside">
+        <div class="login__brand">
+            <img class="login__logo" src="/static/img/logo-full.png" alt="Pathgres" width="174" height="40">
+        </div>
+        <div class="login__tagline">
+            <p class="login__tagline-title">Data Anda, Kendali Anda, Akses Anda</p>
+            <p class="login__tagline-text">Satu tempat untuk melihat schema PostgreSQL, menjalankan migration dalam
+                transaction, dan menjaga riwayat perubahan tetap rapi.</p>
+        </div>
+    </aside>
+
+    <section class="login__panel">
+        <div class="login__box">
+            <h1 class="login__title">Masuk</h1>
+            <p class="login__subtitle">Masuk untuk mengakses akun Pathgres Anda.</p>
+
+            {{if .Error}}<p class="login__alert" role="alert">{{.Error}}</p>{{end}}
+
+            <form class="login__form" method="post" action="/login">
+                {{template `input` (dict `Label` `Username` `Name` `username` `Value` .Username `Placeholder`
+                `Username Anda` `Required` true `Attrs` (attr `autocomplete="username" autofocus`))}}
+                {{template `input` (dict `Label` `Password` `Name` `password` `Type` `password` `Placeholder`
+                `Password Anda` `Required` true `PasswordToggle` true `Attrs` (attr
+                `autocomplete="current-password"`))}}
+                {{template `button` (dict `Label` `Masuk` `Type` `submit` `Class` `login__submit`)}}
+            </form>
+        </div>
+    </section>
+</div>
+<script src="/static/js/password-toggle.js" defer></script>
 {{end}}
