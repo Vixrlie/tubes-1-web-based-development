@@ -1,0 +1,129 @@
+{{define "content"}}
+<div class="page-head row-between">
+  <div>
+    <h1 class="page-title">{{.Table}}</h1>
+    <p class="page-desc">{{.Connection.Name}} / {{.Schema}} · Struktur dan data table hanya-baca</p>
+  </div>
+  <span class="badge badge-primary-soft">View + Edit</span>
+</div>
+
+{{if .Error}}
+<div class="flash-slot">
+  <div class="alert alert-error" role="alert">
+    <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">Gagal memuat detail tabel</p>
+      <p class="alert-desc">{{.Error}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
+
+<nav class="tabs" aria-label="Tab detail tabel">
+  <a class="tab{{if eq .Tab "columns"}}" aria-current="page"{{else}}"{{end}} href="/databases/{{.Connection.ID}}/tables/{{.Schema}}.{{.Table}}?tab=columns">Columns</a>
+  <a class="tab{{if eq .Tab "constraints"}}" aria-current="page"{{else}}"{{end}} href="/databases/{{.Connection.ID}}/tables/{{.Schema}}.{{.Table}}?tab=constraints">Constraints</a>
+  <a class="tab{{if eq .Tab "indexes"}}" aria-current="page"{{else}}"{{end}} href="/databases/{{.Connection.ID}}/tables/{{.Schema}}.{{.Table}}?tab=indexes">Indexes</a>
+  <a class="tab" href="/databases/{{.Connection.ID}}/tables/{{.Schema}}.{{.Table}}/data">Data</a>
+</nav>
+
+<section class="card">
+  <div class="card-header">
+    <h2 class="card-title">{{.TabTitle}}</h2>
+    <span class="badge badge-neutral">{{.ItemCount}} item</span>
+  </div>
+  <div class="card-body card-body-p0">
+    {{if .Error}}
+    <div class="alert alert-error m-4" role="alert">
+      <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+      <div class="alert-content">
+        <p class="alert-title">Gagal memuat {{.TabTitle}}</p>
+        <p class="alert-desc">{{.Error}}</p>
+      </div>
+    </div>
+    {{else}}
+    <div class="table-wrap table-wrap-shadow border-0 rounded-none">
+      <table>
+        {{if eq .Tab "columns"}}
+        <thead>
+          <tr>
+            <th scope="col">Nama kolom</th>
+            <th scope="col">Tipe</th>
+            <th scope="col">Nullable</th>
+            <th scope="col">Default</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Columns}}
+          <tr>
+            <td><span class="mono">{{.Name}}</span></td>
+            <td><span class="mono">{{.Type}}</span></td>
+            <td>{{.Nullable}}</td>
+            <td><span class="mono muted">{{.Default}}</span></td>
+          </tr>
+          {{else}}
+          <tr><td colspan="4" class="table-empty">Belum ada kolom.</td></tr>
+          {{end}}
+        </tbody>
+        {{else if eq .Tab "constraints"}}
+        <thead>
+          <tr>
+            <th scope="col">Nama</th>
+            <th scope="col">Tipe</th>
+            <th scope="col">Kolom</th>
+            <th scope="col">Referensi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Constraints}}
+          <tr>
+            <td><span class="mono">{{.Name}}</span></td>
+            <td>{{.Type}}</td>
+            <td><span class="mono">{{.Columns}}</span></td>
+            <td><span class="mono muted">{{.Reference}}</span></td>
+          </tr>
+          {{else}}
+          <tr><td colspan="4" class="table-empty">Belum ada constraint.</td></tr>
+          {{end}}
+        </tbody>
+        {{else if eq .Tab "indexes"}}
+        <thead>
+          <tr>
+            <th scope="col">Nama</th>
+            <th scope="col">Kolom</th>
+            <th scope="col">Unik</th>
+            <th scope="col">Metode</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Indexes}}
+          <tr>
+            <td><span class="mono">{{.Name}}</span></td>
+            <td><span class="mono">{{.Columns}}</span></td>
+            <td>{{if .Unique}}Ya{{else}}Tidak{{end}}</td>
+            <td>{{.Method}}</td>
+          </tr>
+          {{else}}
+          <tr><td colspan="4" class="table-empty">Belum ada index.</td></tr>
+          {{end}}
+        </tbody>
+        {{end}}
+      </table>
+    </div>
+    {{end}}
+  </div>
+</section>
+
+<div class="alert alert-info mt-4">
+  <span class="alert-icon">{{template "icon" (dict "Name" "info")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Definisi saat ini</p>
+    <p class="alert-desc">
+      Struktur hanya-baca. Kolom phone sudah ada dari migration success. Perubahan struktur dilakukan melalui migration, bukan di halaman ini.
+    </p>
+  </div>
+</div>
+
+<div class="row-start mt-4">
+  <a class="btn btn-secondary" href="/databases/{{.Connection.ID}}/schema">Kembali ke schema</a>
+</div>
+{{end}}

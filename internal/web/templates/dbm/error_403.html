@@ -1,0 +1,50 @@
+{{define "content"}}
+<div class="page-head">
+  <h1 class="page-title">Akses dibatasi</h1>
+  <p class="page-desc">{{.ConnectionName}} · {{.Action}}</p>
+</div>
+
+<section class="card">
+  <div class="card-body stack">
+    <div class="alert alert-error" role="alert">
+      <span class="alert-icon">{{template "icon" (dict "Name" "shield")}}</span>
+      <div class="alert-content">
+        <p class="alert-title">ERROR / 403</p>
+        <p class="alert-desc">Anda tidak memiliki akses ke halaman ini</p>
+        <p class="mt-3">
+          <span class="badge badge-neutral">{{.EffectiveLevel}}</span>
+        </p>
+        <p class="muted mt-3">
+          Akses Anda ke <span class="mono">{{.ConnectionName}}</span> adalah {{.EffectiveLevel}}. Membuat dan menjalankan migration memerlukan View + Edit.
+        </p>
+        <p class="muted">
+          Hubungi admin untuk meninjau keanggotaan group Anda. Database tidak berubah.
+        </p>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tbody>
+          <tr>
+            <td>Database</td>
+            <td><span class="mono">{{.ConnectionName}}</span></td>
+          </tr>
+          <tr>
+            <td>Tingkat akses efektif</td>
+            <td><span class="badge badge-neutral">{{.EffectiveLevel}}</span></td>
+          </tr>
+          <tr>
+            <td>Aksi yang diminta</td>
+            <td>{{.RequestedAction}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="row-start mt-4">
+      <a class="btn btn-primary" href="/databases">Kembali ke daftar database</a>
+    </div>
+  </div>
+</section>
+{{end}}

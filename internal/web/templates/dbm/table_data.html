@@ -1,0 +1,78 @@
+{{define "content"}}
+<div class="page-head row-between">
+  <div>
+    <h1 class="page-title">{{.Table}}</h1>
+    <p class="page-desc">{{.Connection.Name}} / {{.Schema}} · Struktur dan data table hanya-baca</p>
+  </div>
+  <span class="badge badge-primary-soft">View + Edit</span>
+</div>
+
+{{if .Error}}
+<div class="flash-slot">
+  <div class="alert alert-error" role="alert">
+    <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">Gagal memuat data tabel</p>
+      <p class="alert-desc">{{.Error}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
+
+<nav class="tabs" aria-label="Tab detail tabel">
+  <a class="tab" href="/databases/{{.Connection.ID}}/tables/{{.Schema}}.{{.Table}}?tab=columns">Columns</a>
+  <a class="tab" href="/databases/{{.Connection.ID}}/tables/{{.Schema}}.{{.Table}}?tab=constraints">Constraints</a>
+  <a class="tab" href="/databases/{{.Connection.ID}}/tables/{{.Schema}}.{{.Table}}?tab=indexes">Indexes</a>
+  <a class="tab" aria-current="page" href="/databases/{{.Connection.ID}}/tables/{{.Schema}}.{{.Table}}/data">Data</a>
+</nav>
+
+<section class="card">
+  <div class="card-header">
+    <h2 class="card-title">Data</h2>
+    <span class="badge badge-neutral">Halaman {{.Page}} dari {{.TotalPages}}</span>
+  </div>
+  <div class="card-body card-body-p0">
+    {{if .Columns}}
+    <div class="table-wrap">
+      <table class="table-compact">
+        <thead>
+          <tr>
+            {{range .Columns}}<th scope="col">{{.}}</th>{{end}}
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Rows}}
+          <tr>
+            {{range .}}<td><span class="mono truncate">{{.}}</span></td>{{end}}
+          </tr>
+          {{else}}
+          <tr><td colspan="{{len .Columns}}" class="table-empty">Tabel kosong.</td></tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <div class="card-empty">
+      <span class="card-empty-icon">{{template "icon" (dict "Name" "table")}}</span>
+      <p class="card-empty-title">Tabel kosong atau tidak dapat dimuat.</p>
+    </div>
+    {{end}}
+  </div>
+</section>
+
+{{if .Columns}}
+<nav class="pagination" aria-label="Navigasi halaman">
+  {{if .HasPrev}}
+  <a class="btn btn-secondary" href="/databases/{{.Connection.ID}}/tables/{{.Schema}}.{{.Table}}/data?page={{.PrevPage}}">Sebelumnya</a>
+  {{else}}
+  <button type="button" class="btn btn-secondary" disabled>Sebelumnya</button>
+  {{end}}
+  <span class="badge badge-neutral">Halaman {{.Page}} dari {{.TotalPages}}</span>
+  {{if .HasNext}}
+  <a class="btn btn-secondary" href="/databases/{{.Connection.ID}}/tables/{{.Schema}}.{{.Table}}/data?page={{.NextPage}}">Berikutnya</a>
+  {{else}}
+  <button type="button" class="btn btn-secondary" disabled>Berikutnya</button>
+  {{end}}
+</nav>
+{{end}}
+{{end}}

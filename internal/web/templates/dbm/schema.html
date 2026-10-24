@@ -1,0 +1,154 @@
+{{define "content"}}
+<div class="page-head row-between">
+  <div>
+    <h1 class="page-title">Penjelajah schema</h1>
+    <p class="page-desc">
+      {{.Connection.Name}} · <span class="mono">{{.Connection.HostPort}}</span>. Pilih table untuk membaca struktur dan data.
+    </p>
+  </div>
+  <div class="btn-group">
+    <a class="btn btn-secondary" href="/databases/{{.Connection.ID}}/migrations">Riwayat Migration</a>
+    {{if .CanEdit}}
+    <a class="btn btn-primary" href="/databases/{{.Connection.ID}}/migrations/new">Migration Baru</a>
+    {{end}}
+  </div>
+</div>
+
+{{if .Notice}}
+<div class="flash-slot">
+  <div class="alert alert-success" role="status">
+    <span class="alert-icon">{{template "icon" (dict "Name" "check-circle")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">{{.Notice}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{if .Error}}
+<div class="flash-slot">
+  <div class="alert alert-error" role="alert">
+    <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">Gagal memuat daftar tabel</p>
+      <p class="alert-desc">{{.Error}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
+
+<div class="with-aside">
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Schema</h2>
+    </div>
+    <div class="card-body">
+      {{if .Schemas}}
+      <ul class="tree schema-tree" role="list">
+        {{range .Schemas}}
+        <li class="tree-node">
+          <details open>
+            <summary class="tree-node-head">
+              <span class="tree-toggle" aria-hidden="true">{{template "icon" (dict "Name" "chevron-down")}}</span>
+              <span class="tree-icon">{{template "icon" (dict "Name" "folder")}}</span>
+              <span class="tree-label">{{.Name}}</span>
+            </summary>
+            <ul role="list">
+              {{range .Tables}}
+              <li class="tree-node">
+                <a class="tree-link"
+                  href="/databases/{{$.Connection.ID}}/schema?table={{.Schema}}.{{.Name}}"
+                  {{if and $.Selected (eq $.Selected.Name .Name) (eq $.Selected.Schema .Schema)}}aria-current="page"{{end}}>
+                  <span class="tree-icon">{{template "icon" (dict "Name" "table")}}</span>
+                  <span class="tree-label">{{.Name}}</span>
+                </a>
+              </li>
+              {{end}}
+            </ul>
+          </details>
+        </li>
+        {{end}}
+      </ul>
+      {{else}}
+      <div class="card-empty">
+        <span class="card-empty-icon">{{template "icon" (dict "Name" "table")}}</span>
+        <p class="card-empty-title">Belum ada tabel</p>
+        <p class="card-empty-desc">Database masih kosong atau belum memiliki tabel BASE TABLE.</p>
+      </div>
+      {{end}}
+
+      <div class="mt-4">
+        <p class="text-caption muted">+ staging</p>
+        <p class="muted mt-2">Tidak ada data di tabel staging.</p>
+        <p class="muted">Schema staging masih kosong.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="stack">
+    {{if .Selected}}
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">{{.Selected.Schema}}.{{.Selected.Name}}</h2>
+        <span class="badge badge-primary-soft">View + Edit</span>
+      </div>
+      <div class="card-body">
+        <p class="muted">
+          {{len .Selected.Columns}} columns · {{.Selected.RowEstimate}} baris · hanya-baca
+        </p>
+        <p class="mt-3">
+          Table pelanggan pada schema {{.Selected.Schema}}. Pilih detail untuk melihat constraints, indexes, dan data.
+        </p>
+        <a class="btn btn-primary mt-4"
+          href="/databases/{{.Connection.ID}}/tables/{{.Selected.Schema}}.{{.Selected.Name}}">
+          Buka detail {{.Selected.Name}}
+        </a>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Definisi columns saat ini</h2>
+        <span class="badge badge-neutral">{{len .Selected.Columns}} item</span>
+      </div>
+      <div class="card-body card-body-p0">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Nama</th>
+                <th scope="col">Tipe</th>
+                <th scope="col">Nullable</th>
+                <th scope="col">Default</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Selected.Columns}}
+              <tr>
+                <td><span class="mono">{{.Name}}</span></td>
+                <td><span class="mono">{{.Type}}</span></td>
+                <td>{{.Nullable}}</td>
+                <td><span class="mono muted">{{.Default}}</span></td>
+              </tr>
+              {{else}}
+              <tr><td colspan="4" class="table-empty">Belum ada kolom.</td></tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    {{else}}
+    <section class="card">
+      <div class="card-body">
+        <div class="card-empty">
+          <span class="card-empty-icon">{{template "icon" (dict "Name" "table")}}</span>
+          <p class="card-empty-title">Pilih table pada schema</p>
+          <p class="card-empty-desc">Struktur, constraints, indexes, dan data ditampilkan setelah table dipilih.</p>
+        </div>
+      </div>
+    </section>
+    {{end}}
+  </div>
+</div>
+{{end}}
