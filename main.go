@@ -82,11 +82,13 @@ func run() error {
 	connStore := admin.NewPGConnectionStore(pool)
 	groupStore := admin.NewPGGroupStore(pool)
 	connLister := admin.NewPGConnectionLister(pool)
+	migrationStore := dbm.NewPGMigrationStore(pool)
 	dbmHandlers := dbm.NewHandlers(dbm.Config{
-		Platform: pool,
-		Policy:   accessPolicy,
-		Registry: registry,
-		Renderer: renderer,
+		Platform:   pool,
+		Policy:     accessPolicy,
+		Registry:   registry,
+		Renderer:   renderer,
+		Migrations: migrationStore,
 	})
 
 	// Mode dev: DevRoutes memasang redirect /admin/connections -> /dev/connections
@@ -114,6 +116,7 @@ func run() error {
 		adminOpts := []admin.Option{
 			admin.WithUserAdmin(adminUsers, sessions, renderer),
 			admin.WithGroupAdmin(groupStore, adminUsers, connLister, sessions, renderer),
+			admin.WithDashboard(adminUsers, groupStore, connLister, renderer),
 		}
 		if !devMode {
 			adminOpts = append(adminOpts,
