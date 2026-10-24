@@ -1,0 +1,28 @@
+{{define "header"}}
+<header class="app-header">
+    <div class="app-header__inner">
+        <a class="app-header__brand" href="/" aria-label="Pathgres, ke beranda">
+            <img class="app-header__logo" src="/static/img/logo-icon.svg" alt="" width="36" height="36">
+            <span class="brand-text"><span class="brand-text__strong">Path</span><span
+                    class="brand-text__light">gres</span></span>
+        </a>
+
+        <div class="app-header__end">
+            <nav aria-label="Navigasi utama">
+                <ul class="app-header__links" role="list">
+                    <li>
+                        <a class="nav-link" href="/" {{if eq .Nav "database" }}aria-current="page" {{end}}>Database</a>
+                    </li>
+                    {{if .User.IsPlatformAdmin}}
+                    <li>
+                        <a class="nav-link" href="/admin/users" {{if eq .Nav "admin" }}aria-current="page"
+                            {{end}}>Admin</a>
+                    </li>
+                    {{end}}
+                </ul>
+            </nav>
+            {{template "avatar" .User}}
+        </div>
+    </div>
+</header>
+{{end}}

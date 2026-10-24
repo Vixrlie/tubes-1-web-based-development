@@ -1,16 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tubes 1 WBD</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/static/css/app.css">
   <script src="/static/htmx.min.js" defer></script>
   <script src="/static/codemirror.bundle.js" defer></script>
 </head>
 
 <body>
+  {{if .User}}{{template "header" .}}{{end}}
   <main>
     {{template "content" .}}
   </main>

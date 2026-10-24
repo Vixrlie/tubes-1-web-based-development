@@ -2,6 +2,7 @@ package web
 
 import (
 	"embed"
+	"errors"
 	"html/template"
 	"io/fs"
 	"log"
@@ -14,6 +15,44 @@ var TemplatesFS embed.FS
 
 //go:embed static/*
 var StaticFS embed.FS
+
+// funcs dipakai semua template. `dict` untuk memanggil komponen dengan
+// parameter bernama: {{template "button" (dict "Label" "Simpan")}}
+var funcs = template.FuncMap{
+	"dict": func(kv ...any) (map[string]any, error) {
+		if len(kv)%2 != 0 {
+			return nil, errors.New("dict: jumlah argumen harus genap (key, value, ...)")
+		}
+		m := make(map[string]any, len(kv)/2)
+		for i := 0; i < len(kv); i += 2 {
+			k, ok := kv[i].(string)
+			if !ok {
+				return nil, errors.New("dict: key harus string")
+			}
+			m[k] = kv[i+1]
+		}
+		return m, nil
+	},
+	// list membuat slice untuk {{range}}: {{range (list "a" "b")}}
+	"list": func(v ...any) []any { return v },
+	// css menandai nilai CSS tepercaya supaya var(--x) tidak diblokir
+	// sanitizer html/template (jadi "ZgotmplZ"). Hanya untuk literal di template.
+	"css": func(s string) template.CSS { return template.CSS(s) },
+	// attr menandai string sebagai atribut HTML tepercaya (hanya untuk
+	// literal di template, JANGAN dari input user).
+	"attr": func(s string) template.HTMLAttr { return template.HTMLAttr(s) },
+}
+
+// Folder yang berisi potongan template (bukan halaman). Di-parse bersama
+// setiap halaman, jadi {{template "button" ...}} bisa dipakai di mana saja.
+var sharedGlobs = []string{
+	"templates/components/*.html",
+	"templates/partials/*.html",
+}
+
+func isShared(p string) bool {
+	return strings.HasPrefix(p, "templates/components/") || strings.HasPrefix(p, "templates/partials/")
+}
 
 type Renderer struct {
 	pages map[string]*template.Template
@@ -28,10 +67,12 @@ func NewRenderer() (*Renderer, error) {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() || !strings.HasSuffix(p, ".html") || p == "templates/layout.html" {
+		if d.IsDir() || !strings.HasSuffix(p, ".html") || p == "templates/layout.html" || isShared(p) {
 			return nil
 		}
-		t, err := template.ParseFS(TemplatesFS, "templates/layout.html", p)
+		files := append([]string{"templates/layout.html"}, sharedGlobs...)
+		files = append(files, p)
+		t, err := template.New("layout.html").Funcs(funcs).ParseFS(TemplatesFS, files...)
 		if err != nil {
 			return err
 		}

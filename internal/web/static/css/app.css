@@ -1,11 +1,12 @@
+@import "themes.css";
 @import "tokens.css";
-@import "theme.css";
 @import "base.css";
 @import "typography.css";
 @import "layout.css";
 @import "components/button.css";
 @import "components/form.css";
 @import "components/table.css";
-@import "components/alert.css";
-@import "components/badge.css";
-@import "components/card.css";
+@import "components/flash.css";
+@import "components/avatar.css";
+@import "components/nav-link.css";
+@import "components/header.css";

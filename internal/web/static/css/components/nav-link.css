@@ -1,0 +1,16 @@
+.nav-link {
+    font-family: var(--font-family-cta);
+    font-size: var(--font-size-t2);
+    font-weight: var(--font-weight-regular);
+    color: var(--color-text);
+    text-decoration: none;
+    padding-block: var(--space-2);
+}
+
+.nav-link:hover {
+    color: var(--color-link-hover);
+}
+
+.nav-link[aria-current="page"] {
+    font-weight: var(--font-weight-semibold);
+}
