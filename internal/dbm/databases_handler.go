@@ -66,6 +66,7 @@ func (h *Handlers) groupsForUser(r *http.Request, userID int64) []groupName {
 func (h *Handlers) list(w http.ResponseWriter, r *http.Request) {
 	me, _ := auth.UserFromContext(r.Context())
 	shell := h.pageShell(r, "Daftar database", 0, "databases")
+	shell.Breadcrumbs = []web.Crumb{{Label: "Databases"}}
 	h.render(w, http.StatusOK, "dbm/databases.html", databasesPage{
 		AppShell: shell,
 		Groups:   h.groupsForUser(r, me.ID),
@@ -113,7 +114,7 @@ func (h *Handlers) schema(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := schemaPage{
-		AppShell:  h.pageShell(r, "Penjelajah Schema", connID, "databases"),
+		AppShell:  dbCrumb(h.pageShell(r, "Penjelajah Schema", connID, "databases"), conn, "Schema"),
 		Connection: conn,
 		CanEdit:    conn.Level == "edit",
 		Notice:     migrationNotices[r.URL.Query().Get("status")],
@@ -219,7 +220,7 @@ func (h *Handlers) table(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := tablePage{
-		AppShell:  h.pageShell(r, tableName, connID, "databases"),
+		AppShell:  dbCrumb(h.pageShell(r, tableName, connID, "databases"), conn, tableName),
 		Connection: conn,
 		Schema:     schemaName,
 		Table:      tableName,
@@ -303,7 +304,7 @@ func (h *Handlers) tableData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dataPage := tableDataPage{
-		AppShell:  h.pageShell(r, tableName, connID, "databases"),
+		AppShell:  dbCrumb(h.pageShell(r, tableName, connID, "databases"), conn, tableName),
 		Connection: conn,
 		Schema:     schemaName,
 		Table:      tableName,

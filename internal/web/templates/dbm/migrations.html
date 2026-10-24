@@ -26,9 +26,14 @@
 
 <div class="status-legend mt-4">
   <span class="badge badge-primary-soft">View + Edit</span>
-  <span class="badge badge-warning">{{template "icon" (dict "Name" "edit")}} draft</span>
-  <span class="badge badge-success">{{template "icon" (dict "Name" "check-circle")}} success</span>
-  <span class="badge badge-error">{{template "icon" (dict "Name" "alert")}} failed</span>
+  <a class="badge badge-neutral" href="/databases/{{.Connection.ID}}/migrations"
+    {{if eq .Filter ""}}aria-current="page"{{end}}>Semua</a>
+  <a class="badge badge-warning" href="/databases/{{.Connection.ID}}/migrations?status=draft"
+    {{if eq .Filter "draft"}}aria-current="page"{{end}}>{{template "icon" (dict "Name" "edit")}} draft</a>
+  <a class="badge badge-success" href="/databases/{{.Connection.ID}}/migrations?status=applied"
+    {{if eq .Filter "applied"}}aria-current="page"{{end}}>{{template "icon" (dict "Name" "check-circle")}} success</a>
+  <a class="badge badge-error" href="/databases/{{.Connection.ID}}/migrations?status=failed"
+    {{if eq .Filter "failed"}}aria-current="page"{{end}}>{{template "icon" (dict "Name" "alert")}} failed</a>
 </div>
 
 <section class="card mt-4">
@@ -100,4 +105,12 @@
   </div>
   {{end}}
 </section>
+
+<div class="alert alert-info mt-4">
+  <span class="alert-icon">{{template "icon" (dict "Name" "info")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Transaksi aman</p>
+    <p class="alert-desc">Status failed berarti seluruh perubahan di-rollback. Database tidak berubah. Status success berarti transaksi telah di-commit.</p>
+  </div>
+</div>
 {{end}}

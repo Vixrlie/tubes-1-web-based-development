@@ -10,7 +10,13 @@
     {{end}}
     <p class="page-desc">{{.Migration.Name}} · Hasil eksekusi pada database {{.Connection.Name}}.</p>
   </div>
-  <a class="btn btn-secondary" href="/databases/{{.Connection.ID}}/migrations">Kembali ke riwayat</a>
+  <div class="btn-group">
+    <a class="btn btn-secondary" href="/databases/{{.Connection.ID}}/migrations">Kembali ke riwayat</a>
+    {{if eq .Migration.Status "draft"}}
+    <a class="btn btn-secondary" href="/databases/{{.Connection.ID}}/migrations/{{.Migration.ID}}/edit">Edit Draft</a>
+    <a class="btn btn-primary" href="/databases/{{.Connection.ID}}/migrations/{{.Migration.ID}}/preview">Pratinjau &amp; Eksekusi</a>
+    {{end}}
+  </div>
 </div>
 
 {{if .Notice}}
@@ -57,7 +63,7 @@
         <span class="sql-panel-title">SQL · {{.Connection.Name}}</span>
         <span class="badge badge-neutral">{{template "icon" (dict "Name" "lock")}} Hanya-baca</span>
       </div>
-      <pre class="sql-panel-body"><code>{{.Migration.SQL}}</code></pre>
+      <pre class="sql-panel-body" data-sql-lines><code>{{.Migration.SQL}}</code></pre>
     </section>
 
     <section class="card">
@@ -66,7 +72,11 @@
       </div>
       <div class="card-body">
         <p class="mono hash">{{.Migration.Checksum}}</p>
+        {{if eq .Migration.Status "draft"}}
+        <p class="muted mt-2">Dihitung dari SQL draft saat disimpan. Migration belum dijalankan — SQL diverifikasi ulang terhadap checksum saat eksekusi.</p>
+        {{else}}
         <p class="muted mt-2">Sudah dieksekusi. Migration ini tidak dapat diubah atau dijalankan kembali.</p>
+        {{end}}
       </div>
     </section>
   </div>

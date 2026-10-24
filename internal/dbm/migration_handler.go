@@ -42,7 +42,7 @@ func (h *Handlers) migrationList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := migrationsPage{
-		AppShell:  h.pageShell(r, "Riwayat Migration", connID, "migrations"),
+		AppShell:  dbCrumb(h.pageShell(r, "Riwayat Migration", connID, "migrations"), conn, "Migration"),
 		Connection: conn,
 		CanEdit:    conn.Level == "edit",
 		Notice:     migrationNotices[r.URL.Query().Get("status")],
@@ -95,7 +95,7 @@ func (h *Handlers) migrationNew(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.render(w, http.StatusOK, "dbm/migration_editor.html", migrationEditorPage{
-		AppShell:  h.pageShell(r, "Editor Migration", connID, "migrations"),
+		AppShell:  dbCrumb(h.pageShell(r, "Editor Migration", connID, "migrations"), conn, "Migration Baru"),
 		Connection: conn,
 		IsNew:      true,
 		FormAction: "/databases/" + strconv.FormatInt(connID, 10) + "/migrations",
@@ -118,7 +118,7 @@ func (h *Handlers) migrationCreate(w http.ResponseWriter, r *http.Request) {
 	sqlText := strings.TrimSpace(r.PostFormValue("sql"))
 	if name == "" || sqlText == "" {
 		h.renderEditor(w, r, conn, migrationEditorPage{
-			AppShell:  h.pageShell(r, "Editor Migration", connID, "migrations"),
+			AppShell:  dbCrumb(h.pageShell(r, "Editor Migration", connID, "migrations"), conn, "Migration Baru"),
 			Connection: conn,
 			IsNew:      true,
 			FormAction: "/databases/" + strconv.FormatInt(connID, 10) + "/migrations",
@@ -147,7 +147,7 @@ func (h *Handlers) migrationDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.render(w, http.StatusOK, "dbm/migration_detail.html", migrationDetailPage{
-		AppShell:  h.pageShell(r, "Detail Migration", conn.ID, "migrations"),
+		AppShell:  dbCrumb(h.pageShell(r, "Detail Migration", conn.ID, "migrations"), conn, "Migration"),
 		Connection: conn,
 		Migration:  m,
 		Notice:     migrationNotices[r.URL.Query().Get("status")],
@@ -165,7 +165,7 @@ func (h *Handlers) migrationEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.render(w, http.StatusOK, "dbm/migration_editor.html", migrationEditorPage{
-		AppShell:  h.pageShell(r, "Ubah Draft", conn.ID, "migrations"),
+		AppShell:  dbCrumb(h.pageShell(r, "Ubah Draft", conn.ID, "migrations"), conn, "Edit Draft"),
 		Connection: conn,
 		Migration:  m,
 		FormAction: "/databases/" + strconv.FormatInt(conn.ID, 10) + "/migrations/" + strconv.FormatInt(m.ID, 10),
@@ -189,7 +189,7 @@ func (h *Handlers) migrationUpdate(w http.ResponseWriter, r *http.Request) {
 	sqlText := strings.TrimSpace(r.PostFormValue("sql"))
 	if name == "" || sqlText == "" {
 		h.renderEditor(w, r, conn, migrationEditorPage{
-			AppShell:  h.pageShell(r, "Ubah Draft", conn.ID, "migrations"),
+			AppShell:  dbCrumb(h.pageShell(r, "Ubah Draft", conn.ID, "migrations"), conn, "Edit Draft"),
 			Connection: conn,
 			Migration:  m,
 			FormAction: "/databases/" + strconv.FormatInt(conn.ID, 10) + "/migrations/" + strconv.FormatInt(m.ID, 10),
@@ -235,7 +235,7 @@ func (h *Handlers) migrationPreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.render(w, http.StatusOK, "dbm/migration_preview.html", migrationPreviewPage{
-		AppShell:  h.pageShell(r, "Pratinjau Migration", conn.ID, "migrations"),
+		AppShell:  dbCrumb(h.pageShell(r, "Pratinjau Migration", conn.ID, "migrations"), conn, "Pratinjau"),
 		Connection: conn,
 		Migration:  m,
 		FormAction: "/databases/" + strconv.FormatInt(conn.ID, 10) + "/migrations/" + strconv.FormatInt(m.ID, 10) + "/execute",
@@ -256,7 +256,7 @@ func (h *Handlers) migrationExecute(w http.ResponseWriter, r *http.Request) {
 	confirmed := r.PostFormValue("confirm_execute") == "on"
 	if confirmName != conn.Name || !confirmed {
 		h.render(w, http.StatusBadRequest, "dbm/migration_preview.html", migrationPreviewPage{
-			AppShell:  h.pageShell(r, "Pratinjau Migration", conn.ID, "migrations"),
+			AppShell:  dbCrumb(h.pageShell(r, "Pratinjau Migration", conn.ID, "migrations"), conn, "Pratinjau"),
 			Connection: conn,
 			Migration:  m,
 			FormAction: detailURL + "/execute",
@@ -330,6 +330,10 @@ func (h *Handlers) loadMigration(w http.ResponseWriter, r *http.Request, action 
 
 // renderEditor merender ulang halaman editor (untuk validasi gagal).
 func (h *Handlers) renderEditor(w http.ResponseWriter, r *http.Request, conn web.DatabaseLink, page migrationEditorPage, status int) {
-	page.AppShell = h.pageShell(r, "Editor Migration", conn.ID, "migrations")
+	leaf := "Edit Draft"
+	if page.IsNew {
+		leaf = "Migration Baru"
+	}
+	page.AppShell = dbCrumb(h.pageShell(r, "Editor Migration", conn.ID, "migrations"), conn, leaf)
 	h.render(w, status, "dbm/migration_editor.html", page)
 }

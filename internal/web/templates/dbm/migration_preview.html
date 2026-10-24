@@ -35,7 +35,7 @@
         <span class="sql-panel-title">SQL · {{.Connection.Name}}</span>
         <span class="badge badge-neutral">{{template "icon" (dict "Name" "lock")}} Hanya-baca</span>
       </div>
-      <pre class="sql-panel-body"><code>{{.Migration.SQL}}</code></pre>
+      <pre class="sql-panel-body" data-sql-lines><code>{{.Migration.SQL}}</code></pre>
     </section>
 
     <div class="row-start">

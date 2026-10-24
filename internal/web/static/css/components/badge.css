@@ -86,3 +86,18 @@
 .status-dot-primary {
     background: var(--color-primary-default);
 }
+
+/* Tautan badge (chips filter riwayat): tetap solid tanpa garis bawah,
+   penanda aktif memakai cincin fokus-terlihat. */
+a.badge {
+    text-decoration: none;
+    cursor: pointer;
+}
+
+a.badge:hover {
+    filter: brightness(0.96);
+}
+
+a.badge[aria-current="page"] {
+    box-shadow: 0 0 0 2px var(--color-focus, currentColor);
+}

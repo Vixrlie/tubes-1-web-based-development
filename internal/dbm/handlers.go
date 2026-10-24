@@ -122,6 +122,17 @@ func (h *Handlers) pageShell(r *http.Request, title string, currentDB int64, act
 	})
 }
 
+// dbCrumb menetapkan rantai breadcrumb halaman database:
+// Databases > {nama database} > {halaman saat ini}.
+func dbCrumb(sh web.AppShell, conn web.DatabaseLink, leaf string) web.AppShell {
+	sh.Breadcrumbs = []web.Crumb{
+		{Label: "Databases", Href: "/databases"},
+		{Label: conn.Name, Href: "/databases/" + strconv.FormatInt(conn.ID, 10) + "/schema"},
+		{Label: leaf},
+	}
+	return sh
+}
+
 // parseConnID membaca {connID} dari URL. false bila tidak valid.
 func parseConnID(r *http.Request) (int64, bool) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "connID"), 10, 64)
@@ -191,7 +202,8 @@ func (h *Handlers) deny(w http.ResponseWriter, r *http.Request, connID int64, ac
 		requested = "View + Edit"
 	}
 
-	shell := h.pageShell(r, "Akses dibatasi", connID, "databases")
+	shell := dbCrumb(h.pageShell(r, "Akses dibatasi", connID, "databases"),
+		web.DatabaseLink{ID: connID, Name: connName}, "Akses dibatasi")
 	h.render(w, http.StatusForbidden, "dbm/error_403.html", accessPage{
 		AppShell:        shell,
 		ConnectionName:  connName,
@@ -243,7 +255,7 @@ func (h *Handlers) requireAccess(w http.ResponseWriter, r *http.Request, connID 
 // renderDBError merender halaman "koneksi gagal" yang aman (tanpa kredensial).
 func (h *Handlers) renderDBError(w http.ResponseWriter, r *http.Request, conn web.DatabaseLink, err error) {
 	log.Printf("dbm: koneksi target %d gagal: %v", conn.ID, err) // URL tidak ikut log
-	shell := h.pageShell(r, "Koneksi gagal", conn.ID, "databases")
+	shell := dbCrumb(h.pageShell(r, "Koneksi gagal", conn.ID, "databases"), conn, "Koneksi gagal")
 	h.render(w, http.StatusServiceUnavailable, "dbm/error_db.html", dbErrorPage{
 		AppShell:        shell,
 		ConnectionName:  conn.Name,

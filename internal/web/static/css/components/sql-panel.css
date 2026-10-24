@@ -229,3 +229,25 @@
     background: transparent;
     padding: 0;
 }
+
+/* Nomor baris (diinialisasi sql-lines.js pada elemen [data-sql-lines]). */
+.sql-panel-body code {
+    display: block;
+}
+
+.sql-line {
+    display: flex;
+}
+
+.sql-line-no {
+    flex: none;
+    width: 2.5rem;
+    margin-right: var(--space-3);
+    text-align: right;
+    color: rgb(148 163 184 / 0.55);
+    user-select: none;
+}
+
+.sql-line-text {
+    white-space: pre;
+}
