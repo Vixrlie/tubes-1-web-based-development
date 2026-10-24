@@ -37,20 +37,14 @@ func (h *Handlers) connectionsRoutes(r chi.Router) {
 	}
 	c := h.connections
 	r.Get("/connections", c.list)
-	// Form "Tambah Koneksi"/"Edit Koneksi" belum tersedia di FE; arahkan agar tidak 404.
-	r.Get("/connections/new", c.redirectToList)
+	// Form "Tambah Koneksi"/"Edit Koneksi": tampilan (GET) + simpan (POST).
+	r.Get("/connections/new", c.createForm)
+	r.Post("/connections", c.create)
 	r.Get("/connections/{id}", c.detail)
-	r.Get("/connections/{id}/edit", c.redirectToDetail)
+	r.Post("/connections/{id}", c.update)
+	r.Get("/connections/{id}/edit", c.editForm)
 	r.Post("/connections/{id}/test", c.test)
 	r.Post("/connections/{id}/delete", c.remove)
-}
-
-func (c *connectionHandlers) redirectToList(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/admin/connections", http.StatusSeeOther)
-}
-
-func (c *connectionHandlers) redirectToDetail(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/admin/connections/"+chi.URLParam(r, "id"), http.StatusSeeOther)
 }
 
 // shell membangun data shell FE (layout.html: header + sidebar admin).
