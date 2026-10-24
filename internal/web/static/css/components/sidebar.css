@@ -4,7 +4,7 @@
     top: calc(var(--header-h) + var(--shell-pad-y));
     height: calc(100vh - var(--header-h) - var(--shell-pad-y) * 2);
     overflow-y: auto;
-    padding: var(--space-6) var(--space-8);
+    padding: var(--space-6) var(--space-4);
     background: var(--color-surface-raised);
     border: 1px solid var(--color-border);
     border-radius: 1.25rem;
@@ -27,16 +27,16 @@
 .sidebar__list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-2);
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
-/* tabel di bawah schema */
-.sidebar__list--nested {
-    margin-top: var(--space-3);
-    padding-left: var(--space-8);
+/* tabel di bawah schema: menjorok ke kanan (atur lewat --sidebar-indent) */
+.sidebar__list .sidebar__list--nested {
+    margin-top: var(--space-2);
+    padding-left: var(--sidebar-indent, var(--space-6));
 }
 
 @media (max-width: 768px) {

@@ -38,7 +38,8 @@ Isi sidebar database : .Sidebar (lihat SidebarDB di shell.go)
                 {{- if .Tables}}
                 <ul class="sidebar__list sidebar__list--nested" role="list">
                     {{- range .Tables}}
-                    <li>{{template `side-link` (dict `Label` .Name `Icon` `table` `Href` .Href `Active` .Active)}}</li>
+                    <li>{{template `side-link` (dict `Label` .Name `Icon` `table-tree` `Href` .Href `Active` .Active)}}
+                    </li>
                     {{- end}}
                 </ul>
                 {{- end}}

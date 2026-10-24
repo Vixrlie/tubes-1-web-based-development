@@ -2,7 +2,9 @@
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    padding-block: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-full);
+    transition: background-color var(--transition-fast), color var(--transition-fast);
     font-family: var(--font-family-cta);
     font-size: var(--font-size-p3);
     font-weight: var(--font-weight-regular);
@@ -22,6 +24,7 @@
 }
 
 .side-link[aria-current="page"] {
+    background: var(--color-primary-50);
     font-weight: var(--font-weight-semibold);
     color: var(--color-primary);
 }

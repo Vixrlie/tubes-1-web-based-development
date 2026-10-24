@@ -13,7 +13,7 @@
 
 .table-card__title {
     margin: 0 0 var(--space-4);
-    font-size: var(--font-size-t3);
+    font-size: var(--font-size-t5);
     font-weight: var(--font-weight-semibold);
     color: var(--color-text);
 }
