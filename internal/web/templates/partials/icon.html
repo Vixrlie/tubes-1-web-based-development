@@ -1,0 +1,6 @@
+{{define "icon"}}
+{{- $name := .Name -}}
+{{- $class := .Class | default "" -}}
+{{- $alt := .Alt | default "" -}}
+<img src="/static/icons/{{$name}}.svg" class="icon{{if $class}} {{$class}}{{end}}" alt="{{$alt}}" width="16" height="16" aria-hidden="true">
+{{end}}
