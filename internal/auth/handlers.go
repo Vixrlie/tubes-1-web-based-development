@@ -161,6 +161,7 @@ func (h *Handlers) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 type homePage struct {
+	Title           string
 	Username        string
 	CSRFToken       string
 	IsPlatformAdmin bool
@@ -169,6 +170,7 @@ type homePage struct {
 func (h *Handlers) home(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFromContext(r.Context())
 	h.view.Render(w, "home.html", homePage{
+		Title:           "Beranda",
 		Username:        u.Username,
 		CSRFToken:       session.CSRFToken(r.Context()),
 		IsPlatformAdmin: u.IsPlatformAdmin,
