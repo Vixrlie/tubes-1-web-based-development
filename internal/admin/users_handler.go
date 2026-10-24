@@ -11,6 +11,7 @@ import (
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 )
 
 type userHandlers struct {
@@ -19,14 +20,12 @@ type userHandlers struct {
 	view    auth.Renderer
 }
 
-// WithUserAdmin mengaktifkan halaman kelola user. Dipasang dari main.go.
 func WithUserAdmin(store UserStore, revoker session.Revoker, view auth.Renderer) Option {
 	return func(h *Handlers) {
 		h.users = &userHandlers{store: store, revoker: revoker, view: view}
 	}
 }
 
-// Dipasang di bawah /admin dan sudah dibungkus RequireAdmin.
 func (h *Handlers) usersRoutes(r chi.Router) {
 	if h.users == nil {
 		return
@@ -52,15 +51,13 @@ var notices = map[string]string{
 }
 
 type usersPage struct {
-	Me        auth.User
-	CSRFToken string
-	Users     []UserRow
-	Notice    string
+	web.AppShell
+	Users  []UserRow
+	Notice string
 }
 
 type userFormPage struct {
-	Me              auth.User
-	CSRFToken       string
+	web.AppShell
 	IsNew           bool
 	IsSelf          bool
 	FormAction      string
@@ -74,15 +71,22 @@ type userFormPage struct {
 	Notice          string
 }
 
-func (u *userHandlers) base(r *http.Request) (auth.User, string) {
+func (u *userHandlers) shell(r *http.Request) web.AppShell {
 	me, _ := auth.UserFromContext(r.Context())
-	return me, session.CSRFToken(r.Context())
+	return web.AppShell{
+		Me:                   me,
+		CSRFToken:            session.CSRFToken(r.Context()),
+		Initials:             web.Initials(me.Username),
+		ActiveNav:            "users",
+		CanManageUsers:       true,
+		CanManageConnections: me.IsPlatformAdmin,
+	}
 }
 
 func (u *userHandlers) render(w http.ResponseWriter, status int, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	u.view.Render(w, name, data)
+	u.view.RenderApp(w, name, data)
 }
 
 func (u *userHandlers) serverError(w http.ResponseWriter, what string, err error) {
@@ -100,7 +104,6 @@ func isConflict(err error) bool {
 	return errors.Is(err, auth.ErrUsernameTaken) || errors.Is(err, auth.ErrEmailTaken)
 }
 
-// load membaca {id} dari URL lalu mengambil user. Sudah menulis respons bila gagal.
 func (u *userHandlers) load(w http.ResponseWriter, r *http.Request) (UserRow, bool) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil || id <= 0 {
@@ -119,12 +122,10 @@ func (u *userHandlers) load(w http.ResponseWriter, r *http.Request) (UserRow, bo
 	return t, true
 }
 
-func (u *userHandlers) editPage(r *http.Request, t UserRow) userFormPage {
-	me, csrf := u.base(r)
+func (u *userHandlers) editPage(sh web.AppShell, t UserRow) userFormPage {
 	return userFormPage{
-		Me:              me,
-		CSRFToken:       csrf,
-		IsSelf:          t.ID == me.ID,
+		AppShell:        sh,
+		IsSelf:          t.ID == sh.Me.ID,
 		FormAction:      "/admin/users/" + strconv.FormatInt(t.ID, 10),
 		ID:              t.ID,
 		Username:        t.Username,
@@ -139,29 +140,22 @@ func redirectUser(w http.ResponseWriter, r *http.Request, id int64, code string)
 	http.Redirect(w, r, "/admin/users/"+strconv.FormatInt(id, 10)+"?status="+code, http.StatusSeeOther)
 }
 
-// ---- daftar ----
-
 func (u *userHandlers) list(w http.ResponseWriter, r *http.Request) {
 	users, err := u.store.List(r.Context())
 	if err != nil {
 		u.serverError(w, "daftar user", err)
 		return
 	}
-	me, csrf := u.base(r)
 	u.render(w, http.StatusOK, "admin/users.html", usersPage{
-		Me:        me,
-		CSRFToken: csrf,
-		Users:     users,
-		Notice:    notices[r.URL.Query().Get("status")],
+		AppShell: u.shell(r),
+		Users:    users,
+		Notice:   notices[r.URL.Query().Get("status")],
 	})
 }
 
-// ---- buat ----
-
 func (u *userHandlers) newForm(w http.ResponseWriter, r *http.Request) {
-	me, csrf := u.base(r)
 	u.render(w, http.StatusOK, "admin/user_form.html", userFormPage{
-		Me: me, CSRFToken: csrf, IsNew: true, FormAction: "/admin/users", IsActive: true,
+		AppShell: u.shell(r), IsNew: true, FormAction: "/admin/users", IsActive: true,
 	})
 }
 
@@ -195,23 +189,20 @@ func (u *userHandlers) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	me, csrf := u.base(r)
 	u.render(w, status, "admin/user_form.html", userFormPage{
-		Me: me, CSRFToken: csrf, IsNew: true, FormAction: "/admin/users", IsActive: true,
+		AppShell: u.shell(r), IsNew: true, FormAction: "/admin/users", IsActive: true,
 		Username: in.Username, FullName: in.FullName, Email: in.Email,
 		IsPlatformAdmin: in.IsPlatformAdmin,
 		Error:           err.Error(), // pesan sentinel auth, aman ditampilkan; password tidak dirender ulang
 	})
 }
 
-// ---- ubah ----
-
 func (u *userHandlers) editForm(w http.ResponseWriter, r *http.Request) {
 	t, ok := u.load(w, r)
 	if !ok {
 		return
 	}
-	page := u.editPage(r, t)
+	page := u.editPage(u.shell(r), t)
 	page.Notice = notices[r.URL.Query().Get("status")]
 	u.render(w, http.StatusOK, "admin/user_form.html", page)
 }
@@ -239,7 +230,7 @@ func (u *userHandlers) update(w http.ResponseWriter, r *http.Request) {
 
 	err := u.store.Update(r.Context(), t.ID, upd)
 	if isConflict(err) {
-		page := u.editPage(r, t)
+		page := u.editPage(u.shell(r), t)
 		page.FullName, page.Email = upd.FullName, upd.Email
 		page.Error = err.Error()
 		u.render(w, http.StatusConflict, "admin/user_form.html", page)
@@ -260,8 +251,6 @@ func (u *userHandlers) update(w http.ResponseWriter, r *http.Request) {
 	redirectUser(w, r, t.ID, "updated")
 }
 
-// ---- nonaktifkan / aktifkan ----
-
 func (u *userHandlers) deactivate(w http.ResponseWriter, r *http.Request) {
 	t, ok := u.load(w, r)
 	if !ok {
@@ -269,7 +258,7 @@ func (u *userHandlers) deactivate(w http.ResponseWriter, r *http.Request) {
 	}
 	me, _ := auth.UserFromContext(r.Context())
 	if t.ID == me.ID {
-		page := u.editPage(r, t)
+		page := u.editPage(u.shell(r), t)
 		page.Error = "Anda tidak bisa menonaktifkan akun sendiri."
 		u.render(w, http.StatusBadRequest, "admin/user_form.html", page)
 		return
@@ -298,8 +287,6 @@ func (u *userHandlers) activate(w http.ResponseWriter, r *http.Request) {
 	redirectUser(w, r, t.ID, "activated")
 }
 
-// ---- reset password ----
-
 func (u *userHandlers) resetPassword(w http.ResponseWriter, r *http.Request) {
 	t, ok := u.load(w, r)
 	if !ok {
@@ -311,7 +298,7 @@ func (u *userHandlers) resetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	pw := r.PostFormValue("new_password")
 	if err := auth.ValidatePassword(pw); err != nil {
-		page := u.editPage(r, t)
+		page := u.editPage(u.shell(r), t)
 		page.Error = err.Error()
 		u.render(w, http.StatusBadRequest, "admin/user_form.html", page)
 		return

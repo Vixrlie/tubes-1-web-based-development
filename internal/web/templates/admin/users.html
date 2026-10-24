@@ -1,33 +1,138 @@
 {{define "content"}}
-<h1>Kelola User</h1>
-<p><a href="/">Beranda</a> | <a href="/admin/users/new">Buat user</a></p>
-{{if .Notice}}<p role="status">{{.Notice}}</p>{{end}}
-<table>
-    <thead>
+<div class="page-head row-between">
+  <div>
+    <h1 class="page-title">User</h1>
+    <p class="page-desc">Kelola akun, peran platform, dan keanggotaan group.</p>
+  </div>
+  <a class="btn btn-primary" href="/admin/users/new">Tambah user</a>
+</div>
+
+{{if .Notice}}
+<div class="flash-slot">
+  <div class="alert alert-warning" role="alert">
+    <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+    <div class="alert-content">
+      <p class="alert-title">Perlindungan administrator</p>
+      <p class="alert-desc">{{.Notice}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
+
+<section class="card">
+  <div class="card-header">
+    <h2 class="card-title">Akun platform</h2>
+    <span class="badge badge-neutral">{{len .Users}} item</span>
+  </div>
+
+  {{if .Users}}
+  <div class="table-wrap">
+    <table>
+      <thead>
         <tr>
-            <th>Username</th>
-            <th>Nama</th>
-            <th>Email</th>
-            <th>Peran</th>
-            <th>Status</th>
-            <th></th>
+          <th scope="col">Username</th>
+          <th scope="col">Status / per platform</th>
+          <th scope="col">Group</th>
+          <th scope="col" class="table-cell-right"><span class="visually-hidden">Aksi</span></th>
         </tr>
-    </thead>
-    <tbody>
+      </thead>
+      <tbody>
         {{range .Users}}
         <tr>
-            <td>{{.Username}}</td>
-            <td>{{.FullName}}</td>
-            <td>{{.Email}}</td>
-            <td>{{if .IsPlatformAdmin}}Platform Admin{{else}}User{{end}}</td>
-            <td>{{if .IsActive}}Aktif{{else}}Nonaktif{{end}}</td>
-            <td><a href="/admin/users/{{.ID}}">Ubah</a></td>
-        </tr>
-        {{else}}
-        <tr>
-            <td colspan="6">Belum ada user.</td>
+          <td><span class="mono">{{.Username}}</span></td>
+          <td>
+            {{if .IsActive}}
+            {{if .IsPlatformAdmin}}Aktif - Admin terkhakir{{else}}Aktif - Non-admin{{end}}
+            {{else}}Nonaktif - Non-admin{{end}}
+          </td>
+          <td><span class="muted">—</span></td>
+          <td class="table-cell-actions">
+            <a class="link-as-text" href="/admin/users/{{.ID}}">Ubah</a>
+            <span aria-hidden="true">·</span>
+            <a class="link-as-text" href="/admin/users/{{.ID}}/reset-password">Reset password</a>
+            <span aria-hidden="true">·</span>
+            <a class="link-as-text" href="/admin/users/{{.ID}}/access">Akses efektif</a>
+          </td>
         </tr>
         {{end}}
-    </tbody>
-</table>
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <div class="card-empty">
+    <span class="card-empty-icon">{{template "icon" (dict "Name" "users")}}</span>
+    <p class="card-empty-title">Belum ada user</p>
+    <p class="card-empty-desc">Buat user pertama untuk mengakses platform.</p>
+    <a class="btn btn-primary mt-4" href="/admin/users/new">Tambah user</a>
+  </div>
+  {{end}}
+</section>
+
+<div class="with-aside mt-4">
+  <div class="stack">
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Tambah user</h2>
+      </div>
+      <div class="card-body">
+        <form method="post" action="/admin/users/new" class="form">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+          <div class="field">
+            <label for="username">Username <span aria-label="wajib">*</span></label>
+            <input type="text" id="username" name="username" required
+              placeholder="Masukkan username">
+            <p class="help-text">Wajib disisipkan dan unik di platform.</p>
+          </div>
+
+          <div class="field">
+            <label for="password">Password awal <span aria-label="wajib">*</span></label>
+            <div class="input-with-icon">
+              <input type="password" id="password" name="password" required
+                placeholder="Masukkan password">
+              <button type="button" class="icon-btn icon-btn-border" aria-label="Tampilkan password"
+                title="Tampilkan password">{{template "icon" (dict "Name" "eye")}}</button>
+            </div>
+            <p class="help-text">Wajib disisipkan. Ketik kembali keamanan organisasi Anda.</p>
+          </div>
+
+          <label class="checkbox">
+            <input type="checkbox" name="is_admin">
+            <span>Jadikan administrator</span>
+          </label>
+          <p class="help-text mt-2">Admin mengelola platform, bukan akses database. Tambahkan user ke group untuk memberi akses.</p>
+
+          <div class="form-actions mt-4">
+            <button type="submit" class="btn btn-primary">Simpan user</button>
+            <a class="btn btn-secondary" href="/admin/users">Batal</a>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Aksi user · bima.analis</h2>
+      </div>
+      <div class="card-body">
+        <div class="row-start mt-4 gap-3">
+          <button class="btn btn-secondary">Ubah</button>
+          <button class="btn btn-secondary">Reset password</button>
+          <button class="btn btn-secondary">Lihat akses efektif</button>
+        </div>
+        <p class="t-caption muted mt-3">Nonaktifkan akun untuk menghentikan seluruh sesi aktif. Tindakan dampaknya sebelumnya menyelimuti.</p>
+
+        <label class="checkbox">
+          <input type="checkbox" name="confirm_deactivate">
+          <span>Saya memahami seluruh sesi user akan berakhir saat dinonaktifkan.</span>
+        </label>
+
+        <div class="form-actions mt-4">
+          <button class="btn btn-danger">Nonaktifkan…</button>
+          <a class="btn btn-secondary" href="/admin/users">Batal</a>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
 {{end}}
