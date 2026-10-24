@@ -14,7 +14,7 @@ import (
 
 const (
 	loginPath    = "/login"
-	landingPath  = "/"
+	landingPath  = "/databases"
 	maxLoginBody = 4 << 10 // 4 KiB, cukup untuk username + password
 
 	// Satu pesan untuk semua penyebab gagal login (username tidak ada,
