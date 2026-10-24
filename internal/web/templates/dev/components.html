@@ -1,0 +1,98 @@
+{{define "content"}}
+<style>
+    .dev h2 {
+        margin: 2rem 0 .75rem;
+        font-size: var(--font-size-t1);
+    }
+
+    .dev h3 {
+        margin: 1.25rem 0 .5rem;
+        font-size: var(--font-size-t4);
+        color: var(--color-text-muted);
+    }
+
+    .dev-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+        align-items: center;
+    }
+
+    .dev-icon {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-1);
+        font-size: var(--font-size-p4);
+    }
+
+    .dev-icon .icon {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+</style>
+
+<div class="dev">
+    <h1>Playground komponen</h1>
+    <p>
+        Mode:
+        <a href="?nav=none">tanpa sidebar</a> |
+        <a href="?nav=admin&amp;active=users">admin</a> |
+        <a href="?nav=admin&amp;active=users&amp;admin=0">admin (bukan platform admin)</a> |
+        <a href="?nav=database&amp;active=table:public.orders">database</a>
+    </p>
+
+    <h2>Button</h2>
+
+    <h3>Variant x state</h3>
+    {{range $v := (list `primary` `secondary` `tertiary`)}}
+    <div class="dev-row">
+        {{range $s := (list `default` `active` `disabled`)}}
+        {{template `button` (dict `Label` (print $v ` / ` $s) `Variant` $v `State` $s)}}
+        {{end}}
+    </div>
+    {{end}}
+
+    <h3>Dengan icon</h3>
+    <div class="dev-row">
+        {{template `button` (dict `Label` `Tambah` `IconLeft` `plus`)}}
+        {{template `button` (dict `Label` `Lanjut` `IconRight` `arrow-right` `Variant` `secondary`)}}
+        {{template `button` (dict `Label` `Simpan` `IconLeft` `check` `IconRight` `arrow-right` `Variant` `tertiary`)}}
+        {{template `button` (dict `IconLeft` `heart` `AriaLabel` `Suka` `Title` `Suka`)}}
+    </div>
+
+    <h3>Sebagai link (Href)</h3>
+    <div class="dev-row">
+        {{template `button` (dict `Label` `Link biasa` `Href` `?nav=none`)}}
+        {{template `button` (dict `Label` `Link disabled` `Href` `?nav=none` `State` `disabled`)}}
+    </div>
+
+    <h3>Custom warna dan padding</h3>
+    <div class="dev-row">
+        {{template `button` (dict `Label` `Hapus` `Fill` `var(--color-danger)` `Color` `var(--color-on-danger)` `Stroke`
+        `var(--color-danger)`)}}
+        {{template `button` (dict `Label` `Padding besar` `Padding` `6px 40px`)}}
+        {{template `button` (dict `Label` `PaddingX dan Y` `PaddingX` `var(--space-10)` `PaddingY` `var(--space-3)`
+        `Variant` `secondary`)}}
+        {{template `button` (dict `Label` `Custom disabled` `Fill` `#16a34a` `Color` `#ffffff` `State` `disabled`)}}
+    </div>
+
+    <h3>ID, Name, Value, Class, Attrs</h3>
+    <div class="dev-row">
+        {{template `button` (dict `Label` `Atribut` `ID` `btn-uji` `Name` `aksi` `Value` `1` `Class` `kelas-tambahan`
+        `Type` `submit` `Attrs` (attr `data-test="ok"`))}}
+    </div>
+
+    <h2>Icon</h2>
+    <div class="dev-row">
+        {{range (list `heart` `plus` `arrow-right` `check` `user` `users` `link` `database` `table` `migration`)}}
+        <span class="dev-icon">{{template `icon` .}}{{.}}</span>
+        {{end}}
+    </div>
+
+    <h2>Avatar</h2>
+    <div class="dev-row">
+        {{range .Avatars}}{{template `avatar` .}}{{end}}
+    </div>
+</div>
+{{end}}
