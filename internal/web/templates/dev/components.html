@@ -83,6 +83,15 @@
         `Type` `submit` `Attrs` (attr `data-test="ok"`))}}
     </div>
 
+    <h2>Label</h2>
+    <div class="dev-row">
+        {{template `label` (dict `Label` `Terhubung` `Variant` `success`)}}
+        {{template `label` (dict `Label` `Gagal terhubung` `Variant` `error`)}}
+        {{template `label` (dict `Label` `Menunggu` `Variant` `warning`)}}
+        {{template `label` (dict `Label` `View + Edit` `Variant` `info`)}}
+        {{template `label` (dict `Label` `View Only` `Variant` `neutral`)}}
+    </div>
+
     <h2>Icon</h2>
     <div class="dev-row">
         {{range (list
