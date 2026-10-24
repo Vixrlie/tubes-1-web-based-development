@@ -152,3 +152,50 @@
 .btn--custom.is-disabled {
     opacity: 0.5;
 }
+
+/* ---------- Soft danger (aksi kecil destruktif: Keluarkan, Cabut) ---------- */
+.btn--soft-danger {
+    --_fill: var(--color-label-error-bg);
+    --_fg: var(--color-label-error-fg);
+    --_stroke: transparent;
+    --_px: var(--space-3);
+    --_py: var(--space-1);
+    font-size: var(--font-size-p4);
+}
+
+.btn--soft-danger:not(.is-disabled):hover {
+    filter: brightness(0.95);
+}
+
+.btn--soft-danger.is-active,
+.btn--soft-danger:not(.is-disabled):active {
+    filter: brightness(0.9);
+}
+
+.btn--soft-danger.is-disabled {
+    opacity: 0.5;
+}
+
+
+/* ---------- Outline (garis & teks primary; aksi sekunder yang menonjol) ---------- */
+.btn--outline {
+    --_fill: transparent;
+    --_fg: var(--color-primary);
+    --_stroke: var(--color-primary);
+}
+
+.btn--outline:not(.is-disabled):hover {
+    --_fill: var(--color-primary-soft);
+}
+
+.btn--outline.is-active,
+.btn--outline:not(.is-disabled):active {
+    --_fill: var(--color-primary-soft);
+    --_fg: var(--color-primary-active);
+    --_stroke: var(--color-primary-active);
+}
+
+.btn--outline.is-disabled {
+    --_fg: var(--color-disabled-fg);
+    --_stroke: var(--color-disabled-border);
+}

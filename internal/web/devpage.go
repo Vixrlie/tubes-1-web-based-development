@@ -16,6 +16,8 @@ func (d DevRoutes) Routes(r chi.Router) {
 	r.Get("/dev/databases", d.databases)
 	r.Get("/dev/schema", d.schema)
 	r.Get("/dev/table", d.tableDetail)
+	r.Get("/dev/groups", d.groups)
+	r.Get("/dev/group", d.groupDetail)
 }
 
 type devData struct {
@@ -176,7 +178,6 @@ func (d DevRoutes) schema(w http.ResponseWriter, r *http.Request) {
 	d.R.Render(w, "schema.html", devSchema())
 }
 
-
 // devTableDetail membuat data contoh halaman detail tabel untuk satu tab
 // (TabColumns | TabConstraints | TabData; lainnya dianggap TabColumns).
 func devTableDetail(tab string) TableDetailPage {
@@ -265,4 +266,67 @@ func devTableDetail(tab string) TableDetailPage {
 // Halaman detail tabel dengan data contoh: /dev/table?tab=columns|constraints|data
 func (d DevRoutes) tableDetail(w http.ResponseWriter, r *http.Request) {
 	d.R.Render(w, "table_detail.html", devTableDetail(r.URL.Query().Get("tab")))
+}
+
+// devGroups membuat data contoh halaman Kelola Grup (dipakai route dev dan test).
+func devGroups() GroupsPage {
+	return GroupsPage{
+		Shell:      devShell("admin", "groups", true),
+		PageHeader: GroupsHeader("#"),
+		Groups: NewGroupsTable([]GroupSummary{
+			{Name: "Tim Backend", Href: "/dev/group", MemberCount: 3, Access: []GroupAccess{
+				{Database: "shop_db", Level: AccessEdit}, {Database: "analytics_db", Level: AccessView}}},
+			{Name: "Tim Data", Href: "/dev/group", MemberCount: 2, Access: []GroupAccess{
+				{Database: "analytics_db", Level: AccessEdit}}},
+			{Name: "Analis", Href: "/dev/group", MemberCount: 1, Access: []GroupAccess{
+				{Database: "analytics_db", Level: AccessView}}},
+		}),
+	}
+}
+
+// Halaman Kelola Grup dengan data contoh: /dev/groups
+func (d DevRoutes) groups(w http.ResponseWriter, r *http.Request) {
+	d.R.Render(w, "admin/groups.html", devGroups())
+}
+
+// devGroupDetail membuat data contoh halaman Detail Grup. edit=false -> mode
+// lihat; edit=true -> mode ubah akses (access-editor + action bar).
+func devGroupDetail(edit bool) GroupDetailPage {
+	p := GroupDetailPage{
+		Shell:        devShell("admin", "groups", true),
+		PageHeader:   GroupDetailHeader("Tim Backend", "/dev/groups"),
+		DeleteAction: "#",
+		Members: NewMembersCard([]Member{
+			{Username: "budi", FullName: "Budi Santoso"},
+			{Username: "siti", FullName: "Siti Rahma"},
+			{Username: "algi", FullName: "Algi Pratama"},
+		}, "#", func(i int) string { return "#" }),
+	}
+	if edit {
+		p.Editor = &AccessEditor{
+			FormAction: "#",
+			CancelHref: "/dev/group",
+			Rows: []AccessRow{
+				{ID: "1", Name: "shop_db", Level: AccessEdit},
+				{ID: "2", Name: "hospital_db", Level: AccessView},
+				{ID: "3", Name: "analytics_db", Level: AccessView, Removed: true},
+			},
+			Available: []DropdownOption{
+				{Value: "4", Label: "inventory_db"},
+				{Value: "5", Label: "logs_db"},
+			},
+		}
+	} else {
+		p.Access = NewAccessCard([]ListItem{
+			{Title: "shop_db", Subtitle: "PostgreSQL · Terhubung", Tag: AccessLabel(AccessEdit)},
+			{Title: "analytics_db", Subtitle: "PostgreSQL · Terhubung", Tag: AccessLabel(AccessView)},
+		}, "/dev/group?mode=edit")
+	}
+	p.SetCSRF("dev-token")
+	return p
+}
+
+// Halaman Detail Grup dengan data contoh: /dev/group[?mode=edit]
+func (d DevRoutes) groupDetail(w http.ResponseWriter, r *http.Request) {
+	d.R.Render(w, "admin/group_detail.html", devGroupDetail(r.URL.Query().Get("mode") == "edit"))
 }

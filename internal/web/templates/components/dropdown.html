@@ -10,6 +10,7 @@ Dropdown (<select> bawaan browser yang di-style, jadi aksesibel dan ikut form/HT
     Value nilai yang sedang terpilih. Kosong -> placeholder tampil (neutral-500)
     Placeholder teks saat belum ada pilihan
     Label teks label di atas
+    HideLabel true -> label hanya untuk screen reader (dropdown di dalam baris/tabel)
     Name, ID name & id select (ID default = Name)
     Helper teks bantuan di bawah
     Error pesan error. OPSIONAL: kosong -> normal; terisi -> merah dan menggantikan Helper
@@ -26,7 +27,7 @@ Dropdown (<select> bawaan browser yang di-style, jadi aksesibel dan ikut form/HT
     {{define "dropdown"}}
     {{- $id := or .ID .Name -}}
     <div class="{{template `dropdown-class` .}}">
-        {{- with .Label}}<label class="input__label" for="{{$id}}">{{.}}</label>{{end}}
+        {{- with .Label}}<label class="input__label{{if $.HideLabel}} sr-only{{end}}" for="{{$id}}">{{.}}</label>{{end}}
         <div class="input__box">
             <select class="input__control dropdown__control" {{with $id}} id="{{.}}" {{end}}{{with .Name}} name="{{.}}"
                 {{end}}{{if eq (or .State `default`) `disabled`}} disabled{{end}}{{if .Required}} required{{end}}{{if

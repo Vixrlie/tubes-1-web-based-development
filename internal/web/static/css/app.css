@@ -12,6 +12,9 @@
 @import "components/action-bar.css";
 @import "components/table.css";
 @import "components/pager.css";
+@import "components/card.css";
+@import "components/list-card.css";
+@import "components/access-editor.css";
 @import "components/tabs.css";
 @import "components/flash.css";
 @import "components/avatar.css";

@@ -1,0 +1,33 @@
+/* ==========================================================================
+   card.css  -  kartu putih umum + kepala kartu (templates/components/card.html)
+   Dipakai bersama oleh list-card dan access-editor.
+   ========================================================================== */
+
+.card {
+    padding: var(--space-6);
+    background: var(--color-surface-raised);
+    border-radius: var(--radius-xl);
+}
+
+.card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.card__title {
+    margin: 0;
+    font-family: var(--font-family-heading);
+    font-size: var(--font-size-t3);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+}
+
+.card__actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-3);
+}

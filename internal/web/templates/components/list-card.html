@@ -1,0 +1,39 @@
+{{/*
+Kartu berisi judul + tombol aksi + daftar baris. Data: web.ListCard (lihat listcard.go):
+
+{{template `list-card` .Members}}
+
+ListCard:
+Title judul kartu
+Actions daftar tombol di kanan judul (opsional): []web.Button
+Items daftar baris: Title, Subtitle (opsional), Tag (label di kanan, opsional),
+Action (tombol kecil di kanan, dikirim sebagai form POST, opsional)
+Empty pesan kalau tidak ada baris (default "Belum ada data.")
+Class class tambahan
+CSRFToken token csrf untuk form aksi baris
+*/}}
+{{define "list-card"}}
+<section class="card list-card{{with .Class}} {{.}}{{end}}">
+    {{template `card-head` .}}
+    <ul class="list-card__list" role="list">
+        {{- range $it := .Items}}
+        <li class="list-card__item">
+            <div class="list-card__text">
+                <p class="list-card__title">{{$it.Title}}</p>
+                {{- with $it.Subtitle}}<p class="list-card__subtitle">{{.}}</p>{{end}}
+            </div>
+            {{- with $it.Tag.Text}}{{template `table-cell` $it.Tag}}{{end}}
+            {{- with $it.Action}}
+            <form class="list-card__action" method="post" action="{{.FormAction}}" {{with .Confirm}}
+                onsubmit="return confirm({{.}})" {{end}}>
+                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                {{template `button` (dict `Label` .Label `Type` `submit` `Variant` `soft-danger`)}}
+            </form>
+            {{- end}}
+        </li>
+        {{- else}}
+        <li class="list-card__empty">{{or .Empty `Belum ada data.`}}</li>
+        {{- end}}
+    </ul>
+</section>
+{{end}}

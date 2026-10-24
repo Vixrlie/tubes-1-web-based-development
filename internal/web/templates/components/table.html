@@ -17,6 +17,7 @@ Cell:
 Text teks sel
 Variant success|error|warning|info|neutral -> dirender sebagai label
 Href (tanpa Variant) -> dirender sebagai link
+Button (*web.Button) -> dirender sebagai tombol (lihat button.go)
 */}}
 
 {{define "table"}}
@@ -67,7 +68,8 @@ Href (tanpa Variant) -> dirender sebagai link
 {{end}}
 
 {{define "table-cell" -}}
-{{- if .Variant}}{{template `label` (dict `Label` .Text `Variant` .Variant)}}
+{{- if .Button}}{{template `button` .Button}}
+{{- else if .Variant}}{{template `label` (dict `Label` .Text `Variant` .Variant)}}
 {{- else if .Href}}<a href="{{.Href}}">{{.Text}}</a>
 {{- else}}{{.Text}}{{end -}}
 {{- end}}

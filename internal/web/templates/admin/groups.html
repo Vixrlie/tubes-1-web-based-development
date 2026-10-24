@@ -1,0 +1,8 @@
+{{/*
+Halaman Kelola Grup: daftar grup + tombol "Grup Baru".
+Data: web.GroupsPage (lihat groups.go): .PageHeader, .Groups
+*/}}
+{{define "content"}}
+{{template `page-header` .PageHeader}}
+{{template `table` .Groups}}
+{{end}}

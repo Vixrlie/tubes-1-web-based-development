@@ -1,0 +1,17 @@
+{{/*
+Kepala kartu: judul di kiri, tombol aksi (opsional) di kanan. Dipakai bersama oleh
+list-card dan access-editor supaya kepala semua kartu seragam. Data: apa pun yang punya
+.Title dan .Actions ([]web.Button), mis. web.ListCard.
+
+{{template `card-head` .}}
+*/}}
+{{define "card-head"}}
+<header class="card__head">
+    <h2 class="card__title">{{.Title}}</h2>
+    {{- with .Actions}}
+    <div class="card__actions">
+        {{- range .}}{{template `button` .}}{{end}}
+    </div>
+    {{- end}}
+</header>
+{{end}}

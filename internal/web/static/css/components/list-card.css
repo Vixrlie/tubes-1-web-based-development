@@ -1,0 +1,56 @@
+/* ==========================================================================
+   list-card.css  -  daftar baris di dalam kartu (templates/components/list-card.html)
+   Baris: [judul + keterangan kecil] ........ [label] [aksi]
+   ========================================================================== */
+
+.list-card__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.list-card__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-top: 1px solid var(--color-border);
+}
+
+.list-card__item:first-child {
+    border-top: 0;
+}
+
+/* teks mengisi sisa ruang, label / aksi menempel di kanan */
+.list-card__text {
+    flex: 1;
+    min-width: 0;
+}
+
+.list-card__title,
+.list-card__subtitle {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.list-card__title {
+    font-size: var(--font-size-p3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text);
+}
+
+.list-card__subtitle {
+    font-size: var(--font-size-p4);
+    color: var(--color-text-muted);
+}
+
+.list-card__action {
+    margin: 0;
+    flex: none;
+}
+
+.list-card__empty {
+    padding: var(--space-6) 0;
+    text-align: center;
+    color: var(--color-text-muted);
+}

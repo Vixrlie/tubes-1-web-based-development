@@ -40,6 +40,7 @@ type TableCell struct {
 	Text    string
 	Variant string
 	Href    string
+	Button  *Button
 }
 
 // TableRow memetakan Column.Key -> sel. Key yang tidak ada = sel kosong.

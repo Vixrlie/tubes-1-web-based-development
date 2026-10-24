@@ -1,0 +1,33 @@
+{{/*
+Halaman Detail Grup: kartu Anggota + kartu Akses Database. Dua mode dalam satu template:
+lihat (Editor == nil) dan ubah akses (Editor != nil, lengkap dengan action bar).
+Data: web.GroupDetailPage (lihat groups.go)
+*/}}
+{{define "content"}}
+<div {{if .Editor}}class="has-action-bar" {{end}}>
+    {{template `page-header` .PageHeader}}
+
+    {{- with .DeleteAction}}
+    {{/* Form tersembunyi; tombol "Hapus Grup" di kepala halaman men-submit-nya lewat atribut form= */}}
+    <form id="delete-group-form" method="post" action="{{.}}"
+        onsubmit="return confirm('Hapus grup ini? Tindakan ini tidak dapat dibatalkan.')" hidden>
+        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+    </form>
+    {{- end}}
+
+    <div class="split split--start">
+        {{template `list-card` .Members}}
+        {{- if .Editor}}
+        {{template `access-editor` .Editor}}
+        {{- else}}
+        {{template `list-card` .Access}}
+        {{- end}}
+    </div>
+
+    {{- with .Editor}}
+    {{template `action-bar` (dict `Message` .Message `ID` `access-bar` `Hidden` true `CancelHref` .CancelHref `SubmitAttrs`
+    (attr `form="access-form"`))}}
+    <script src="/static/js/access-editor.js" defer></script>
+    {{- end}}
+</div>
+{{end}}
