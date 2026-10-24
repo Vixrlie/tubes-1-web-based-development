@@ -1,0 +1,106 @@
+{{define "content"}}
+<div class="page-head">
+  <h1 class="page-title">{{if .IsNew}}Tambah koneksi{{else}}Ubah koneksi{{end}}</h1>
+  <p class="page-desc">Password hanya dipakai saat membuka koneksi dan tidak pernah ditampilkan lagi.</p>
+</div>
+
+{{if .Errors}}
+<div class="alert alert-error" role="alert" tabindex="-1" id="error-summary">
+  <span class="alert-icon">{{template "icon" (dict "Name" "alert")}}</span>
+  <div class="alert-content">
+    <p class="alert-title">Ada masalah</p>
+    <ul class="alert-desc">
+      {{range $field, $message := .Errors}}
+      <li><a href="#field-{{$field}}">{{$message}}</a></li>
+      {{end}}
+    </ul>
+  </div>
+</div>
+{{end}}
+
+<section class="card">
+  <div class="card-header">
+    <h2 class="card-title">Detail koneksi</h2>
+  </div>
+  <div class="card-body">
+    <form method="post" action="{{.FormAction}}" class="form">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+      <div class="field">
+        <label for="field-name">Nama tampilan</label>
+        <input type="text" id="field-name" name="name" value="{{.Values.Name}}" required
+          {{if index .Errors "name"}}aria-invalid="true" aria-describedby="field-name-error"{{end}}>
+        {{if index .Errors "name"}}
+        <p class="error-text" id="field-name-error">{{index .Errors "name"}}</p>
+        {{end}}
+      </div>
+
+      <div class="field">
+        <label for="field-description">Deskripsi</label>
+        <input type="text" id="field-description" name="description" value="{{.Values.Description}}">
+        <p class="help-text">Opsional. Dipakai untuk membedakan tujuan yang mirip.</p>
+      </div>
+
+      <div class="field">
+        <label for="field-host">Host</label>
+        <input type="text" id="field-host" name="host" value="{{.Values.Host}}" required placeholder="localhost"
+          {{if index .Errors "host"}}aria-invalid="true" aria-describedby="field-host-error"{{end}}>
+        {{if index .Errors "host"}}
+        <p class="error-text" id="field-host-error">{{index .Errors "host"}}</p>
+        {{end}}
+      </div>
+
+      <div class="field">
+        <label for="field-port">Port</label>
+        <input type="text" id="field-port" name="port" value="{{.Values.Port}}" inputmode="numeric" required
+          {{if index .Errors "port"}}aria-invalid="true" aria-describedby="field-port-error"{{end}}>
+        {{if index .Errors "port"}}
+        <p class="error-text" id="field-port-error">{{index .Errors "port"}}</p>
+        {{end}}
+      </div>
+
+      <div class="field">
+        <label for="field-database">Nama database</label>
+        <input type="text" id="field-database" name="database" value="{{.Values.Database}}" required
+          {{if index .Errors "database"}}aria-invalid="true" aria-describedby="field-database-error"{{end}}>
+        {{if index .Errors "database"}}
+        <p class="error-text" id="field-database-error">{{index .Errors "database"}}</p>
+        {{end}}
+      </div>
+
+      <div class="field">
+        <label for="field-username">Username database</label>
+        <input type="text" id="field-username" name="username" value="{{.Values.Username}}" required
+          autocomplete="off"
+          {{if index .Errors "username"}}aria-invalid="true" aria-describedby="field-username-error"{{end}}>
+        {{if index .Errors "username"}}
+        <p class="error-text" id="field-username-error">{{index .Errors "username"}}</p>
+        {{end}}
+      </div>
+
+      <div class="field">
+        <label for="field-password">Password database</label>
+        <input type="password" id="field-password" name="password" autocomplete="new-password"
+          {{if .IsNew}}required{{end}}
+          {{if index .Errors "password"}}aria-invalid="true" aria-describedby="field-password-error"{{end}}>
+        {{if index .Errors "password"}}
+        <p class="error-text" id="field-password-error">{{index .Errors "password"}}</p>
+        {{else}}
+        <p class="help-text">
+          {{if .IsNew}}Wajib diisi untuk koneksi baru.{{else}}Kosongkan bila password tidak berubah.{{end}}
+        </p>
+        {{end}}
+      </div>
+
+      <div class="form-actions">
+        <a class="btn btn-secondary" href="/admin/connections">Batal</a>
+        <div class="form-actions-primary">
+          <button type="submit" class="btn btn-primary">
+            {{if .IsNew}}Tambah koneksi{{else}}Simpan perubahan{{end}}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}
