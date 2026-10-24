@@ -1,0 +1,17 @@
+{{/*
+Halaman Riwayat Migration: daftar migration per database (terbaru lebih dahulu).
+Data: dbm.migrationsPage (lihat dbm/migration_pages.go): .Shell, .Crumbs, .Table, .Actions
+*/}}
+{{define "content"}}
+{{template `page-header` (dict `Title` `Riwayat Migration` `Crumbs` .Crumbs `Actions` .Actions)}}
+
+<div class="stack">
+    {{template `table` .Table}}
+
+    <section class="card">
+        {{template `card-head` (dict `Title` `Transaksi aman`)}}
+        <p>Status <strong>failed</strong> berarti seluruh perubahan di-rollback — database tidak
+            berubah. Status <strong>applied</strong> berarti transaksi telah di-commit.</p>
+    </section>
+</div>
+{{end}}

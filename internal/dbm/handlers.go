@@ -24,6 +24,9 @@ type Config struct {
 	Policy   access.Policy
 	Registry Registry
 	Renderer auth.Renderer
+	// Migrations menyimpan & membaca riwayat migration (opsional; default
+	// PGMigrationStore di atas Platform).
+	Migrations MigrationStore
 }
 
 // Handlers melayani userflow database: daftar database, penjelajah schema,
@@ -31,10 +34,12 @@ type Config struct {
 // izin lewat access.Policy di backend; penolakan memakai 403 polos
 // (FE belum menyediakan halaman error khusus).
 type Handlers struct {
-	platform *pgxpool.Pool
-	policy   access.Policy
-	registry Registry
-	renderer auth.Renderer
+	platform   *pgxpool.Pool
+	policy     access.Policy
+	registry   Registry
+	renderer   auth.Renderer
+	migrations MigrationStore
+	runner     *MigrationRunner
 }
 
 func NewHandlers(cfg Config) *Handlers {
@@ -46,12 +51,21 @@ func NewHandlers(cfg Config) *Handlers {
 	if registry == nil {
 		registry = StubRegistry{}
 	}
-	return &Handlers{
-		platform: cfg.Platform,
-		policy:   policy,
-		registry: registry,
-		renderer: cfg.Renderer,
+	migrations := cfg.Migrations
+	if migrations == nil && cfg.Platform != nil {
+		migrations = NewPGMigrationStore(cfg.Platform)
 	}
+	h := &Handlers{
+		platform:   cfg.Platform,
+		policy:     policy,
+		registry:   registry,
+		renderer:   cfg.Renderer,
+		migrations: migrations,
+	}
+	if cfg.Platform != nil {
+		h.runner = NewMigrationRunner(cfg.Platform, registry)
+	}
+	return h
 }
 
 // Routes mendaftarkan route userflow /databases/* pada grup terproteksi
@@ -63,9 +77,13 @@ func (h *Handlers) Routes(r chi.Router) {
 		r.Get("/{connID}/schema", h.schema)
 		r.Get("/{connID}/tables/{table}", h.tableDetail)
 		r.Get("/{connID}/tables/{table}/data", h.tableData)
-		// Halaman riwayat migration belum tersedia di FE; alihkan sementara
-		// agar tautan "Migrasi" di sidebar tidak404.
-		r.Get("/{connID}/migrations", h.migrationsPlaceholder)
+		// Halaman migration: riwayat, editor (draft), detail, preview & eksekusi.
+		r.Get("/{connID}/migrations", h.migrationsList)
+		r.Post("/{connID}/migrations", h.migrationsCreate)
+		r.Get("/{connID}/migrations/new", h.migrationEditor)
+		r.Get("/{connID}/migrations/{mID}", h.migrationDetail)
+		r.Get("/{connID}/migrations/{mID}/preview", h.migrationPreview)
+		r.Post("/{connID}/migrations/{mID}/execute", h.migrationExecute)
 	})
 }
 
@@ -73,6 +91,12 @@ func (h *Handlers) Routes(r chi.Router) {
 // (param route pasti terisi pada titik ini). false = respons sudah dikirim
 // (404 untuk id tak valid, 403 untuk izin ditolak/gagal dimuat — fail closed).
 func (h *Handlers) authorize(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	return h.authorizeAction(w, r, access.ActionView)
+}
+
+// authorizeAction = authorize dengan aksi tertentu (edit untuk operasi tulis
+// migration: buat draft & eksekusi).
+func (h *Handlers) authorizeAction(w http.ResponseWriter, r *http.Request, action access.Action) (int64, bool) {
 	connID, err := strconv.ParseInt(chi.URLParam(r, "connID"), 10, 64)
 	if err != nil || connID <= 0 {
 		http.NotFound(w, r)
@@ -83,7 +107,7 @@ func (h *Handlers) authorize(w http.ResponseWriter, r *http.Request) (int64, boo
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return 0, false
 	}
-	allowed, err := h.policy.Can(r.Context(), user.ID, connID, access.ActionView)
+	allowed, err := h.policy.Can(r.Context(), user.ID, connID, action)
 	if err != nil || !allowed {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return 0, false
@@ -256,16 +280,6 @@ func countTables(ctx context.Context, pool *pgxpool.Pool) (int, error) {
 
 // summary mengarahkan /databases/{id} ke penjelajah schema (userflow).
 func (h *Handlers) summary(w http.ResponseWriter, r *http.Request) {
-	connID, ok := h.authorize(w, r)
-	if !ok {
-		return
-	}
-	http.Redirect(w, r, "/databases/"+strconv.FormatInt(connID, 10)+"/schema", http.StatusSeeOther)
-}
-
-// migrationsPlaceholder mengalihkan tautan "Migrasi" ke schema sampai halaman
-// riwayat migration tersedia di FE.
-func (h *Handlers) migrationsPlaceholder(w http.ResponseWriter, r *http.Request) {
 	connID, ok := h.authorize(w, r)
 	if !ok {
 		return

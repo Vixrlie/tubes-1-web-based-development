@@ -1,0 +1,23 @@
+{{/*
+Halaman Detail Migration: status eksekusi + SQL lengkap + detail pelaksana.
+Data: dbm.migrationDetailPage (lihat dbm/migration_pages.go):
+.Shell, .Title, .Crumbs, .StatusText, .StatusNote, .SQL, .Detail (web.DetailCard),
+.Actions (tombol aksi, mis. Preview utk draft)
+*/}}
+{{define "content"}}
+{{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs `Actions` .Actions)}}
+
+<div class="stack">
+    <section class="card">
+        {{template `card-head` (dict `Title` .StatusText)}}
+        <p>{{.StatusNote}}</p>
+    </section>
+
+    <section class="card">
+        {{template `card-head` (dict `Title` `SQL`)}}
+        <pre>{{.SQL}}</pre>
+    </section>
+
+    {{template `detail-card` .Detail}}
+</div>
+{{end}}
