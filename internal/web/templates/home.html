@@ -1,6 +1,11 @@
 {{define "content"}}
 <h1>Halo, {{.Username}}</h1>
 <p>Halaman sementara. Akan diganti daftar database.</p>
+{{if .IsPlatformAdmin}}
+<nav>
+    <a href="/admin/groups">Kelola Group</a> | <a href="/admin/users">Kelola User</a>
+</nav>
+{{end}}
 <form method="post" action="/logout">
     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
     <button type="submit">Keluar</button>
