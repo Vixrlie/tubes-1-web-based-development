@@ -10,6 +10,7 @@ import (
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/access"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 )
 
 var (
@@ -66,6 +67,9 @@ type GroupStore interface {
 	AccessSummaries(ctx context.Context) (map[int64][]string, error)
 	// AllGrants mengembalikan level per (group, connection) untuk matriks akses.
 	AllGrants(ctx context.Context) (map[int64]map[int64]access.Action, error)
+	// GroupAccesses mengembalikan akses per group dalam bentuk asli
+	// (database + level) untuk tabel kelola group fe-components.
+	GroupAccesses(ctx context.Context) (map[int64][]web.GroupAccess, error)
 }
 
 // levelLabel menerjemahkan level grant untuk tampilan.
@@ -343,6 +347,31 @@ func (s *PGGroupStore) AllGrants(ctx context.Context) (map[int64]map[int64]acces
 			out[groupID] = map[int64]access.Action{}
 		}
 		out[groupID][connID] = access.Action(level)
+	}
+	return out, rows.Err()
+}
+
+// GroupAccesses mengembalikan akses per group dalam bentuk asli
+// (database + level), urut nama koneksi — untuk tabel kelola group fe-components.
+func (s *PGGroupStore) GroupAccesses(ctx context.Context) (map[int64][]web.GroupAccess, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT gr.group_id, dc.name, gr.level
+		   FROM grants gr
+		   JOIN db_connections dc ON dc.id = gr.connection_id
+		  ORDER BY dc.name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := map[int64][]web.GroupAccess{}
+	for rows.Next() {
+		var groupID int64
+		var connName, level string
+		if err := rows.Scan(&groupID, &connName, &level); err != nil {
+			return nil, err
+		}
+		out[groupID] = append(out[groupID], web.GroupAccess{Database: connName, Level: level})
 	}
 	return out, rows.Err()
 }

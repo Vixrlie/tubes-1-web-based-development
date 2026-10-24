@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/access"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 )
 
 type fakeGroupStore struct {
@@ -30,6 +31,14 @@ type fakeGroupStore struct {
 
 	accessSummaries func(context.Context) (map[int64][]string, error)
 	allGrants       func(context.Context) (map[int64]map[int64]access.Action, error)
+	groupAccesses   func(context.Context) (map[int64][]web.GroupAccess, error)
+}
+
+func (f *fakeGroupStore) GroupAccesses(ctx context.Context) (map[int64][]web.GroupAccess, error) {
+	if f.groupAccesses != nil {
+		return f.groupAccesses(ctx)
+	}
+	return map[int64][]web.GroupAccess{}, nil
 }
 
 func (f *fakeGroupStore) ListGroups(ctx context.Context) ([]Group, error) {
