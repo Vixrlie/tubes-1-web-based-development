@@ -12,7 +12,8 @@ type Option func(*Handlers)
 
 // Handle layar administrasi
 type Handlers struct {
-	users *userHandlers // Arin
+	users  *userHandlers  // Arin
+	groups *groupHandlers // Vincent
 }
 
 func NewHandlers(opts ...Option) *Handlers {
