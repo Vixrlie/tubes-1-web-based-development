@@ -475,8 +475,8 @@ func (u *userHandlers) accessPage(w http.ResponseWriter, r *http.Request) {
 	shell := page.AppShell
 	shell.Title = "Akses efektif · " + t.Username
 	shell.Breadcrumbs = []web.Crumb{
-		{Label: "Admin", URL: "/admin/users"},
-		{Label: "User", URL: "/admin/users"},
+		{Label: "Admin", Href: "/admin/users"},
+		{Label: "User", Href: "/admin/users"},
 		{Label: t.Username},
 	}
 	page.AppShell = shell

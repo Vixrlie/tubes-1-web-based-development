@@ -9,11 +9,6 @@ import (
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
 )
 
-type Crumb struct {
-	Label string
-	URL   string
-}
-
 // DatabaseLink adalah database yang boleh dibuka user. Level berasal dari
 // akses efektif tertinggi dari seluruh group yang dianggotai user.
 type DatabaseLink struct {

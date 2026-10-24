@@ -133,7 +133,7 @@
         <nav class="breadcrumb" aria-label="Breadcrumb">
           {{range $i, $c := .Breadcrumbs}}
           {{if $i}}<span class="breadcrumb-sep" aria-hidden="true">{{template "icon" (dict "Name" "chevron-right")}}</span>{{end}}
-          {{if $c.URL}}<a href="{{$c.URL}}">{{$c.Label}}</a>{{else}}<span class="breadcrumb-current">{{$c.Label}}</span>{{end}}
+          {{if $c.Href}}<a href="{{$c.Href}}">{{$c.Label}}</a>{{else}}<span class="breadcrumb-current">{{$c.Label}}</span>{{end}}
           {{end}}
         </nav>
         {{end}}

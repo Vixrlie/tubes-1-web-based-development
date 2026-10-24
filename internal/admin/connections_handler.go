@@ -143,7 +143,7 @@ func (c *connectionHandlers) list(w http.ResponseWriter, r *http.Request) {
 		shell.NoticeDesc = n.Desc
 	}
 	shell.Breadcrumbs = []web.Crumb{
-		{Label: "Admin", URL: "/admin/users"},
+		{Label: "Admin", Href: "/admin/users"},
 		{Label: "Koneksi"},
 		{Label: "Daftar"},
 	}
@@ -173,8 +173,8 @@ func findConnection(rows []ConnectionRow, rawID string) (ConnectionRow, bool) {
 func (c *connectionHandlers) newForm(w http.ResponseWriter, r *http.Request) {
 	shell := c.shellFor(r.Context(), "Tambah koneksi", "connections")
 	shell.Breadcrumbs = []web.Crumb{
-		{Label: "Admin", URL: "/admin/users"},
-		{Label: "Koneksi", URL: "/admin/connections"},
+		{Label: "Admin", Href: "/admin/users"},
+		{Label: "Koneksi", Href: "/admin/connections"},
 		{Label: "Tambah"},
 	}
 	c.render(w, http.StatusOK, "admin/connection_form.html", connectionFormPage{
@@ -216,8 +216,8 @@ func (c *connectionHandlers) editForm(w http.ResponseWriter, r *http.Request) {
 	}
 	shell := c.shellFor(r.Context(), "Ubah koneksi", "connections")
 	shell.Breadcrumbs = []web.Crumb{
-		{Label: "Admin", URL: "/admin/users"},
-		{Label: "Koneksi", URL: "/admin/connections"},
+		{Label: "Admin", Href: "/admin/users"},
+		{Label: "Koneksi", Href: "/admin/connections"},
 		{Label: row.Name},
 	}
 	c.render(w, http.StatusOK, "admin/connection_form.html", connectionFormPage{
@@ -308,7 +308,7 @@ func (c *connectionHandlers) renderDeleteError(w http.ResponseWriter, r *http.Re
 	}
 	shell := c.shellFor(r.Context(), "Koneksi database", "connections")
 	shell.Breadcrumbs = []web.Crumb{
-		{Label: "Admin", URL: "/admin/users"},
+		{Label: "Admin", Href: "/admin/users"},
 		{Label: "Koneksi"},
 		{Label: "Daftar"},
 	}
@@ -324,8 +324,8 @@ func (c *connectionHandlers) renderDeleteError(w http.ResponseWriter, r *http.Re
 func (c *connectionHandlers) renderForm(w http.ResponseWriter, r *http.Request, status int, isNew bool, action string, in ConnectionInput, fieldErrors map[string]string) {
 	shell := c.shellFor(r.Context(), "Koneksi database", "connections")
 	shell.Breadcrumbs = []web.Crumb{
-		{Label: "Admin", URL: "/admin/users"},
-		{Label: "Koneksi", URL: "/admin/connections"},
+		{Label: "Admin", Href: "/admin/users"},
+		{Label: "Koneksi", Href: "/admin/connections"},
 		{Label: "Tambah"},
 	}
 	if !isNew {

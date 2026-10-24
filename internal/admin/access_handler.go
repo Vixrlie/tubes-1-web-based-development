@@ -65,7 +65,7 @@ func (a *accessHandlers) shell(r *http.Request, title string) web.AppShell {
 		CanManageConnections: me.IsPlatformAdmin,
 	}
 	shell.Breadcrumbs = []web.Crumb{
-		{Label: "Admin", URL: "/admin/users"},
+		{Label: "Admin", Href: "/admin/users"},
 		{Label: "Akses"},
 		{Label: "Matriks"},
 	}
