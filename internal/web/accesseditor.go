@@ -21,7 +21,8 @@ func AccessLabel(level string) TableCell {
 // Tipe data untuk komponen access-editor (templates/components/access-editor.html):
 // kartu "Akses Database" mode ubah. Perubahan dikumpulkan di sisi klien
 // (static/js/access-editor.js) lalu dikirim sekali lewat tombol "Simpan Perubahan"
-// di action bar.
+// di action bar. Tombol "Tambah Database" membuka pop up (pilih database + level akses);
+// "Tambahkan" di pop up hanya menambah baris baru di daftar, belum menyimpan.
 //
 // Field yang dikirim form (POST FormAction):
 //
@@ -60,6 +61,15 @@ func (AccessEditor) LevelOptions() []DropdownOption {
 	return []DropdownOption{
 		{Value: AccessView, Label: "View Only"},
 		{Value: AccessEdit, Label: "View + Edit"},
+	}
+}
+
+// LevelChoices = pilihan level akses versi kartu (judul + keterangan) untuk pop up
+// "Tambah Database". Nilainya sama dengan LevelOptions.
+func (AccessEditor) LevelChoices() []RadioOption {
+	return []RadioOption{
+		{Value: AccessView, Label: "View Only", Description: "Lihat schema, data, dan riwayat migration"},
+		{Value: AccessEdit, Label: "View + Edit", Description: "Plus buat, ubah, dan jalankan migration"},
 	}
 }
 

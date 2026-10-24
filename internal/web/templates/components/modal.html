@@ -1,0 +1,29 @@
+{{/*
+Kepala pop up (judul + tombol tutup bulat). Go template tidak punya "slot", jadi modal dirangkai
+langsung di template pemakainya dengan kerangka berikut:
+
+<dialog class="modal" id="contoh-modal" aria-labelledby="contoh-modal-title">
+    <div class="modal__panel">
+        {{template `modal-head` (dict `ID` `contoh-modal` `Title` `Judul pop up`)}}
+        <div class="modal__body"> ...isi (form, daftar, dst)... </div>
+        <div class="modal__foot"> tombol Batal (data-modal-close) + tombol utama </div>
+    </div>
+</dialog>
+
+Pembuka: tombol / link dengan atribut data-modal-open="contoh-modal" (lihat static/js/modal.js).
+Contoh nyata: access-editor.html (Tambah Database) dan add-members-modal.html (Tambah Anggota).
+
+Parameter modal-head:
+ID id <dialog> (dipakai untuk id judul: <ID>-title, cocokkan dengan aria-labelledby)
+        Title judul pop up
+
+        CATATAN: string di dalam tag HTML pakai backtick (`...`), lihat button.html.
+        */}}
+
+        {{define "modal-head"}}
+        <header class="modal__head">
+            <h2 class="modal__title" id="{{.ID}}-title">{{.Title}}</h2>
+            <button type="button" class="modal__close" data-modal-close aria-label="Tutup">{{template `icon`
+                `close`}}</button>
+        </header>
+        {{end}}

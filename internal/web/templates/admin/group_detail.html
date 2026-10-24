@@ -1,6 +1,7 @@
 {{/*
 Halaman Detail Grup: kartu Anggota + kartu Akses Database. Dua mode dalam satu template:
 lihat (Editor == nil) dan ubah akses (Editor != nil, lengkap dengan action bar).
+Pop up: "Tambah Anggota" (AddMembers != nil) dan "Tambah Database" (di dalam access-editor).
 Data: web.GroupDetailPage (lihat groups.go)
 */}}
 {{define "content"}}
@@ -24,9 +25,22 @@ Data: web.GroupDetailPage (lihat groups.go)
         {{- end}}
     </div>
 
+    {{- with .AddMembers}}
+    {{template `add-members-modal` .}}
+    {{- end}}
+
     {{- with .Editor}}
-    {{template `action-bar` (dict `Message` .Message `ID` `access-bar` `Hidden` true `CancelHref` .CancelHref `SubmitAttrs`
+    {{template `action-bar` (dict `Message` .Message `ID` `access-bar` `Hidden` true `CancelHref` .CancelHref
+    `SubmitAttrs`
     (attr `form="access-form"`))}}
+    {{- end}}
+
+    {{/* Urutan penting: modal.js dulu (buka / tutup pop up), baru JS komponen */}}
+    <script src="/static/js/modal.js" defer></script>
+    {{- if .AddMembers}}
+    <script src="/static/js/add-members.js" defer></script>
+    {{- end}}
+    {{- if .Editor}}
     <script src="/static/js/access-editor.js" defer></script>
     {{- end}}
 </div>

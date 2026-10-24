@@ -190,9 +190,9 @@
 
 .btn--outline.is-active,
 .btn--outline:not(.is-disabled):active {
-    --_fill: var(--color-primary-soft);
-    --_fg: var(--color-primary-active);
-    --_stroke: var(--color-primary-active);
+    --_fill: var(--color-primary);
+    --_fg: var(--color-on-primary);
+    --_stroke: var(--color-primary);
 }
 
 .btn--outline.is-disabled {

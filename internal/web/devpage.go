@@ -301,6 +301,14 @@ func devGroupDetail(edit bool) GroupDetailPage {
 			{Username: "siti", FullName: "Siti Rahma"},
 			{Username: "algi", FullName: "Algi Pratama"},
 		}, "#", func(i int) string { return "#" }),
+		AddMembers: &AddMembersModal{
+			FormAction: "#",
+			Candidates: []MemberCandidate{
+				{ID: "10", Username: "rudi", FullName: "Rudi Hartono"},
+				{ID: "11", Username: "maya", FullName: "Maya Putri"},
+				{ID: "12", Username: "dewi", FullName: "Dewi Lestari", Inactive: true},
+			},
+		},
 	}
 	if edit {
 		p.Editor = &AccessEditor{

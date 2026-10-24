@@ -1,0 +1,352 @@
+/* ==========================================================================
+   modal.css  -  pop up (templates/components/modal.html + static/js/modal.js)
+   Berisi: .modal (kerangka <dialog>), .radio-card (pilihan berbentuk kartu),
+   .member-picker (daftar centang di pop up "Tambah Anggota").
+   Hanya memakai token semantik dari themes.css.
+   ========================================================================== */
+
+/* ---------- Kerangka modal ---------- */
+.modal {
+    width: min(31rem, calc(100vw - 2rem));
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-text);
+    overflow: visible;
+}
+
+.modal::backdrop {
+    background: rgb(10 25 51 / 0.45);
+    backdrop-filter: blur(3px);
+}
+
+.modal[open] {
+    animation: modal-in var(--transition-base) both;
+}
+
+.modal[open]::backdrop {
+    animation: modal-fade var(--transition-base) both;
+}
+
+.modal__panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-height: calc(100dvh - 2rem);
+    padding: var(--space-6);
+    background: var(--color-surface-raised);
+    border-radius: 1.75rem;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.modal__title {
+    margin: 0;
+    font-family: var(--font-family-heading);
+    font-size: var(--font-size-t2);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+}
+
+.modal__close {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: var(--color-primary-soft);
+    color: var(--color-icon);
+    transition: background-color var(--transition-fast);
+}
+
+.modal__close:hover {
+    background: var(--color-primary-soft-hover);
+}
+
+.modal__close:focus-visible {
+    box-shadow: var(--focus-ring);
+    border-radius: var(--radius-full);
+}
+
+.modal__close .icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: inherit;
+}
+
+/* <form> pembungkus body + foot: ikut menyusun kolom supaya daftar panjang bisa di-scroll sendiri */
+.modal__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-height: 0;
+    margin: 0;
+}
+
+.modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-height: 0;
+}
+
+.modal__foot {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-3);
+}
+
+@keyframes modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(0.75rem) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes modal-fade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* ---------- Radio card (pilihan level akses, dll) ---------- */
+.radio-cards {
+    display: grid;
+    gap: var(--space-2);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.radio-cards__legend {
+    padding: 0;
+    margin-bottom: var(--space-2);
+}
+
+.radio-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast),
+        box-shadow var(--transition-fast);
+}
+
+.radio-card:hover {
+    border-color: var(--color-neutral-400);
+}
+
+/* radio asli disembunyikan secara visual, tetap bisa difokus dan dibaca screen reader */
+.radio-card__input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.radio-card__mark {
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 2px solid var(--color-border-strong);
+    border-radius: var(--radius-full);
+    background: var(--color-surface-raised);
+    transition: border-color var(--transition-fast), border-width var(--transition-fast);
+}
+
+.radio-card__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.radio-card__label {
+    font-size: var(--font-size-p3);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+}
+
+.radio-card__desc {
+    font-size: var(--font-size-p4);
+    color: var(--color-text-muted);
+}
+
+/* terpilih: bingkai + latar biru muda, tanda bulat bercincin tebal */
+.radio-card:has(.radio-card__input:checked) {
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary);
+    box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+.radio-card__input:checked+.radio-card__mark {
+    border: 0.4rem solid var(--color-primary);
+}
+
+.radio-card:has(.radio-card__input:focus-visible) {
+    box-shadow: var(--focus-ring);
+}
+
+/* ---------- Member picker (pop up "Tambah Anggota") ---------- */
+.member-picker__search .input__box {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-full);
+}
+
+.member-picker__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: min(18rem, 40dvh);
+    overflow-y: auto;
+}
+
+.member-picker__item {
+    border-bottom: 1px solid var(--color-border);
+}
+
+.member-picker__item[hidden] {
+    display: none;
+}
+
+.member-picker__row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    cursor: pointer;
+}
+
+.member-picker__text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.member-picker__name,
+.member-picker__username {
+    overflow-wrap: anywhere;
+}
+
+.member-picker__name {
+    font-size: var(--font-size-p3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text);
+}
+
+.member-picker__username {
+    font-size: var(--font-size-p4);
+    color: var(--color-text-muted);
+}
+
+/* checkbox asli disembunyikan secara visual; kotak buatan di sebelah kanan */
+.member-picker__input {
+    position: absolute;
+    right: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0;
+    opacity: 0;
+    cursor: inherit;
+}
+
+.member-picker__box {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1.5px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-raised);
+    transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.member-picker__box .icon {
+    width: 1rem;
+    height: 1rem;
+    color: var(--color-on-primary);
+    opacity: 0;
+}
+
+.member-picker__item:not(.is-disabled) .member-picker__row:hover .member-picker__box {
+    border-color: var(--color-neutral-400);
+}
+
+.member-picker__input:checked+.member-picker__box {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.member-picker__input:checked+.member-picker__box .icon {
+    opacity: 1;
+}
+
+.member-picker__input:focus-visible+.member-picker__box {
+    box-shadow: var(--focus-ring);
+}
+
+/* pengguna nonaktif: redup, tidak bisa dicentang */
+.member-picker__item.is-disabled .member-picker__row {
+    cursor: not-allowed;
+}
+
+.member-picker__item.is-disabled .member-picker__name,
+.member-picker__item.is-disabled .member-picker__username {
+    color: var(--color-text-subtle);
+}
+
+.member-picker__item.is-disabled .member-picker__box {
+    background: var(--color-disabled-bg);
+    border-color: var(--color-disabled-border);
+}
+
+.member-picker__empty {
+    padding: var(--space-6) 0;
+    text-align: center;
+    font-size: var(--font-size-p3);
+    color: var(--color-text-muted);
+}
+
+.member-picker__empty[hidden] {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .modal__panel {
+        padding: var(--space-5);
+    }
+
+    .modal__foot .btn {
+        flex: 1;
+    }
+}

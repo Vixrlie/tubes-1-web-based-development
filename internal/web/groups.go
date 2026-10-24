@@ -1,6 +1,10 @@
 package web
 
-import "fmt"
+import (
+	"fmt"
+	"html/template"
+	"strings"
+)
 
 // PageHeader = data kepala halaman (judul, breadcrumb, tombol aksi). Embed di
 // struct halaman, lalu di template cukup: {{template `page-header` .PageHeader}}
@@ -81,6 +85,9 @@ func NewGroupsTable(groups []GroupSummary) Table {
 // Satu halaman, dua mode:
 //   - lihat : Editor == nil -> kartu "Akses Database" (Access) + tombol "Kelola Database"
 //   - ubah  : Editor != nil -> kartu diganti access-editor + action bar "Simpan Perubahan"
+//
+// Dua pop up: "Tambah Anggota" (AddMembers, kedua mode) dan "Tambah Database" (bagian dari
+// access-editor, hanya mode ubah).
 // ---------------------------------------------------------------------------
 
 type GroupDetailPage struct {
@@ -93,6 +100,9 @@ type GroupDetailPage struct {
 	Members      ListCard
 	Access       ListCard
 	Editor       *AccessEditor
+	// AddMembers = data pop up "Tambah Anggota" (tombol pembukanya dibuat NewMembersCard).
+	// nil -> pop up tidak dirender dan tombol kembali menjadi link biasa ke addHref.
+	AddMembers *AddMembersModal
 }
 
 // ID form tersembunyi untuk hapus grup; dirujuk tombol lewat atribut form=.
@@ -120,8 +130,54 @@ func GroupDetailHeader(name, groupsHref string) PageHeader {
 	}
 }
 
+// ID <dialog> pop up "Tambah Anggota"; dirujuk tombol lewat atribut data-modal-open.
+const addMembersModalID = "add-members-modal"
+
+// MemberCandidate = pengguna yang bisa dipilih di pop up "Tambah Anggota".
+// Inactive -> tampil redup bertanda "(nonaktif)" dan tidak bisa dicentang.
+type MemberCandidate struct {
+	ID       string // nilai field user_id
+	Username string
+	FullName string
+	Inactive bool
+}
+
+func (c MemberCandidate) DisplayName() string {
+	if c.FullName != "" {
+		return c.FullName
+	}
+	return c.Username
+}
+
+// SearchKey = teks huruf kecil (nama + username) yang dicocokkan kotak cari di pop up.
+func (c MemberCandidate) SearchKey() string {
+	return strings.ToLower(c.FullName + " " + c.Username)
+}
+
+// AddMembersModal = data pop up "Tambah Anggota" (templates/components/add-members-modal.html).
+//
+//	page.AddMembers = &web.AddMembersModal{
+//	    FormAction: "/admin/groups/1/members",
+//	    Candidates: candidates, // pengguna yang BELUM jadi anggota grup ini
+//	}
+//	page.SetCSRF(token)
+//
+// Field yang dikirim form (POST FormAction):
+//
+//	csrf_token  token csrf
+//	user_id     ID pengguna yang dipilih (berulang, satu per anggota)
+//
+// Handler wajib memvalidasi ulang di server (pengguna ada, aktif, belum jadi anggota);
+// kotak centang yang dinonaktifkan di UI bukan jaminan keamanan.
+type AddMembersModal struct {
+	FormAction string
+	CSRFToken  string
+	Candidates []MemberCandidate
+}
+
 // NewMembersCard membuat kartu "Anggota (n)". removeAction(i) = URL POST untuk
-// mengeluarkan anggota ke-i.
+// mengeluarkan anggota ke-i. Tombol "Tambah Anggota" membuka pop up AddMembers
+// (data-modal-open); addHref hanya cadangan kalau JS mati / pop up tidak dirender.
 func NewMembersCard(members []Member, addHref string, removeAction func(i int) string) ListCard {
 	items := make([]ListItem, 0, len(members))
 	for i, m := range members {
@@ -135,9 +191,11 @@ func NewMembersCard(members []Member, addHref string, removeAction func(i int) s
 		}
 		items = append(items, item)
 	}
+	add := OutlineButton("Tambah Anggota", addHref).WithIcon("plus")
+	add.Attrs = template.HTMLAttr(`data-modal-open="` + addMembersModalID + `"`)
 	return ListCard{
 		Title:   fmt.Sprintf("Anggota (%d)", len(members)),
-		Actions: []Button{OutlineButton("Tambah Anggota", addHref).WithIcon("plus")},
+		Actions: []Button{add},
 		Items:   items,
 		Empty:   "Belum ada anggota.",
 	}
@@ -174,5 +232,8 @@ func (p *GroupDetailPage) SetCSRF(token string) {
 	p.Access.CSRFToken = token
 	if p.Editor != nil {
 		p.Editor.CSRFToken = token
+	}
+	if p.AddMembers != nil {
+		p.AddMembers.CSRFToken = token
 	}
 }
