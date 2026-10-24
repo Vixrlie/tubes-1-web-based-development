@@ -1,0 +1,3 @@
+/* Adapter integrasi: app.css mengimpor "components/icon.css"; file asli
+   bernama icons.css (izin gaya ikon inline). */
+@import "icons.css";
