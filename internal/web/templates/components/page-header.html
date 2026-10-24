@@ -1,0 +1,27 @@
+{{/*
+Kepala halaman: judul besar + breadcrumb (opsional). Dipanggil lewat `dict`:
+
+{{template `page-header` (dict `Title` `Schema public` `Crumbs` .Crumbs)}}
+
+Parameter:
+Title judul halaman (wajib)
+Crumbs daftar breadcrumb (opsional): Label, Href (lihat Crumb di schema.go).
+Item terakhir biasanya tanpa Href = halaman saat ini.
+*/}}
+{{define "page-header"}}
+<header class="page-header">
+    <h1 class="page-header__title">{{.Title}}</h1>
+    {{- with .Crumbs}}
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb__list" role="list">
+            {{- range .}}
+            <li class="breadcrumb__item">
+                {{- if .Href}}<a href="{{.Href}}">{{.Label}}</a>{{else}}<span aria-current="page">{{.Label}}</span>{{end
+                -}}
+            </li>
+            {{- end}}
+        </ol>
+    </nav>
+    {{- end}}
+</header>
+{{end}}

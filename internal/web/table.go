@@ -22,6 +22,12 @@ type TableColumn struct {
 	Label string // teks header
 	Align string // "" (kiri, default) | "center" | "right"
 	Bold  bool   // isi kolom ditebalkan (mis. kolom nama)
+
+	// Sort opsional. Header jadi link pengurutan kalau SortHref diisi.
+	//   Sort      arah urutan saat ini: "asc" | "desc" | "" (tidak diurutkan)
+	//   SortHref  tujuan klik header (handler yang menentukan arah berikutnya)
+	Sort     string
+	SortHref string
 }
 
 // TableCell adalah isi satu sel.
@@ -41,9 +47,11 @@ type TableRow map[string]TableCell
 
 // Table adalah seluruh data untuk satu tabel.
 type Table struct {
-	Title   string // opsional; kalau kosong tidak ada judul
+	Title   string    // opsional; kalau kosong tidak ada judul
+	Tag     TableCell // opsional; label kecil di kanan judul, mis. {Text: "View-only"}
 	Columns []TableColumn
 	Rows    []TableRow
 	Empty   string // pesan kalau Rows kosong (default "Belum ada data.")
 	Class   string // class tambahan untuk pembungkus
+	Pager   *Pager // opsional; paginasi di bawah tabel (lihat pager.go)
 }

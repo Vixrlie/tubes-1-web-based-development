@@ -27,3 +27,37 @@
         padding-inline: var(--space-4);
     }
 }
+
+
+:root {
+    --page-bg: linear-gradient(to bottom right, var(--color-primary-50) 0%, var(--color-primary-200) 100%);
+}
+
+:root[data-theme="dark"] {
+    --page-bg: var(--color-bg);
+}
+
+body {
+    min-height: 100vh;
+    background: var(--page-bg) fixed;
+}
+
+/* tumpukan vertikal dengan jarak seragam (mis. beberapa kartu di satu halaman) */
+.stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+}
+
+/* varian rapat (mis. tabs + kartu di bawahnya) */
+.stack--sm {
+    gap: var(--space-3);
+}
+
+/* kartu berdampingan: 1 item = penuh, 2+ = bagi rata; turun ke bawah kalau sempit */
+.split {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+    gap: var(--space-4);
+    align-items: stretch;
+}

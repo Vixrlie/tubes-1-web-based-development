@@ -1,0 +1,37 @@
+/* ==========================================================================
+   tabs.css  -  filter pill (templates/components/tabs.html)
+   Item aktif: [aria-current="page"] -> pill putih, teks primary, tebal.
+   ========================================================================== */
+
+.tabs__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tabs__item {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    font-family: var(--font-family-cta);
+    font-size: var(--font-size-p3);
+    font-weight: var(--font-weight-regular);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.tabs__item:hover {
+    color: var(--color-text);
+}
+
+.tabs__item[aria-current="page"] {
+    background: var(--color-surface-raised);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-primary);
+}

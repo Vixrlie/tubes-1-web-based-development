@@ -1,0 +1,20 @@
+{{/*
+Tabs / filter berbentuk pill. Tiap item adalah link (cocok untuk filter lewat query / HTMX).
+Dipanggil lewat `dict`:
+
+{{template `tabs` (dict `Label` `Filter akses` `Items` .Tabs)}}
+
+Parameter:
+Items daftar item: Label, Href, Active (lihat TabItem di databases.go)
+Label nama region untuk screen reader (aria-label), default "Filter"
+Item aktif diberi aria-current="page" (gaya aktif ikut dari CSS).
+*/}}
+{{define "tabs"}}
+<nav class="tabs" aria-label="{{or .Label `Filter`}}">
+    <ul class="tabs__list" role="list">
+        {{- range .Items}}
+        <li><a class="tabs__item" href="{{.Href}}" {{if .Active}} aria-current="page" {{end}}>{{.Label}}</a></li>
+        {{- end}}
+    </ul>
+</nav>
+{{end}}

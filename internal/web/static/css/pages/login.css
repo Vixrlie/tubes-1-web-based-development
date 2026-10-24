@@ -1,0 +1,152 @@
+/* ==========================================================================
+   login.css  -  halaman login (templates/login.html)
+   Kiri : panel gambar (static/img/login-page-image.png) + logo + tagline
+   Kanan: form. Di layar sempit panel kiri disembunyikan.
+   ========================================================================== */
+
+/* layout membungkus konten dengan padding .app-shell; login butuh full-bleed */
+.app-shell:has(.login) {
+    padding: 0;
+    gap: 0;
+}
+
+/* login tidak memakai gradasi latar global */
+body:has(.login) {
+    background: var(--color-bg);
+}
+
+.login {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    min-height: 100vh;
+    padding: var(--space-6);
+    gap: var(--space-6);
+    background: var(--color-bg);
+}
+
+/* ---------- Panel kiri ---------- */
+.login__aside {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: var(--space-16) var(--space-12) var(--space-12);
+    border-radius: var(--radius-xl);
+    background-color: var(--color-neutral-50);
+    background-image: url("/static/img/login-page-image.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Logo dibungkus div supaya gambar bukan item flex langsung (item flex di
+   kolom ikut melebar = stretch). Lebar otomatis dari rasio asli gambar. */
+.login__brand {
+    align-self: flex-start;
+}
+
+.login__logo {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: 2.5rem;
+    aspect-ratio: 781 / 180;
+    object-fit: contain;
+}
+
+.login__tagline {
+    max-width: 32rem;
+}
+
+.login__tagline-title {
+    margin: 0 0 var(--space-4);
+    font-family: var(--font-family-heading);
+    font-size: clamp(1.75rem, 2.4vw, 2.25rem);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.25;
+    color: var(--color-neutral-800);
+}
+
+.login__tagline-text {
+    margin: 0;
+    font-size: var(--font-size-p3);
+    line-height: 1.5;
+    color: var(--color-neutral-600);
+}
+
+/* ---------- Panel kanan ---------- */
+.login__panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6);
+}
+
+.login__box {
+    width: 100%;
+    max-width: 27.5rem;
+}
+
+.login__title {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-family-heading);
+    font-size: 2.5rem;
+    font-weight: var(--font-weight-bold);
+    line-height: 1.2;
+    color: var(--color-primary-900);
+}
+
+.login__subtitle {
+    margin: 0 0 var(--space-8);
+    font-size: var(--font-size-p2);
+    color: var(--color-text-muted);
+}
+
+.login__alert {
+    margin: 0 0 var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-label-error-bg);
+    color: var(--color-label-error-fg);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-p3);
+}
+
+.login__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+/* ukuran field di desain login sedikit lebih kecil dari default */
+.login .input__box {
+    font-size: var(--font-size-p3);
+}
+
+.login .input__label {
+    font-size: var(--font-size-p4);
+}
+
+/* tombol Masuk: lebar penuh, tetap pill (radius-full) bawaan komponen button */
+.login .btn.login__submit {
+    width: 100%;
+    margin-top: var(--space-2);
+    padding-block: var(--space-3);
+}
+
+/* ---------- Layar sempit: panel gambar jadi bar logo saja ---------- */
+@media (max-width: 900px) {
+    .login {
+        grid-template-columns: minmax(0, 1fr);
+        padding: var(--space-4);
+        gap: var(--space-4);
+    }
+
+    .login__aside {
+        padding: 0;
+        background: none;
+        border-radius: 0;
+    }
+
+    .login__tagline {
+        display: none;
+    }
+}

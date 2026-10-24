@@ -9,6 +9,9 @@
 .db-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+    /* semua baris setinggi kartu tertinggi (mis. kartu dengan pesan error),
+       jadi semua kartu selalu berukuran sama */
+    grid-auto-rows: 1fr;
     gap: var(--space-6);
 }
 
