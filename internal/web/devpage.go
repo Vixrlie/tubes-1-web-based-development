@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -14,6 +15,7 @@ func (d DevRoutes) Routes(r chi.Router) {
 	r.Get("/dev/components", d.components)
 	r.Get("/dev/databases", d.databases)
 	r.Get("/dev/schema", d.schema)
+	r.Get("/dev/table", d.tableDetail)
 }
 
 type devData struct {
@@ -172,4 +174,95 @@ func devSchema() SchemaPage {
 // Halaman Schema dengan data contoh: /dev/schema
 func (d DevRoutes) schema(w http.ResponseWriter, r *http.Request) {
 	d.R.Render(w, "schema.html", devSchema())
+}
+
+
+// devTableDetail membuat data contoh halaman detail tabel untuk satu tab
+// (TabColumns | TabConstraints | TabData; lainnya dianggap TabColumns).
+func devTableDetail(tab string) TableDetailPage {
+	c := func(t string) TableCell { return TableCell{Text: t} }
+	if tab != TabConstraints && tab != TabData {
+		tab = TabColumns
+	}
+
+	var tables []Table
+	switch tab {
+	case TabColumns:
+		tables = []Table{{
+			Title: "Column",
+			Columns: []TableColumn{
+				{Key: "name", Label: "Nama"},
+				{Key: "type", Label: "Tipe"},
+				{Key: "nullable", Label: "Nullable"},
+				{Key: "default", Label: "Default"},
+			},
+			Rows: []TableRow{
+				{"name": c("id"), "type": c("integer"), "nullable": c("NO"), "default": c("nextval()")},
+				{"name": c("email"), "type": c("varchar(255)"), "nullable": c("NO"), "default": c("-")},
+				{"name": c("created_at"), "type": c("timestamp"), "nullable": c("YES"), "default": c("now()")},
+			},
+		}}
+	case TabConstraints:
+		tables = []Table{
+			{
+				Title: "Constraint",
+				Columns: []TableColumn{
+					{Key: "name", Label: "Nama"},
+					{Key: "kind", Label: "Jenis"},
+					{Key: "cols", Label: "Kolom"},
+				},
+				Rows: []TableRow{
+					{"name": c("users_pkey"), "kind": {Text: "PRIMARY KEY", Variant: "info"}, "cols": c("id")},
+					{"name": c("users_email_key"), "kind": {Text: "UNIQUE", Variant: "neutral"}, "cols": c("email")},
+				},
+			},
+			{
+				Title: "Index",
+				Columns: []TableColumn{
+					{Key: "name", Label: "Nama"},
+					{Key: "cols", Label: "Kolom"},
+					{Key: "unique", Label: "Unik"},
+				},
+				Rows: []TableRow{
+					{"name": c("users_pkey"), "cols": c("id"), "unique": c("Ya")},
+					{"name": c("idx_users_created"), "cols": c("created_at"), "unique": c("Tidak")},
+				},
+			},
+		}
+	case TabData:
+		tables = []Table{{
+			Title: "Isi table",
+			Tag:   TableCell{Text: "View-only", Variant: "neutral"},
+			Columns: []TableColumn{
+				{Key: "id", Label: "id", Sort: "asc", SortHref: "?tab=data&sort=id&dir=desc"},
+				{Key: "email", Label: "email"},
+				{Key: "created_at", Label: "created_at"},
+			},
+			Rows: []TableRow{
+				{"id": c("1"), "email": c("ani@mail.com"), "created_at": c("2026-09-01 09:12")},
+				{"id": c("2"), "email": c("budi@mail.com"), "created_at": c("2026-09-02 14:30")},
+				{"id": c("3"), "email": c("citra@mail.com"), "created_at": c("2026-09-05 08:45")},
+				{"id": c("4"), "email": c("dedi@mail.com"), "created_at": c("2026-09-07 17:03")},
+			},
+			Pager: NewPager("Menampilkan 1–4 dari 1.250 baris", 1, 133,
+				func(p int) string { return fmt.Sprintf("?tab=data&page=%d", p) }),
+		}}
+	}
+
+	return TableDetailPage{
+		Shell: devShell("database", "table:public.users", true),
+		Title: "Tabel users",
+		Crumbs: []Crumb{
+			{Label: "shop_db", Href: "/dev/databases"},
+			{Label: "public", Href: "/dev/schema"},
+			{Label: "users"},
+		},
+		Tabs:   NewTableTabs(tab, func(id string) string { return "?tab=" + id }),
+		Tables: tables,
+	}
+}
+
+// Halaman detail tabel dengan data contoh: /dev/table?tab=columns|constraints|data
+func (d DevRoutes) tableDetail(w http.ResponseWriter, r *http.Request) {
+	d.R.Render(w, "table_detail.html", devTableDetail(r.URL.Query().Get("tab")))
 }

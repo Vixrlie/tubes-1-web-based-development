@@ -5,7 +5,10 @@ Komponen tabel. Kolom dan baris datang dari backend (lihat table.go):
 
 Table:
 Title judul di atas tabel (opsional)
-Columns daftar kolom: Key, Label, Align (center|right), Bold
+Tag label kecil di kanan judul (opsional): Text, Variant (mis. "View-only")
+Pager paginasi di bawah tabel (opsional, lihat pager.go)
+Columns daftar kolom: Key, Label, Align (center|right), Bold,
+Sort (asc|desc) + SortHref -> header jadi link pengurutan
 Rows daftar baris, tiap baris = map Key -> Cell
 Empty pesan kalau tidak ada baris (default "Belum ada data.")
 Class class tambahan
@@ -18,15 +21,27 @@ Href (tanpa Variant) -> dirender sebagai link
 
 {{define "table"}}
 <section class="table-card{{with .Class}} {{.}}{{end}}">
-    {{- with .Title}}
-    <h2 class="table-card__title">{{.}}</h2>
+    {{- if or .Title .Tag.Text}}
+    <header class="table-card__head">
+        <h2 class="table-card__title">{{.Title}}</h2>
+        {{- with .Tag.Text}}{{template `table-cell` $.Tag}}{{end}}
+    </header>
     {{- end}}
     <div class="table-card__scroll">
         <table class="table">
             <thead>
                 <tr>
                     {{- range .Columns}}
-                    <th scope="col" {{with .Align}} class="is-{{.}}" {{end}}>{{.Label}}</th>
+                    <th scope="col" {{with .Align}} class="is-{{.}}" {{end}}{{if .SortHref}}
+                        aria-sort="{{if eq .Sort `asc`}}ascending{{else if eq .Sort `desc`}}descending{{else}}none{{end}}"
+                        {{end}}>
+                        {{- if .SortHref}}
+                        <a class="table__sort" href="{{.SortHref}}">{{.Label}}
+                            {{- if eq .Sort `asc`}}{{template `icon` `arrow-up`}}{{else if eq .Sort `desc`}}{{template
+                            `icon` `arrow-down`}}{{end -}}
+                        </a>
+                        {{- else}}{{.Label}}{{end -}}
+                    </th>
                     {{- end}}
                 </tr>
             </thead>
@@ -47,6 +62,7 @@ Href (tanpa Variant) -> dirender sebagai link
             </tbody>
         </table>
     </div>
+    {{- with .Pager}}{{template `pager` .}}{{end}}
 </section>
 {{end}}
 

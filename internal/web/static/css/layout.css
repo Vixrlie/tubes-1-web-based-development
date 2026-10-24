@@ -28,10 +28,7 @@
     }
 }
 
-/* Latar semua halaman: gradasi diagonal primary-50 (kiri atas) -> primary-200 (kanan bawah).
-   "fixed" = menempel di layar, tidak ikut ter-scroll. Dark theme: warna polos.
-   Header dan kartu punya latar sendiri sehingga tetap putih.
-   Halaman yang butuh latar polos (login) menimpanya di CSS-nya sendiri. */
+
 :root {
     --page-bg: linear-gradient(to bottom right, var(--color-primary-50) 0%, var(--color-primary-200) 100%);
 }
@@ -50,4 +47,17 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--space-8);
+}
+
+/* varian rapat (mis. tabs + kartu di bawahnya) */
+.stack--sm {
+    gap: var(--space-3);
+}
+
+/* kartu berdampingan: 1 item = penuh, 2+ = bagi rata; turun ke bawah kalau sempit */
+.split {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+    gap: var(--space-4);
+    align-items: stretch;
 }

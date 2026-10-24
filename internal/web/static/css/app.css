@@ -11,6 +11,8 @@
 @import "components/page-header.css";
 @import "components/action-bar.css";
 @import "components/table.css";
+@import "components/pager.css";
+@import "components/tabs.css";
 @import "components/flash.css";
 @import "components/avatar.css";
 @import "components/nav-link.css";

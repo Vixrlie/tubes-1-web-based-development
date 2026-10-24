@@ -1,0 +1,15 @@
+{{/*
+Halaman detail tabel: tab Column | Constraint & Index | Data.
+Data: web.TableDetailPage (lihat tabledetail.go): .Title, .Crumbs, .Tabs, .Tables
+Tata letak mengikuti jumlah tabel (1 = penuh, 2 = berdampingan) lewat .split.
+*/}}
+{{define "content"}}
+{{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs)}}
+
+<div class="stack stack--sm">
+    {{template `tabs` (dict `Label` `Detail tabel` `Items` .Tabs)}}
+    <div class="split">
+        {{range .Tables}}{{template `table` .}}{{end}}
+    </div>
+</div>
+{{end}}

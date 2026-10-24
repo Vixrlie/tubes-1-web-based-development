@@ -49,7 +49,7 @@
    --color-primary-disabled-bg: var(--color-primary-100);
    --color-primary-disabled-fg: var(--color-primary-400);
    --color-link: var(--color-primary-600);
-   --color-link-hover: var(--color-primary-700);
+   --color-link-hover: var(--color-primary-500);
 
    /* ---------- Brand (teks logo "Path" + "gres") - sesuaikan dgn Figma ---------- */
    --color-brand-strong: var(--color-primary-700);
