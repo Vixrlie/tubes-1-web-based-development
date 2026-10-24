@@ -11,10 +11,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/access"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/admin"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/config"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/db"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/dbm"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 	"github.com/Vixrlie/tubes-1-web-based-development/migrations"
@@ -70,8 +72,11 @@ func run() error {
 	}
 
 	authHandlers := auth.NewHandlers(userStore, sessions, renderer, cfg.CookieSecure)
+	accessPolicy := access.NewPolicy(access.NewPGLevelSource(pool))
 
 	adminUsers := admin.NewPGUserStore(pool)
+	groupStore := admin.NewPGGroupStore(pool)
+	connLister := admin.NewPGConnectionLister(pool)
 	r := web.NewRouter()
 
 	// Rute publik: belum ada session (login punya perlindungan Origin sendiri).
@@ -84,8 +89,10 @@ func run() error {
 		r.Use(auth.CSRFProtect)
 
 		authHandlers.ProtectedRoutes(r)
+		dbm.NewHandlers(accessPolicy, dbm.NewPGRegistry(pool)).Routes(r)
 		admin.NewHandlers(
 			admin.WithUserAdmin(adminUsers, sessions, renderer),
+			admin.WithGroupAdmin(groupStore, adminUsers, connLister, sessions, renderer),
 		).Routes(r)
 	})
 
