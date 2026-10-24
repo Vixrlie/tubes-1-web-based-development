@@ -23,6 +23,7 @@
 @import "components/side-link.css";
 @import "components/sidebar.css";
 @import "components/header.css";
+@import "components/user-menu.css";
 @import "components/label.css";
 @import "components/db-card.css";
 @import "pages/login.css";

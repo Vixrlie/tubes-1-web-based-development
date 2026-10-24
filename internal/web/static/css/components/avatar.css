@@ -25,3 +25,7 @@
 .avatar--sm {
     --avatar-size: 2rem;
 }
+
+.avatar--lg {
+    --avatar-size: 3.5rem;
+}

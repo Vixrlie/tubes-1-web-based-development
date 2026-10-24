@@ -40,7 +40,7 @@ func devShell(nav, active string, admin bool) Shell {
 	if nav != "admin" && nav != "database" && nav != "databases" {
 		return s // User nil -> tanpa header & sidebar
 	}
-	s.User = &ShellUser{Username: "arin", FullName: "Arin Dev", IsPlatformAdmin: admin}
+	s.User = &ShellUser{Username: "arin", FullName: "Arin Dev", IsPlatformAdmin: admin, CSRFToken: "dev-token"}
 	switch nav {
 	case "admin":
 		s.SideActive = active // users | groups | connections
