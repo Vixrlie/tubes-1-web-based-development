@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{if .Title}}{{.Title}} · {{end}}Pathgres</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/js/htmx-init.js" defer></script>
+  <script src="/static/js/drawer.js" defer></script>
+  <script src="/static/codemirror.bundle.js" defer></script>
+  <script src="/static/js/sql-editor.js" defer></script>
+  <script src="/static/js/confirm-form.js" defer></script>
+</head>
+
+<body class="app-body">
+  <a class="skip-link" href="#app-content">Lewati ke konten utama</a>
+
+  <div class="app" data-drawer="closed">
+    <aside class="app-sidebar" id="app-sidebar">
+      <div class="sidebar-head">
+        <div class="sidebar-brand">
+          <span class="logo-mark">{{template "icon" (dict "Name" "database")}}</span>
+          <span>
+            <span class="sidebar-brand-name">Database Platform</span><br>
+            <span class="sidebar-brand-tag">POSTGRESQL</span>
+          </span>
+        </div>
+        <button type="button" class="icon-btn sidebar-close" data-drawer-close aria-label="Tutup menu navigasi">
+          {{template "icon" (dict "Name" "close")}}
+        </button>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Navigasi utama">
+        <div class="nav-section">
+          <p class="nav-section-label">Utama</p>
+          <a class="nav-item" href="/databases" data-nav-toggle {{if eq .ActiveNav "databases"}}aria-current="page"{{end}}>
+            <span class="nav-item-icon">{{template "icon" (dict "Name" "database")}}</span>
+            <span class="nav-item-label">Databases</span>
+            {{if .Databases}}<span class="nav-item-icon nav-toggle-icon">{{template "icon" (dict "Name" "chevron-down")}}</span>{{end}}
+          </a>
+          {{if .Databases}}
+          <ul class="nav-sub" role="list">
+            {{range .Databases}}
+            <li>
+              <a class="nav-subitem" href="/databases/{{.ID}}"
+                {{if eq $.CurrentDB .ID}}aria-current="page"{{end}}>
+                <span class="nav-bullet"></span>
+                <span class="nav-item-label">{{.Name}}</span>
+              </a>
+            </li>
+            {{end}}
+          </ul>
+          {{end}}
+          {{if .CurrentDB}}
+          <a class="nav-item" href="/databases/{{.CurrentDB}}/migrations"
+            {{if eq .ActiveNav "migrations"}}aria-current="page"{{end}}>
+            <span class="nav-item-icon">{{template "icon" (dict "Name" "file-diff")}}</span>
+            <span class="nav-item-label">Migrasi</span>
+          </a>
+          {{end}}
+        </div>
+
+        {{if .Me.IsPlatformAdmin}}
+        <div class="nav-section">
+          <p class="nav-section-label">Admin</p>
+          {{if .CanManageConnections}}
+          <a class="nav-item" href="/admin/connections"
+            {{if eq .ActiveNav "connections"}}aria-current="page"{{end}}>
+            <span class="nav-item-icon">{{template "icon" (dict "Name" "lock")}}</span>
+            <span class="nav-item-label">Koneksi database</span>
+          </a>
+          {{end}}
+          {{if .CanManageUsers}}
+          <a class="nav-item" href="/admin/users" {{if eq .ActiveNav "users"}}aria-current="page"{{end}}>
+            <span class="nav-item-icon">{{template "icon" (dict "Name" "users")}}</span>
+            <span class="nav-item-label">User</span>
+          </a>
+          {{end}}
+          <a class="nav-item" href="/admin/groups" {{if eq .ActiveNav "groups"}}aria-current="page"{{end}}>
+            <span class="nav-item-icon">{{template "icon" (dict "Name" "group")}}</span>
+            <span class="nav-item-label">Group</span>
+          </a>
+          <a class="nav-item" href="/admin/access" {{if eq .ActiveNav "access"}}aria-current="page"{{end}}>
+            <span class="nav-item-icon">{{template "icon" (dict "Name" "shield")}}</span>
+            <span class="nav-item-label">Akses Group</span>
+          </a>
+        </div>
+        {{end}}
+      </nav>
+
+      <div class="nav-foot">
+        <span class="avatar">{{.Initials}}</span>
+        <span class="nav-foot-user">
+          <span class="nav-foot-name">{{.Me.Username}}</span><br>
+          <span class="nav-foot-role">{{if .Me.IsPlatformAdmin}}Administrator{{else}}User{{end}}</span>
+        </span>
+        <form method="post" action="/logout">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          <button type="submit" class="icon-btn" aria-label="Keluar">{{template "icon" (dict "Name" "logout")}}</button>
+        </form>
+      </div>
+    </aside>
+
+    <div class="app-frame">
+      <header class="app-topbar">
+        <button type="button" class="icon-btn" data-drawer-open aria-label="Buka menu navigasi" aria-expanded="false"
+          aria-controls="app-sidebar">
+          {{template "icon" (dict "Name" "menu")}}
+        </button>
+        <span class="topbar-brand">
+          <span class="logo-mark">{{template "icon" (dict "Name" "database")}}</span>
+          <span class="topbar-brand-name">Database Platform</span>
+          <span class="topbar-brand-tag">POSTGRESQL</span>
+        </span>
+        <div class="topbar-end">
+          <span class="topbar-user">{{.Me.Username}} · {{if .Me.IsPlatformAdmin}}Administrator{{else}}User{{end}}</span>
+          <form method="post" action="/logout" class="topbar-logout">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button type="submit" class="btn btn-secondary">Logout</button>
+          </form>
+          <span class="avatar">{{.Initials}}</span>
+        </div>
+      </header>
+
+      <main class="app-content" id="app-content">
+        {{if .Breadcrumbs}}
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          {{range $i, $c := .Breadcrumbs}}
+          {{if $i}}<span class="breadcrumb-sep" aria-hidden="true">{{template "icon" (dict "Name" "chevron-right")}}</span>{{end}}
+          {{if $c.URL}}<a href="{{$c.URL}}">{{$c.Label}}</a>{{else}}<span class="breadcrumb-current">{{$c.Label}}</span>{{end}}
+          {{end}}
+        </nav>
+        {{end}}
+
+        {{if .Notice}}
+        <div class="flash-slot">
+          <div class="alert alert-info" role="status">{{.Notice}}</div>
+        </div>
+        {{end}}
+
+        {{template "content" .}}
+      </main>
+    </div>
+
+    <div class="drawer-backdrop" data-drawer-close></div>
+  </div>
+</body>
+
+</html>
