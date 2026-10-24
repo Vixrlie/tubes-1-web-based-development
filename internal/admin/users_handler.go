@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
 )
 
@@ -52,15 +53,21 @@ var notices = map[string]string{
 }
 
 type usersPage struct {
-	Me        auth.User
-	CSRFToken string
-	Users     []UserRow
-	Notice    string
+	Me         auth.User
+	CSRFToken  string
+	Users      []UserRow
+	Notice     string
+	User       *web.ShellUser // layout FE: header + sidebar admin
+	Nav        string
+	SideActive string
 }
 
 type userFormPage struct {
 	Me              auth.User
 	CSRFToken       string
+	User            *web.ShellUser // layout FE: header + sidebar admin
+	Nav             string
+	SideActive      string
 	IsNew           bool
 	IsSelf          bool
 	FormAction      string
@@ -124,6 +131,9 @@ func (u *userHandlers) editPage(r *http.Request, t UserRow) userFormPage {
 	return userFormPage{
 		Me:              me,
 		CSRFToken:       csrf,
+		User:            shellUserData(me, csrf),
+		Nav:             "admin",
+		SideActive:      "users",
 		IsSelf:          t.ID == me.ID,
 		FormAction:      "/admin/users/" + strconv.FormatInt(t.ID, 10),
 		ID:              t.ID,
@@ -133,6 +143,11 @@ func (u *userHandlers) editPage(r *http.Request, t UserRow) userFormPage {
 		IsPlatformAdmin: t.IsPlatformAdmin,
 		IsActive:        t.IsActive,
 	}
+}
+
+// shellUserData mengisi data shell layout FE (header + sidebar admin).
+func shellUserData(me auth.User, csrf string) *web.ShellUser {
+	return &web.ShellUser{Username: me.Username, IsPlatformAdmin: me.IsPlatformAdmin, CSRFToken: csrf}
 }
 
 func redirectUser(w http.ResponseWriter, r *http.Request, id int64, code string) {
@@ -149,8 +164,11 @@ func (u *userHandlers) list(w http.ResponseWriter, r *http.Request) {
 	}
 	me, csrf := u.base(r)
 	u.render(w, http.StatusOK, "admin/users.html", usersPage{
-		Me:        me,
-		CSRFToken: csrf,
+		Me:         me,
+		CSRFToken:  csrf,
+		User:       shellUserData(me, csrf),
+		Nav:        "admin",
+		SideActive: "users",
 		Users:     users,
 		Notice:    notices[r.URL.Query().Get("status")],
 	})
@@ -161,7 +179,7 @@ func (u *userHandlers) list(w http.ResponseWriter, r *http.Request) {
 func (u *userHandlers) newForm(w http.ResponseWriter, r *http.Request) {
 	me, csrf := u.base(r)
 	u.render(w, http.StatusOK, "admin/user_form.html", userFormPage{
-		Me: me, CSRFToken: csrf, IsNew: true, FormAction: "/admin/users", IsActive: true,
+		Me: me, CSRFToken: csrf, User: shellUserData(me, csrf), Nav: "admin", SideActive: "users", IsNew: true, FormAction: "/admin/users", IsActive: true,
 	})
 }
 
@@ -197,7 +215,7 @@ func (u *userHandlers) create(w http.ResponseWriter, r *http.Request) {
 
 	me, csrf := u.base(r)
 	u.render(w, status, "admin/user_form.html", userFormPage{
-		Me: me, CSRFToken: csrf, IsNew: true, FormAction: "/admin/users", IsActive: true,
+		Me: me, CSRFToken: csrf, User: shellUserData(me, csrf), Nav: "admin", SideActive: "users", IsNew: true, FormAction: "/admin/users", IsActive: true,
 		Username: in.Username, FullName: in.FullName, Email: in.Email,
 		IsPlatformAdmin: in.IsPlatformAdmin,
 		Error:           err.Error(), // pesan sentinel auth, aman ditampilkan; password tidak dirender ulang

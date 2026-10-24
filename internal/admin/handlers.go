@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
@@ -12,7 +14,9 @@ type Option func(*Handlers)
 
 // Handle layar administrasi
 type Handlers struct {
-	users *userHandlers // Arin
+	users       *userHandlers       // Arin
+	groups      *groupHandlers      // Vincent
+	connections *connectionHandlers // Majiid
 }
 
 func NewHandlers(opts ...Option) *Handlers {
@@ -30,5 +34,10 @@ func (h *Handlers) Routes(r chi.Router) {
 		h.usersRoutes(r)       // Arin
 		h.groupsRoutes(r)      // Vincent
 		h.connectionsRoutes(r) // Majiid
+		// userflow lama menyebut /admin/access; FE final mengaturnya di
+		// halaman group (access-editor), jadi alihkan agar tidak 404.
+		r.Get("/access", func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "/admin/groups", http.StatusSeeOther)
+		})
 	})
 }
