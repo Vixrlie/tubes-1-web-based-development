@@ -1,0 +1,47 @@
+/* paginasi (templates/components/pager.html)
+   Tombolnya adalah komponen .btn--secondary; di sini hanya tata letak
+   dan ukuran. Hanya memakai token dari themes.css. */
+
+.pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+}
+
+.pager__summary {
+    margin: 0;
+    font-size: var(--font-size-p4);
+    color: var(--color-text-muted);
+}
+
+.pager__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 0 auto;
+    padding: 0;
+    list-style: none;
+}
+
+.pager .btn,
+.pager__gap {
+    min-width: 2.5rem;
+    padding-block: var(--space-2);
+    font-size: var(--font-size-p4);
+}
+
+/* "..." : bentuk sama dengan tombol, tapi bukan kontrol */
+.pager__gap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding-inline: var(--space-3);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-full);
+    color: var(--color-text-muted);
+    font-family: var(--font-family-cta);
+}

@@ -1,0 +1,68 @@
+{{/*
+Komponen button. Dipanggil lewat helper `dict`:
+
+{{template "button" (dict "Label" "Simpan" "Type" "submit")}}
+
+Parameter (semua opsional kecuali Label):
+Label teks tombol
+Variant "primary" (default) | "secondary" | "tertiary" | "outline" | "soft-danger"
+State "default" (default) | "active" | "disabled"
+IconLeft nama icon di kiri (lihat components/icon.html)
+IconRight nama icon di kanan
+Type "button" (default) | "submit" | "reset"
+Href kalau diisi, dirender sebagai <a> bukan <button>
+        ID, Name, Value, Title, AriaLabel, Class (class tambahan)
+        Attrs atribut mentah, mis. (attr `hx-post="/x" hx-target="#y"`)
+
+        Custom (kalau tidak diisi -> pakai default variant/state):
+        Fill warna background mis. "#ff0000" / "var(--color-danger)"
+        Color warna teks + icon
+        Stroke warna border
+        Padding shorthand penuh mis. "6px 20px"
+        PaddingX padding kiri-kanan mis. "var(--space-8)"
+        PaddingY padding atas-bawah
+
+        CATATAN PENTING (biar tidak rusak lagi):
+        - Di dalam tag HTML, string Go template pakai backtick (`...`), BUKAN "...".
+        Tanda kutip ganda di dalam atribut membuat formatter HTML VS Code
+        menyisipkan spasi (" button-class") dan memotong string jadi 2 baris.
+        - Jangan taruh {{ }} langsung di dalam style="..." — editor menganggapnya CSS
+        dan menampilkan error palsu. Makanya style dibuat lewat template
+        "button-style-attr".
+        */}}
+
+        {{define "button"}}
+        {{- $state := or .State `default` -}}
+        {{- if .Href}}
+        <a class="{{template `button-class` .}}" {{template `button-style-attr` .}}{{if eq $state `disabled`}}
+            aria-disabled="true" tabindex="-1" {{else}} href="{{.Href}}" {{end}}{{with .ID}} id="{{.}}" {{end}}{{with
+            .Title}} title="{{.}}" {{end}}{{with .AriaLabel}} aria-label="{{.}}" {{end}}{{with .Attrs}}
+            {{.}}{{end}}>{{template `button-inner` .}}</a>
+        {{- else}}
+        <button type="{{or .Type `button`}}" class="{{template `button-class` .}}" {{template `button-style-attr`
+            .}}{{if eq $state `disabled`}} disabled{{end}}{{with .ID}} id="{{.}}" {{end}}{{with .Name}} name="{{.}}"
+            {{end}}{{with .Value}} value="{{.}}" {{end}}{{with .Title}} title="{{.}}" {{end}}{{with .AriaLabel}}
+            aria-label="{{.}}" {{end}}{{with .Attrs}} {{.}}{{end}}>{{template `button-inner` .}}</button>
+        {{- end}}
+        {{end}}
+
+        {{define "button-class" -}}
+        btn btn--{{or .Variant `primary`}}
+        {{- if eq (or .State `default`) `active`}} is-active{{end}}
+        {{- if eq (or .State `default`) `disabled`}} is-disabled{{end}}
+        {{- if or .Fill .Color .Stroke}} btn--custom{{end}}
+        {{- with .Class}} {{.}}{{end}}
+        {{- end}}
+
+        {{define "button-style-attr" -}}
+        {{if or .Fill .Color .Stroke .Padding .PaddingX .PaddingY}} style="{{with .Fill}}--btn-fill:{{css
+        .}};{{end}}{{with .Color}}--btn-fg:{{css .}};{{end}}{{with .Stroke}}--btn-stroke:{{css .}};{{end}}{{with
+        .Padding}}--btn-padding:{{css .}};{{end}}{{with .PaddingX}}--btn-px:{{css .}};{{end}}{{with
+        .PaddingY}}--btn-py:{{css .}};{{end}}"{{end}}
+        {{- end}}
+
+        {{define "button-inner" -}}
+        {{with .IconLeft}}{{template `icon` .}}{{end}}
+        {{- with .Label}}<span class="btn__label">{{.}}</span>{{end}}
+        {{- with .IconRight}}{{template `icon` .}}{{end}}
+        {{- end}}

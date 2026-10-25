@@ -1,0 +1,58 @@
+{{/*
+Kartu berisi judul + tombol aksi + daftar baris. Data: web.ListCard (lihat listcard.go):
+
+{{template `list-card` .Members}}
+
+ListCard:
+Title judul kartu
+Note keterangan kecil di kanan judul (opsional)
+Actions daftar tombol di kanan judul (opsional): []web.Button
+Items daftar baris: Title, Subtitle (opsional), Tag (label di kanan, opsional),
+Action (tombol kecil di kanan, dikirim sebagai form POST, opsional)
+Empty pesan kalau tidak ada baris (default "Belum ada data.")
+Class class tambahan
+CSRFToken token csrf untuk form aksi baris
+*/}}
+{{define "list-card"}}
+<section class="card list-card{{with .Class}} {{.}}{{end}}">
+    {{- if .Note}}
+    <header class="card__head">
+        <h2 class="card__title">{{.Title}}</h2>
+        <div class="card__actions">
+            <p class="card__note">{{.Note}}</p>
+            {{- range .Actions}}{{template `button` .}}{{end}}
+        </div>
+    </header>
+    {{- else}}
+    {{template `card-head` .}}
+    {{- end}}
+    <ul class="list-card__list" role="list">
+        {{- range $it := .Items}}
+        <li class="list-card__item">
+            <div class="list-card__text">
+                <p class="list-card__title">{{$it.Title}}</p>
+                {{- with $it.Subtitle}}<p class="list-card__subtitle">{{.}}</p>{{end}}
+            </div>
+            {{- with $it.Tag.Text}}{{template `table-cell` $it.Tag}}{{end}}
+            {{- with $it.Action}}
+            {{- if .Dialog}}
+            <div class="list-card__action">
+                <button type="button" class="btn btn--soft-danger" data-modal-open="{{.Dialog}}"
+                    data-form-action="{{.FormAction}}" data-subject="{{.Subject}}">
+                    <span class="btn__label">{{.Label}}</span></button>
+            </div>
+            {{- else}}
+            <form class="list-card__action" method="post" action="{{.FormAction}}" {{with .Confirm}}
+                onsubmit="return confirm({{.}})" {{end}}>
+                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                {{template `button` (dict `Label` .Label `Type` `submit` `Variant` `soft-danger`)}}
+            </form>
+            {{- end}}
+            {{- end}}
+        </li>
+        {{- else}}
+        <li class="list-card__empty">{{or .Empty `Belum ada data.`}}</li>
+        {{- end}}
+    </ul>
+</section>
+{{end}}

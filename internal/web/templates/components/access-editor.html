@@ -1,0 +1,90 @@
+{{/*
+Kartu "Akses Database" mode ubah: tiap baris = nama database + dropdown level akses + tombol Cabut.
+Perubahan (ubah level, cabut, tambah) dikumpulkan di klien oleh static/js/access-editor.js,
+lalu dikirim sekali lewat action bar. Data: *web.AccessEditor (lihat accesseditor.go):
+
+{{template `access-editor` .Editor}}
+{{template `action-bar` (dict `Message` .Editor.Message `ID` `access-bar` `Hidden` true
+`CancelHref` .Editor.CancelHref `SubmitAttrs` (attr `form="access-form"`))}}
+
+Action bar dengan ID `access-bar` dimunculkan JS kalau ada perubahan. Halaman yang memakai
+komponen ini perlu memuat static/js/modal.js lalu static/js/access-editor.js (keduanya defer).
+Nama field form: lihat komentar di accesseditor.go.
+
+Tombol "Tambah Database" membuka pop up (pilih database + level akses). Pop up berada DI LUAR
+<form id="access-form"> supaya isinya tidak ikut terkirim; yang terkirim hanya baris hasil
+    "Tambahkan" (hidden add_db + dropdown add_access) yang disalin JS dari <template data-new-row>.
+        */}}
+
+        {{define "access-editor"}}
+        <section class="card access-editor" data-access-editor data-bar="access-bar" data-message="{{.Message}}">
+            {{template `card-head` (dict `Title` (or .Title `Akses Database`))}}
+            <form id="access-form" method="post" action="{{.FormAction}}">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <ul class="access-editor__list" role="list" data-list>
+                    {{- range .Rows}}
+                    {{template `access-row` (dict `Row` . `Options` $.LevelOptions)}}
+                    {{- end}}
+                </ul>
+                <div class="access-editor__foot">
+                    {{- $addState := `default`}}{{if not .Available}}{{$addState = `disabled`}}{{end}}
+                    {{template `button` (dict `Label` `Tambah Database` `Variant` `outline` `IconLeft` `plus` `State`
+                    $addState
+                    `Attrs` (attr `data-add`))}}
+                </div>
+            </form>
+
+            {{/* Cetakan baris database baru; JS menyalinnya tiap "Tambahkan" di pop up ditekan */}}
+            <template data-new-row>
+                <li class="access-editor__row" data-row data-new>
+                    <span class="access-editor__name" data-new-name></span>
+                    <input type="hidden" name="add_db" value="" data-new-db>
+                    {{template `dropdown` (dict `Name` `add_access` `ID` `add-access` `Label` `Level akses` `HideLabel`
+                    true
+                    `Value` `view` `Options` .LevelOptions `Class` `access-editor__level`)}}
+                    {{template `button` (dict `Label` `Cabut` `Variant` `soft-danger` `Attrs` (attr `data-remove`))}}
+                </li>
+            </template>
+
+            {{- if .Available}}
+            {{/* Pop up "Tambah Database" (di luar form, lihat catatan di atas) */}}
+            <dialog class="modal" id="add-db-modal" aria-labelledby="add-db-modal-title" data-add-db-modal>
+                <div class="modal__panel">
+                    {{template `modal-head` (dict `ID` `add-db-modal` `Title` `Tambah Database`)}}
+                    <div class="modal__body">
+                        {{template `dropdown` (dict `Label` `Database` `ID` `add-db-select` `Options` .Available `Attrs`
+                        (attr
+                        `data-modal-db autofocus`))}}
+                        {{template `radio-card-group` (dict `Legend` `Level akses` `Name` `add-db-level` `ID`
+                        `add-db-level`
+                        `Value` `view` `Options` .LevelChoices)}}
+                    </div>
+                    <div class="modal__foot">
+                        {{template `button` (dict `Label` `Batal` `Variant` `secondary` `Attrs` (attr
+                        `data-modal-close`))}}
+                        {{template `button` (dict `Label` `Tambahkan` `Attrs` (attr `data-modal-confirm`))}}
+                    </div>
+                </div>
+            </dialog>
+            {{- end}}
+        </section>
+        {{end}}
+
+        {{/* Satu baris database yang sudah dimiliki grup. Param: Row (web.AccessRow), Options (level akses) */}}
+        {{define "access-row"}}
+        {{- $r := .Row}}
+        {{- $sel := `default`}}{{if $r.Removed}}{{$sel = `disabled`}}{{end}}
+        <li class="access-editor__row" data-row data-initial="{{$r.Level}}" {{if $r.Removed}} data-state="removed"
+            {{end}}>
+            <span class="access-editor__name">{{$r.Name}}</span>
+            {{template `dropdown` (dict `Name` (printf `access:%s` $r.ID) `ID` (printf `access-%s` $r.ID) `Label`
+            (printf `Akses %s` $r.Name)
+            `HideLabel` true `Value` $r.Level `Options` .Options `State` $sel `Class` `access-editor__level`)}}
+            <input type="hidden" name="remove" value="{{$r.ID}}" data-remove-field {{if not $r.Removed}}
+                disabled{{end}}>
+            {{template `button` (dict `Label` `Cabut` `Variant` `soft-danger` `Attrs` (attr `data-remove`))}}
+            {{template `button` (dict `Label` `Batal Cabut` `Variant` `tertiary` `Class` `access-editor__restore`
+            `Attrs` (attr
+            `data-restore`))}}
+        </li>
+        {{end}}

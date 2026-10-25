@@ -1,0 +1,97 @@
+/* Kartu database. Varian: (default = terhubung) | .db-card--failed
+   Dibangun dari komponen icon, label, dan button; hanya memakai token
+   semantik dari themes.css. */
+
+/* Grid daftar kartu: otomatis menyesuaikan jumlah kolom */
+.db-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+    /* semua baris setinggi kartu tertinggi (mis. kartu dengan pesan error),
+       jadi semua kartu selalu berukuran sama */
+    grid-auto-rows: 1fr;
+    gap: var(--space-6);
+}
+
+.db-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-width: 0;
+    padding: var(--space-6);
+    background: var(--color-surface-raised);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+}
+
+.db-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+/* icon database di atas nama: primary-500 kalau terhubung, error-500 kalau gagal.
+   Ukuran diset di sini juga supaya tidak bergantung pada icon.css. */
+.db-card__icon {
+    display: inline-flex;
+    color: var(--color-primary-500);
+}
+
+.db-card--failed .db-card__icon {
+    color: var(--color-error-500);
+}
+
+.db-card__icon .icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    flex: none;
+    color: inherit;
+}
+
+/* flex: 1 -> footer selalu menempel di bawah walau tinggi isi kartu berbeda */
+.db-card__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+
+/* nama database selalu hitam (#000000). Selector 2 class supaya tidak kalah
+   dengan aturan h3 global. Dark theme: putih supaya tetap terbaca. */
+.db-card .db-card__name {
+    margin: 0;
+    font-family: var(--font-family-heading);
+    font-size: var(--font-size-t2);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-black);
+    overflow-wrap: anywhere;
+}
+
+:root[data-theme="dark"] .db-card .db-card__name {
+    color: var(--color-white);
+}
+
+.db-card__meta {
+    font-size: var(--font-size-p3);
+    color: var(--color-text-muted);
+}
+
+.db-card__error {
+    align-self: stretch;
+    padding: var(--space-3);
+    background: var(--color-label-error-bg);
+    color: var(--color-label-error-fg);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-p4);
+    line-height: 1.5;
+}
+
+.db-card__foot {
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+}
+
+.db-card__foot .btn {
+    width: 100%;
+}

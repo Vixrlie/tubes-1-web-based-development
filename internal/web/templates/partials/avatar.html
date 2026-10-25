@@ -1,0 +1,21 @@
+{{define "avatar"}}
+<span class="avatar" title="{{.DisplayName}}">
+    {{if .AvatarURL}}
+    <img class="avatar__img" src="{{.AvatarURL}}" alt="Foto profil {{.DisplayName}}">
+    {{else}}
+    <span class="avatar__initial" aria-hidden="true">{{.Initial}}</span>
+    <span class="sr-only">{{.DisplayName}}</span>
+    {{end}}
+</span>
+{{end}}
+
+{{/* Avatar besar berlatar soft (kartu akun). Param: *web.ShellUser */}}
+{{define "avatar-lg"}}
+<span class="avatar avatar--lg">
+    {{if .AvatarURL}}
+    <img class="avatar__img" src="{{.AvatarURL}}" alt="Foto profil {{.DisplayName}}">
+    {{else}}
+    <span class="avatar__initial" aria-hidden="true">{{.Initial}}</span>
+    {{end}}
+</span>
+{{end}}

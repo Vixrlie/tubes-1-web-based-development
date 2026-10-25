@@ -1,0 +1,97 @@
+/* Bar melayang di bawah layar (templates/components/action-bar.html).
+   Default : position fixed, muncul dengan animasi naik dari bawah.
+   Modifier: .action-bar--static -> ikut alur halaman (untuk demo / dev page).
+   Sembunyikan dengan atribut `hidden`. */
+
+.action-bar {
+    position: fixed;
+    /* rentang horizontal mengikuti kolom konten: halaman dengan sidebar menggeser
+       --action-bar-left (lihat layout.css) supaya bar tidak menutupi sidebar */
+    left: var(--action-bar-left, var(--space-6));
+    right: var(--action-bar-right, var(--space-6));
+    bottom: var(--space-6);
+    z-index: 50;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-8);
+    background: var(--color-surface-raised);
+    border: 1.5px solid var(--color-primary-500);
+    border-radius: var(--radius-full);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+    animation: action-bar-in var(--transition-base) both;
+}
+
+.action-bar[hidden] {
+    display: none;
+}
+
+.action-bar--static {
+    position: static;
+    width: 100%;
+    animation: none;
+}
+
+.action-bar__message {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    font-family: var(--font-family-paragraph);
+    font-size: var(--font-size-p3);
+    color: var(--color-text);
+}
+
+.action-bar__dot {
+    flex: none;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: var(--radius-full);
+    background: var(--color-primary-500);
+}
+
+.action-bar__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex: none;
+}
+
+@keyframes action-bar-in {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .action-bar {
+        animation: none;
+    }
+}
+
+/* layar sempit: pesan di atas, tombol di bawah */
+@media (max-width: 640px) {
+    .action-bar {
+        flex-direction: column;
+        align-items: stretch;
+        border-radius: var(--radius-xl);
+        padding: var(--space-4);
+    }
+
+    .action-bar__actions {
+        justify-content: flex-end;
+    }
+}
+
+/* halaman yang memakai action bar melayang: beri ruang supaya isi paling bawah tidak tertutup */
+.has-action-bar {
+    padding-bottom: 6rem;
+}

@@ -1,0 +1,28 @@
+{{/*
+Halaman Dashboard Admin: ringkasan jumlah user / group / koneksi + jalan pintas.
+Data: admin.dashboardPage (lihat admin/dashboard.go): .Shell, .Crumbs,
+.Stats ([]web.DetailField), .Links ([]web.Button), .Note
+*/}}
+{{define "content"}}
+{{template `page-header` (dict `Title` `Dashboard Admin` `Crumbs` .Crumbs)}}
+
+<div class="stack">
+    <section class="card">
+        {{template `card-head` (dict `Title` `Ringkasan platform` `Actions` .Links)}}
+        <dl class="detail-card__grid">
+            {{range .Stats}}
+            <div class="detail-card__field">
+                <dt class="detail-card__label">{{.Label}}</dt>
+                <dd class="detail-card__value">{{.Value}}{{with .Note}}
+                    <span class="detail-card__note">{{.}}</span>{{end}}</dd>
+            </div>
+            {{end}}
+        </dl>
+    </section>
+
+    <section class="card">
+        {{template `card-head` (dict `Title` `Catatan`)}}
+        <p>{{.Note}}</p>
+    </section>
+</div>
+{{end}}

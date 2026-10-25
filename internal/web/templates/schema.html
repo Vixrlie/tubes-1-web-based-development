@@ -1,0 +1,12 @@
+{{/*
+Halaman Schema: daftar tabel dan relasi foreign key dalam satu schema.
+Data: web.SchemaPage (lihat schema.go): .Title, .Crumbs, .Tables, .Relations
+*/}}
+{{define "content"}}
+{{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs)}}
+
+<div class="stack">
+    {{template `table` .Tables}}
+    {{template `table` .Relations}}
+</div>
+{{end}}

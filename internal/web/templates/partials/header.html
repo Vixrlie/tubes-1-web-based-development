@@ -1,0 +1,37 @@
+{{define "header"}}
+<header class="app-header">
+    <div class="app-header__inner">
+        <a class="app-header__brand" href="/" aria-label="Pathgres, ke beranda">
+            <img class="app-header__logo" src="/static/img/logo-full.png" alt="" height="40">
+        </a>
+
+        <div class="app-header__end">
+            <nav aria-label="Navigasi utama">
+                <ul class="app-header__links" role="list">
+                    <li>
+                        <a class="nav-link" href="/databases" {{if or (eq .Nav "database" ) (eq .Nav "databases"
+                            )}}aria-current="page" {{end}}>Database</a>
+                    </li>
+                    {{if .User.IsPlatformAdmin}}
+                    <li>
+                        <a class="nav-link" href="/admin/users" {{if eq .Nav "admin" }}aria-current="page"
+                            {{end}}>Admin</a>
+                    </li>
+                    {{end}}
+                </ul>
+            </nav>
+            {{/* Avatar = tombol pembuka kartu akun (nama, role, Logout). Lihat partials/user-menu.html */}}
+            <div class="user-menu" data-user-menu>
+                <button type="button" class="user-menu__trigger" aria-haspopup="true" aria-expanded="false"
+                    aria-controls="user-menu-panel" aria-label="Menu akun {{.User.DisplayName}}">
+                    {{template "avatar" .User}}
+                </button>
+                <div class="user-menu__panel" id="user-menu-panel" hidden>
+                    {{template "user-menu-card" .User}}
+                </div>
+            </div>
+            <script src="/static/js/user-menu.js" defer></script>
+        </div>
+    </div>
+</header>
+{{end}}

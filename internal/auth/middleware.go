@@ -31,7 +31,6 @@ func WithUser(ctx context.Context, u User) context.Context {
 }
 
 // UserFromContext memberikan user yang sedang login (identifikasi principal).
-// Dipakai Vincent dan Majiid.
 func UserFromContext(ctx context.Context) (User, bool) {
 	u, ok := ctx.Value(contextKey{}).(User)
 	return u, ok
@@ -41,15 +40,13 @@ func UserFromContext(ctx context.Context) (User, bool) {
 type SessionInfo struct {
 	User      User
 	CSRFToken string
-	// NewToken terisi kalau session baru saja dirotasi (rotasi berkala).
-	// Middleware akan menulis ulang cookie dengan nilai ini.
+	// NewToken terisi kalau session baru saja dirotasi (berkala atau karena
+	// privilege naik). Middleware akan menulis ulang cookie dengan nilai ini.
 	NewToken string
 }
 
-// SessionValidator diimplementasikan session manager (paket session).
-// Validate harus: mencari token (termasuk token lama selama grace period),
-// memeriksa revoked, idle timeout, dan absolute expiration, memperbarui
-// last_seen_at, dan merotasi token bila sudah jatuh tempo.
+// SessionValidator diimplementasikan session manager. Validate menerima token lama
+// selama grace period, menolak revoked & timeout, menyegarkan last_seen_at, merotasi token.
 type SessionValidator interface {
 	Validate(ctx context.Context, token string) (SessionInfo, error)
 }

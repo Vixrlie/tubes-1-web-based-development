@@ -1,0 +1,26 @@
+{{/*
+Kartu detail: judul + kisi 2 kolom "label di atas, nilai di bawah" (hanya tampil).
+Data: web.DetailCard (lihat detailcard.go):
+
+{{template `detail-card` .Params}}
+
+DetailCard:
+Title judul kartu
+Actions daftar tombol di kanan judul (opsional): []web.Button
+Fields daftar isian: Label, Value, Note (keterangan kecil di sebelah nilai, opsional)
+Class class tambahan
+*/}}
+{{define "detail-card"}}
+<section class="card detail-card{{with .Class}} {{.}}{{end}}">
+    {{template `card-head` .}}
+    <dl class="detail-card__grid">
+        {{- range .Fields}}
+        <div class="detail-card__field">
+            <dt class="detail-card__label">{{.Label}}</dt>
+            <dd class="detail-card__value">{{.Value}}{{with .Note}} <span class="detail-card__note">{{.}}</span>{{end}}
+            </dd>
+        </div>
+        {{- end}}
+    </dl>
+</section>
+{{end}}

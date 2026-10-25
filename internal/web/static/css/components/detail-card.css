@@ -1,0 +1,50 @@
+/* kartu "label + nilai" 2 kolom (templates/components/detail-card.html)
+   Kepala kartu memakai .card / .card__head dari card.css. */
+
+.detail-card__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-6) var(--space-6);
+    margin: 0;
+}
+
+.detail-card__field {
+    min-width: 0;
+}
+
+.detail-card__label {
+    margin: 0 0 var(--space-2);
+    font-size: var(--font-size-p4);
+    color: var(--color-text-muted);
+}
+
+.detail-card__value {
+    margin: 0;
+    font-size: var(--font-size-p2);
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+/* keterangan kecil di sebelah nilai, mis. "tidak ditampilkan ulang" */
+.detail-card__note {
+    margin-left: var(--space-2);
+    font-size: var(--font-size-p4);
+    color: var(--color-text-muted);
+}
+
+@media (max-width: 480px) {
+    .detail-card__grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* Tata letak: kolom pertama lebih lebar (mis. Parameter Koneksi | Group) */
+.split--lead {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+}
+
+@media (max-width: 960px) {
+    .split--lead {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

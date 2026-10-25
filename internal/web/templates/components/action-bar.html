@@ -1,0 +1,34 @@
+{{/*
+Action bar: bar melayang di bawah layar ("N perubahan belum disimpan" + tombol Batal / Simpan).
+Dipanggil lewat `dict`:
+
+{{template `action-bar` (dict `Message` `2 perubahan akses belum disimpan` `ID` `access-bar` `Hidden` true)}}
+
+Parameter (semua opsional kecuali Message):
+Message teks di kiri (titik biru otomatis ditambahkan)
+ID id elemen, supaya mudah ditampilkan/disembunyikan lewat JS/HTMX
+Hidden true -> disembunyikan (atribut hidden). Hapus atribut itu untuk memunculkannya
+CancelLabel teks tombol kiri (default "Batal")
+CancelHref kalau diisi, Batal jadi link
+CancelAttrs atribut mentah Batal, mis. (attr `hx-get="/x" hx-target="#y"`)
+SubmitLabel teks tombol kanan (default "Simpan Perubahan")
+SubmitAttrs atribut mentah Simpan. Pakai `form="id-form"` supaya submit form di luar bar,
+mis. (attr `form="access-form"`)
+Class class tambahan. "action-bar--static" = ikut alur halaman (tidak melayang), buat demo
+
+CATATAN: string di dalam tag HTML pakai backtick (`...`), lihat button.html.
+*/}}
+
+{{define "action-bar"}}
+<div class="action-bar{{with .Class}} {{.}}{{end}}" role="region" aria-label="Perubahan belum disimpan" {{with .ID}}
+    id="{{.}}" {{end}}{{if .Hidden}} hidden{{end}}>
+    <p class="action-bar__message" role="status">
+        <span class="action-bar__dot" aria-hidden="true"></span><span class="action-bar__text">{{.Message}}</span>
+    </p>
+    <div class="action-bar__actions">
+        {{template `button` (dict `Label` (or .CancelLabel `Batal`) `Variant` `secondary` `Href` .CancelHref `Attrs`
+        .CancelAttrs)}}
+        {{template `button` (dict `Label` (or .SubmitLabel `Simpan Perubahan`) `Type` `submit` `Attrs` .SubmitAttrs)}}
+    </div>
+</div>
+{{end}}

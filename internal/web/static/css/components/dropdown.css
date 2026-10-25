@@ -1,0 +1,66 @@
+/* Dropdown = <select> native di dalam .input__box (gaya dasar, state error /
+   disabled, focus ada di input.css, jadi input.css harus ikut dimuat).
+   File ini hanya menambah hal khusus select: sembunyikan panah bawaan,
+   susun icon di atas select, dan warna placeholder. */
+
+/* select dan icon menumpuk di satu sel grid; select yang menangkap semua klik */
+.dropdown .input__box {
+    display: grid;
+    align-items: center;
+    padding: 0;
+}
+
+.dropdown__control {
+    grid-area: 1 / 1;
+    width: 100%;
+    min-width: 0;
+    /* ruang kanan untuk chevron */
+    padding: var(--space-3) calc(var(--space-3) + 1.25em + var(--space-2)) var(--space-3) var(--space-3);
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    text-overflow: ellipsis;
+}
+
+.dropdown--icon-left .dropdown__control {
+    padding-left: calc(var(--space-3) + 1.25em + var(--space-2));
+}
+
+.dropdown--icon-right .dropdown__control {
+    padding-right: calc(var(--space-3) + (1.25em + var(--space-2)) * 2);
+}
+
+.dropdown__icon {
+    grid-area: 1 / 1;
+    display: inline-flex;
+    pointer-events: none;
+}
+
+.dropdown__icon--left {
+    justify-self: start;
+    margin-left: var(--space-3);
+}
+
+.dropdown__icon--chevron {
+    justify-self: end;
+    margin-right: var(--space-3);
+}
+
+.dropdown__icon--right {
+    justify-self: end;
+    margin-right: calc(var(--space-3) + 1.25em + var(--space-2));
+}
+
+/* belum memilih (opsi placeholder terpilih) -> neutral-500 */
+.dropdown:not(.is-error):not(.is-disabled) .dropdown__control:has(option[value=""]:checked) {
+    color: var(--color-text-muted);
+}
+
+/* daftar pilihan selalu warna teks normal */
+.dropdown__control option {
+    color: var(--color-text);
+}
+
+.dropdown.is-disabled .dropdown__control {
+    cursor: not-allowed;
+}

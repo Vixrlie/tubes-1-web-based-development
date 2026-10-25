@@ -1,0 +1,8 @@
+{{/*
+Halaman Kelola Koneksi: daftar koneksi database + tombol "Tambah Koneksi".
+Data: web.ConnectionsPage (lihat connections.go): .PageHeader, .Connections
+*/}}
+{{define "content"}}
+{{template `page-header` .PageHeader}}
+{{template `table` .Connections}}
+{{end}}

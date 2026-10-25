@@ -1,4 +1,3 @@
-// Package testutil berisi helper untuk integration test.
 package testutil
 
 import (

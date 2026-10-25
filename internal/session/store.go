@@ -27,6 +27,7 @@ type Record struct {
 	RotatedAt         time.Time
 	AbsoluteExpiresAt time.Time
 	RevokedAt         time.Time
+	ForceRotate       bool
 }
 
 type NewRecord struct {
@@ -40,18 +41,21 @@ type NewRecord struct {
 type Store interface {
 	Insert(ctx context.Context, n NewRecord) error
 
-	// FindByTokenHash mencari berdasarkan token saat ini ATAU token sebelumnya.
-	// Mengembalikan ErrNotFound bila tidak ada.
+	// FindByTokenHash cari berdasarkan current atau prev token
+	// ErrNotFound bila tidak ketemu.
 	FindByTokenHash(ctx context.Context, hash string) (Record, error)
 
 	Touch(ctx context.Context, id int64, at time.Time) error
 
-	// Rotate mengganti token hanya jika token saat ini masih oldHash.
+	// Rotate ganti token hanya jika current token masih oldHash.
 	// Mengembalikan false bila keduluan request lain.
 	Rotate(ctx context.Context, id int64, oldHash, newHash string, at, previousValidUntil time.Time) (bool, error)
 
-	// Revoke mencabut session yang token saat ini atau sebelumnya cocok.
-	// Tidak ada baris yang cocok bukan error.
+	// Revoke cabut session yang current atau prev tokennya cocok.
 	Revoke(ctx context.Context, tokenHash string, at time.Time) error
 	RevokeByUser(ctx context.Context, userID int64, at time.Time) error
+
+	// ForceRotateByUser menandai semua active session user spy dirotasi pada
+	// next request tanpa logout.
+	ForceRotateByUser(ctx context.Context, userID int64) error
 }

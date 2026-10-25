@@ -1,0 +1,24 @@
+{{/*
+Halaman Editor Migration: tulis SQL draft lalu simpan (POST CreateDraft).
+Data: dbm.migrationEditorPage (lihat dbm/migration_pages.go):
+.Shell, .Title, .Crumbs, .SQL, .Note, .FormAction, .Actions
+CSRF: .User.CSRFToken (dari Shell).
+*/}}
+{{define "content"}}
+{{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs)}}
+
+<form class="stack" method="post" action="{{.FormAction}}">
+    <input type="hidden" name="csrf_token" value="{{.User.CSRFToken}}">
+
+    <section class="card">
+        {{template `card-head` (dict `Title` `SQL Migration` `Actions` .Actions)}}
+        <p class="card__note">{{.Note}}</p>
+        <div class="input">
+            <div class="input__box">
+                <textarea class="input__control" name="sql" rows="14" spellcheck="false"
+                    placeholder="CREATE TABLE ...">{{.SQL}}</textarea>
+            </div>
+        </div>
+    </section>
+</form>
+{{end}}

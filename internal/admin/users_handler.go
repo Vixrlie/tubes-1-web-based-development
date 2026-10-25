@@ -11,6 +11,7 @@ import (
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 )
 
 type userHandlers struct {
@@ -40,6 +41,7 @@ func (h *Handlers) usersRoutes(r chi.Router) {
 	r.Post("/users/{id}/deactivate", u.deactivate)
 	r.Post("/users/{id}/activate", u.activate)
 	r.Post("/users/{id}/password", u.resetPassword)
+	r.Post("/users/{id}/delete", u.delete)
 }
 
 // Pesan sukses dipilih lewat kode di query string; teks bebas dari URL tidak pernah dirender.
@@ -49,18 +51,26 @@ var notices = map[string]string{
 	"deactivated": "User dinonaktifkan dan semua session-nya dicabut.",
 	"activated":   "User diaktifkan kembali.",
 	"password":    "Password direset dan semua session user dicabut.",
+	"deleted":     "User dihapus permanen beserta keanggotaannya.",
 }
 
 type usersPage struct {
-	Me        auth.User
-	CSRFToken string
-	Users     []UserRow
-	Notice    string
+	User       *web.ShellUser // layout FE: header + sidebar admin
+	Nav        string
+	SideActive string
+	Title      string
+	Crumbs     []web.Crumb
+	Actions    []web.Button
+	Table      web.Table
+	Notice     string
 }
 
 type userFormPage struct {
 	Me              auth.User
 	CSRFToken       string
+	User            *web.ShellUser // layout FE: header + sidebar admin
+	Nav             string
+	SideActive      string
 	IsNew           bool
 	IsSelf          bool
 	FormAction      string
@@ -124,6 +134,9 @@ func (u *userHandlers) editPage(r *http.Request, t UserRow) userFormPage {
 	return userFormPage{
 		Me:              me,
 		CSRFToken:       csrf,
+		User:            shellUserData(me, csrf),
+		Nav:             "admin",
+		SideActive:      "users",
 		IsSelf:          t.ID == me.ID,
 		FormAction:      "/admin/users/" + strconv.FormatInt(t.ID, 10),
 		ID:              t.ID,
@@ -135,11 +148,30 @@ func (u *userHandlers) editPage(r *http.Request, t UserRow) userFormPage {
 	}
 }
 
+// shellUserData mengisi data shell layout FE (header + sidebar admin).
+func shellUserData(me auth.User, csrf string) *web.ShellUser {
+	return &web.ShellUser{Username: me.Username, IsPlatformAdmin: me.IsPlatformAdmin, CSRFToken: csrf}
+}
+
 func redirectUser(w http.ResponseWriter, r *http.Request, id int64, code string) {
 	http.Redirect(w, r, "/admin/users/"+strconv.FormatInt(id, 10)+"?status="+code, http.StatusSeeOther)
 }
 
-// ---- daftar ----
+func userStatusCell(isActive bool) web.TableCell {
+	if isActive {
+		return web.TableCell{Text: "Aktif", Variant: "success"}
+	}
+	return web.TableCell{Text: "Nonaktif", Variant: "error"}
+}
+
+func userRoleCell(isPlatformAdmin bool) web.TableCell {
+	if isPlatformAdmin {
+		return web.TableCell{Text: "Admin", Variant: "info"}
+	}
+	return web.TableCell{Text: "Non-admin", Variant: "neutral"}
+}
+
+// Daftar
 
 func (u *userHandlers) list(w http.ResponseWriter, r *http.Request) {
 	users, err := u.store.List(r.Context())
@@ -147,21 +179,72 @@ func (u *userHandlers) list(w http.ResponseWriter, r *http.Request) {
 		u.serverError(w, "daftar user", err)
 		return
 	}
+	groups, err := u.store.GroupNamesByUser(r.Context())
+	if err != nil {
+		u.serverError(w, "grup per user", err)
+		return
+	}
 	me, csrf := u.base(r)
+
+	table := web.Table{
+		Title: "Akun platform",
+		Tag:   web.TableCell{Text: strconv.Itoa(len(users)) + " item"},
+		Class: "users-table",
+		Columns: []web.TableColumn{
+			{Key: "username", Label: "Username", Bold: true},
+			{Key: "name", Label: "Nama"},
+			{Key: "status", Label: "Status"},
+			{Key: "role", Label: "Peran"},
+			{Key: "group", Label: "Group"},
+			{Key: "aksi", Label: "Aksi", Align: "right"},
+		},
+		Empty: "Belum ada user.",
+	}
+	for _, usr := range users {
+		name := strings.TrimSpace(usr.FullName)
+		if name == "" {
+			name = "-"
+		}
+		groupList := strings.Join(groups[usr.ID], ", ")
+		if groupList == "" {
+			groupList = "-"
+		}
+		manage := web.OutlineButton("Kelola", "/admin/users/"+strconv.FormatInt(usr.ID, 10))
+		manage.PaddingY = "var(--space-1)"
+		manage.PaddingX = "var(--space-4)"
+		table.Rows = append(table.Rows, web.TableRow{
+			"username": {Text: usr.Username},
+			"name":     {Text: name},
+			"status":   userStatusCell(usr.IsActive),
+			"role":     userRoleCell(usr.IsPlatformAdmin),
+			"group":    {Text: groupList},
+			"aksi":     {Button: &manage},
+		})
+	}
+
 	u.render(w, http.StatusOK, "admin/users.html", usersPage{
-		Me:        me,
-		CSRFToken: csrf,
-		Users:     users,
-		Notice:    notices[r.URL.Query().Get("status")],
+		User:       shellUserData(me, csrf),
+		Nav:        "admin",
+		SideActive: "users",
+		Title:      "Kelola User",
+		Crumbs: []web.Crumb{
+			{Label: "Admin", Href: "/admin"},
+			{Label: "Daftar User"},
+		},
+		Actions: []web.Button{
+			{Label: "Tambah User", IconLeft: "plus", Href: "/admin/users/new"},
+		},
+		Table:  table,
+		Notice: notices[r.URL.Query().Get("status")],
 	})
 }
 
-// ---- buat ----
+// Buat
 
 func (u *userHandlers) newForm(w http.ResponseWriter, r *http.Request) {
 	me, csrf := u.base(r)
 	u.render(w, http.StatusOK, "admin/user_form.html", userFormPage{
-		Me: me, CSRFToken: csrf, IsNew: true, FormAction: "/admin/users", IsActive: true,
+		Me: me, CSRFToken: csrf, User: shellUserData(me, csrf), Nav: "admin", SideActive: "users", IsNew: true, FormAction: "/admin/users", IsActive: true,
 	})
 }
 
@@ -197,14 +280,14 @@ func (u *userHandlers) create(w http.ResponseWriter, r *http.Request) {
 
 	me, csrf := u.base(r)
 	u.render(w, status, "admin/user_form.html", userFormPage{
-		Me: me, CSRFToken: csrf, IsNew: true, FormAction: "/admin/users", IsActive: true,
+		Me: me, CSRFToken: csrf, User: shellUserData(me, csrf), Nav: "admin", SideActive: "users", IsNew: true, FormAction: "/admin/users", IsActive: true,
 		Username: in.Username, FullName: in.FullName, Email: in.Email,
 		IsPlatformAdmin: in.IsPlatformAdmin,
 		Error:           err.Error(), // pesan sentinel auth, aman ditampilkan; password tidak dirender ulang
 	})
 }
 
-// ---- ubah ----
+// Ubah
 
 func (u *userHandlers) editForm(w http.ResponseWriter, r *http.Request) {
 	t, ok := u.load(w, r)
@@ -250,9 +333,15 @@ func (u *userHandlers) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Peran berubah (naik atau turun): session lama tidak boleh membawa hak lama.
+	// naik: rotasi transparan pada next req  
+	// turun: session harus berhenti pake priv sblmny
 	if upd.IsPlatformAdmin != t.IsPlatformAdmin {
-		if err := u.revoker.RevokeSessionsByUser(r.Context(), t.ID); err != nil {
+		if upd.IsPlatformAdmin {
+			if err := u.revoker.ForceRotateSessionsByUser(r.Context(), t.ID); err != nil {
+				u.serverError(w, "tandai rotasi session setelah perubahan peran", err)
+				return
+			}
+		} else if err := u.revoker.RevokeSessionsByUser(r.Context(), t.ID); err != nil {
 			u.serverError(w, "cabut session setelah perubahan peran", err)
 			return
 		}
@@ -260,7 +349,7 @@ func (u *userHandlers) update(w http.ResponseWriter, r *http.Request) {
 	redirectUser(w, r, t.ID, "updated")
 }
 
-// ---- nonaktifkan / aktifkan ----
+// Nonaktifkan / aktifkan
 
 func (u *userHandlers) deactivate(w http.ResponseWriter, r *http.Request) {
 	t, ok := u.load(w, r)
@@ -298,7 +387,38 @@ func (u *userHandlers) activate(w http.ResponseWriter, r *http.Request) {
 	redirectUser(w, r, t.ID, "activated")
 }
 
-// ---- reset password ----
+// delete menghapus user permanen. Guard dari store: admin aktif terakhir dan
+// user ber-riwayat migration ditolak (muncul sebagai pesan error di form).
+func (u *userHandlers) delete(w http.ResponseWriter, r *http.Request) {
+	t, ok := u.load(w, r)
+	if !ok {
+		return
+	}
+	me, _ := auth.UserFromContext(r.Context())
+	if t.ID == me.ID {
+		page := u.editPage(r, t)
+		page.Error = "Anda tidak bisa menghapus akun sendiri."
+		u.render(w, http.StatusBadRequest, "admin/user_form.html", page)
+		return
+	}
+	if err := u.store.Delete(r.Context(), t.ID); err != nil {
+		switch {
+		case errors.Is(err, ErrLastAdmin), errors.Is(err, ErrUserHasHistory):
+			page := u.editPage(r, t)
+			page.Error = err.Error()
+			u.render(w, http.StatusBadRequest, "admin/user_form.html", page)
+		case errors.Is(err, auth.ErrUserNotFound):
+			http.NotFound(w, r)
+		default:
+			u.serverError(w, "hapus user", err)
+		}
+		return
+	}
+	// Keanggotaan & session terhapus cascade oleh store.
+	http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+}
+
+// Reset password
 
 func (u *userHandlers) resetPassword(w http.ResponseWriter, r *http.Request) {
 	t, ok := u.load(w, r)

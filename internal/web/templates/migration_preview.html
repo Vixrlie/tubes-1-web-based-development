@@ -1,0 +1,100 @@
+{{/*
+Halaman Preview Migration: tinjauan SQL + KONFIRMASI EKSEKUSI (scr08: ketik nama
+database tujuan + centang persetujuan sebelum tombol aktif; submit nonaktifkan
+diri saat proses untuk mencegah kirim ganda) + analisa EXPLAIN.
+Data: dbm.migrationPreviewPage (lihat dbm/migration_pages.go):
+.Shell, .Title, .Crumbs, .SQL, .Warning, .Detail, .ExecuteAction, .Actions,
+.ConnName, .ExplainAction, .ExplainTable, .Plans, .ExplainErr, .Analyze
+CSRF: .User.CSRFToken (dari Shell).
+*/}}
+{{define "content"}}
+{{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs)}}
+
+<div class="stack">
+    <form method="post" action="{{.ExecuteAction}}"
+        onsubmit="if(window.__execBusy){return false}window.__execBusy=true;var b=document.getElementById('exec-submit');if(b){b.classList.add('is-disabled');var l=b.querySelector('.btn__label');if(l){l.textContent='Eksekusi berjalan...';}}">
+        <input type="hidden" name="csrf_token" value="{{.User.CSRFToken}}">
+        <section class="card">
+            {{template `card-head` (dict `Title` `Pratinjau SQL` `Actions` .Actions)}}
+            <p class="card__note">{{.Warning}}</p>
+            <pre>{{.SQL}}</pre>
+        </section>
+
+        {{if .CanExecute}}
+        {{/* Konfirmasi eksekusi (scr08): tanpa ketik-nama + persetujuan, tombol tetap mati. */}}
+        <section class="card">
+            {{template `card-head` (dict `Title` `Konfirmasi eksekusi`)}}
+            <p class="card__note">SQL dijalankan dalam satu transaksi: commit bila seluruh statement
+                berhasil, rollback bila gagal. Pastikan tujuan dan dampak sudah sesuai.</p>
+            <div class="input">
+                <label class="input__label" for="exec-name">Ketik {{.ConnName}} untuk konfirmasi</label>
+                <div class="input__box">
+                    <input class="input__control" id="exec-name" type="text" autocomplete="off"
+                        data-expected="{{.ConnName}}" placeholder="{{.ConnName}}">
+                </div>
+            </div>
+            <p class="card__note">Nama harus sama persis dengan database tujuan.</p>
+            <p><label><input type="checkbox" id="exec-agree">
+                Saya menyetujui perubahan pada database {{.ConnName}}.</label></p>
+            <div class="card__actions">
+                {{template `button` (dict `Label` `Jalankan Migration` `Type` `submit`
+                    `State` `disabled` `ID` `exec-submit`)}}
+            </div>
+        </section>
+        {{end}}
+    </form>
+
+    {{/* --- Analisa rencana eksekusi --- */}}
+    <section class="card">
+        {{template `card-head` (dict `Title` `Analisa Rencana Eksekusi`)}}
+        <p class="card__note">EXPLAIN berjalan tanpa mengeksekusi statement. EXPLAIN ANALYZE
+            mengeksekusi di dalam transaksi yang selalu di-ROLLBACK, jadi tidak ada perubahan permanen.</p>
+        <form method="post" action="{{.ExplainAction}}">
+            <input type="hidden" name="csrf_token" value="{{.User.CSRFToken}}">
+            {{if .CanAnalyze}}
+            <p>
+                <label>
+                    <input type="checkbox" name="analyze" {{if .Analyze}}checked{{end}}>
+                    Dengan EXPLAIN ANALYZE (dieksekusi lalu di-rollback)
+                </label>
+            </p>
+            {{else}}
+            <p class="card__note">EXPLAIN ANALYZE membutuhkan akses View + Edit.</p>
+            {{end}}
+            {{template `button` (dict `Label` `Jalankan EXPLAIN` `Type` `submit`)}}
+        </form>
+        {{- with .ExplainErr}}
+        <p role="alert">{{.}}</p>
+        {{- end}}
+    </section>
+
+    {{- if .ExplainTable.Columns}}
+    {{template `table` .ExplainTable}}
+    {{- end}}
+    {{- range .Plans}}
+    <section class="card">
+        {{template `card-head` (dict `Title` .Title)}}
+        <pre>{{.Tree}}</pre>
+    </section>
+    {{- end}}
+
+    {{template `detail-card` .Detail}}
+</div>
+
+<script>
+    (function () {
+        var name = document.getElementById('exec-name'),
+            agree = document.getElementById('exec-agree'),
+            submit = document.getElementById('exec-submit');
+        if (!name || !agree || !submit) return;
+        var sync = function () {
+            var off = !(name.value.trim() === name.getAttribute('data-expected') && agree.checked);
+            submit.disabled = off;
+            submit.classList.toggle('is-disabled', off);
+        };
+        name.addEventListener('input', sync);
+        agree.addEventListener('change', sync);
+        sync();
+    })();
+</script>
+{{end}}

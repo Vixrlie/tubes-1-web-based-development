@@ -1,0 +1,75 @@
+{{/*
+Komponen tabel. Kolom dan baris datang dari backend (lihat table.go):
+
+{{template `table` .Table}}
+
+Table:
+Title judul di atas tabel (opsional)
+Tag label kecil di kanan judul (opsional): Text, Variant (mis. "View-only")
+Pager paginasi di bawah tabel (opsional, lihat pager.go)
+Columns daftar kolom: Key, Label, Align (center|right), Bold,
+Sort (asc|desc) + SortHref -> header jadi link pengurutan
+Rows daftar baris, tiap baris = map Key -> Cell
+Empty pesan kalau tidak ada baris (default "Belum ada data.")
+Class class tambahan
+
+Cell:
+Text teks sel
+Variant success|error|warning|info|neutral -> dirender sebagai label
+Href (tanpa Variant) -> dirender sebagai link
+Button (*web.Button) -> dirender sebagai tombol (lihat button.go)
+*/}}
+
+{{define "table"}}
+<section class="table-card{{with .Class}} {{.}}{{end}}">
+    {{- if or .Title .Tag.Text}}
+    <header class="table-card__head">
+        <h2 class="table-card__title">{{.Title}}</h2>
+        {{- with .Tag.Text}}{{template `table-cell` $.Tag}}{{end}}
+    </header>
+    {{- end}}
+    <div class="table-card__scroll">
+        <table class="table">
+            <thead>
+                <tr>
+                    {{- range .Columns}}
+                    <th scope="col" {{with .Align}} class="is-{{.}}" {{end}}{{if .SortHref}}
+                        aria-sort="{{if eq .Sort `asc`}}ascending{{else if eq .Sort `desc`}}descending{{else}}none{{end}}"
+                        {{end}}>
+                        {{- if .SortHref}}
+                        <a class="table__sort" href="{{.SortHref}}">{{.Label}}
+                            {{- if eq .Sort `asc`}}{{template `icon` `arrow-up`}}{{else if eq .Sort `desc`}}{{template
+                            `icon` `arrow-down`}}{{end -}}
+                        </a>
+                        {{- else}}{{.Label}}{{end -}}
+                    </th>
+                    {{- end}}
+                </tr>
+            </thead>
+            <tbody>
+                {{- range $row := .Rows}}
+                <tr>
+                    {{- range $col := $.Columns}}
+                    <td class="{{if $col.Bold}}is-bold{{end}}{{with $col.Align}} is-{{.}}{{end}}">
+                        {{- template `table-cell` (index $row $col.Key) -}}
+                    </td>
+                    {{- end}}
+                </tr>
+                {{- else}}
+                <tr>
+                    <td class="table__empty" colspan="{{len .Columns}}">{{or .Empty `Belum ada data.`}}</td>
+                </tr>
+                {{- end}}
+            </tbody>
+        </table>
+    </div>
+    {{- with .Pager}}{{template `pager` .}}{{end}}
+</section>
+{{end}}
+
+{{define "table-cell" -}}
+{{- if .Button}}{{template `button` .Button}}
+{{- else if .Variant}}{{template `label` (dict `Label` .Text `Variant` .Variant)}}
+{{- else if .Href}}<a href="{{.Href}}">{{.Text}}</a>
+{{- else}}{{.Text}}{{end -}}
+{{- end}}

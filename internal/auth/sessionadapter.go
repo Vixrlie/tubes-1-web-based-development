@@ -7,7 +7,6 @@ import (
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
 )
 
-// SessionSource adalah bagian dari session.Manager yang dibutuhkan adapter.
 type SessionSource interface {
 	Validate(ctx context.Context, token string) (session.Info, error)
 }

@@ -1,0 +1,36 @@
+{{/*
+Paginasi: ringkasan di kiri, tombol halaman di kanan. Memakai komponen `button`
+(secondary), jadi gaya & state ikut tombol. Biasanya dipakai lewat Table.Pager,
+tapi bisa berdiri sendiri. Dipanggil dengan *web.Pager (lihat pager.go):
+
+{{template `pager` .Pager}}
+
+Pager:
+Summary teks kiri, mis. "Menampilkan 1–4 dari 1.250 baris" (opsional)
+Label aria-label navigasi (default "Paginasi")
+Items daftar tombol: Label, Href, Active, Disabled, Gap ("..." tidak bisa diklik)
+Buat item lewat web.NewPager(...) supaya « Prev / Next / "..." dihitung otomatis.
+*/}}
+{{define "pager"}}
+<nav class="pager" aria-label="{{or .Label `Paginasi`}}">
+    {{- with .Summary}}
+    <p class="pager__summary">{{.}}</p>
+    {{- end}}
+    <ul class="pager__list" role="list">
+        {{- range .Items}}
+        <li>
+            {{- if .Gap}}
+            <span class="pager__gap" aria-hidden="true">{{.Label}}</span>
+            {{- else if .Disabled}}
+            {{template `button` (dict `Label` .Label `Variant` `secondary` `State` `disabled` `Class` `pager__btn`)}}
+            {{- else if .Active}}
+            {{template `button` (dict `Label` .Label `Variant` `secondary` `State` `active` `Href` .Href `Class`
+            `pager__btn` `Attrs` (attr `aria-current="page"`))}}
+            {{- else}}
+            {{template `button` (dict `Label` .Label `Variant` `secondary` `Href` .Href `Class` `pager__btn`)}}
+            {{- end}}
+        </li>
+        {{- end}}
+    </ul>
+</nav>
+{{end}}

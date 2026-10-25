@@ -1,0 +1,24 @@
+/* Penyetelan tampilan tabel user admin (admin/users.html).
+   Menjaga proporsi kolom agar badge Status/Peran dan tombol Aksi konsisten. */
+
+.users-table .table th,
+.users-table .table td {
+    vertical-align: middle;
+}
+
+.users-table .table th:nth-child(2),
+.users-table .table th:nth-child(3),
+.users-table .table td:nth-child(2),
+.users-table .table td:nth-child(3) {
+    width: 10rem;
+}
+
+.users-table .table th:last-child,
+.users-table .table td:last-child {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.users-table .table td:last-child .btn {
+    min-width: 6.5rem;
+}

@@ -38,14 +38,16 @@ func (s *PGStore) FindByTokenHash(ctx context.Context, hash string) (Record, err
 	err := s.pool.QueryRow(ctx,
 		`SELECT s.id, s.user_id, u.username, u.is_platform_admin, u.is_active,
 		        s.token_hash, s.previous_token_hash, s.previous_valid_until, s.csrf_secret,
-		        s.last_seen_at, s.rotated_at, s.absolute_expires_at, s.revoked_at
+		        s.last_seen_at, s.rotated_at, s.absolute_expires_at, s.revoked_at,
+		        s.force_rotate
 		   FROM sessions s
 		   JOIN users u ON u.id = s.user_id
 		  WHERE s.token_hash = $1 OR s.previous_token_hash = $1
 		  LIMIT 1`, hash).
 		Scan(&r.ID, &r.UserID, &r.Username, &r.IsPlatformAdmin, &r.IsActive,
 			&r.TokenHash, &prevHash, &prevUntil, &r.CSRFSecret,
-			&r.LastSeenAt, &r.RotatedAt, &r.AbsoluteExpiresAt, &revoked)
+			&r.LastSeenAt, &r.RotatedAt, &r.AbsoluteExpiresAt, &revoked,
+			&r.ForceRotate)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Record{}, ErrNotFound
 	}
@@ -76,7 +78,8 @@ func (s *PGStore) Rotate(ctx context.Context, id int64, oldHash, newHash string,
 		        previous_valid_until = $5,
 		        token_hash           = $4,
 		        rotated_at           = $2,
-		        last_seen_at         = $2
+		        last_seen_at         = $2,
+		        force_rotate         = FALSE
 		  WHERE id = $1 AND token_hash = $3 AND revoked_at IS NULL`,
 		id, at, oldHash, newHash, previousValidUntil)
 	if err != nil {
@@ -95,7 +98,15 @@ func (s *PGStore) Revoke(ctx context.Context, tokenHash string, at time.Time) er
 
 func (s *PGStore) RevokeByUser(ctx context.Context, userID int64, at time.Time) error {
 	_, err := s.pool.Exec(ctx,
-		`UPDATE sessions SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL`,
+		`UPDATE sessions SET revoked_at = $2, force_rotate = FALSE
+		  WHERE user_id = $1 AND revoked_at IS NULL`,
 		userID, at)
+	return err
+}
+
+func (s *PGStore) ForceRotateByUser(ctx context.Context, userID int64) error {
+	_, err := s.pool.Exec(ctx,
+		`UPDATE sessions SET force_rotate = TRUE
+		  WHERE user_id = $1 AND revoked_at IS NULL`, userID)
 	return err
 }

@@ -1,0 +1,112 @@
+/* kartu akun di header (partials/header.html, partials/user-menu.html)
+   Avatar = tombol pemicu; kartu muncul tepat di bawahnya, rata kanan.
+   Buka / tutup: static/js/user-menu.js (atribut hidden pada .user-menu__panel).
+   Hanya memakai token semantik dari themes.css. */
+
+.user-menu {
+    position: relative;
+}
+
+.user-menu__trigger {
+    display: inline-flex;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    cursor: pointer;
+    transition: box-shadow var(--transition-fast);
+}
+
+/* hover: shadow saja. Saat kartu terbuka (ditekan), tidak ada efek apa pun */
+.user-menu__trigger:hover:not([aria-expanded="true"]) {
+    box-shadow: var(--shadow-md);
+}
+
+.user-menu__trigger:focus-visible {
+    box-shadow: var(--focus-ring);
+    border-radius: var(--radius-full);
+}
+
+.user-menu__panel {
+    position: absolute;
+    top: calc(100% + var(--space-3));
+    right: 0;
+    z-index: var(--z-dropdown);
+    width: min(21.75rem, calc(100vw - 2rem));
+    animation: user-menu-in var(--transition-fast) both;
+}
+
+.user-menu__panel[hidden] {
+    display: none;
+}
+
+@keyframes user-menu-in {
+    from {
+        opacity: 0;
+        transform: translateY(-0.5rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Isi kartu */
+.user-card {
+    padding: var(--space-5);
+    background: var(--color-surface-raised);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+}
+
+.user-card__info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.user-card__text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.user-card__name,
+.user-card__username {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.user-card__name {
+    font-family: var(--font-family-heading);
+    font-size: var(--font-size-t3);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+}
+
+.user-card__username {
+    font-size: var(--font-size-p3);
+    color: var(--color-text-muted);
+}
+
+.user-card__divider {
+    margin: var(--space-4) 0;
+    border: 0;
+    border-top: 1px solid var(--color-border);
+}
+
+.user-card__form {
+    margin: 0;
+}
+
+/* tombol Logout selebar kartu, lebih besar dari soft-danger bawaan (yang kecil) */
+.user-card__logout {
+    width: 100%;
+    justify-content: flex-start;
+    --btn-px: var(--space-6);
+    --btn-py: var(--space-3);
+    font-size: var(--font-size-p3);
+}

@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -46,6 +47,9 @@ func Load() (Config, error) {
 	}
 	if c.SessionGrace, err = dur("SESSION_GRACE_PERIOD", "30s"); err != nil {
 		return c, err
+	}
+	if strings.EqualFold(strings.TrimSpace(c.Env), "production") && !c.CookieSecure {
+		return c, errors.New("APP_ENV=production mewajibkan COOKIE_SECURE=true")
 	}
 	return c, nil
 }

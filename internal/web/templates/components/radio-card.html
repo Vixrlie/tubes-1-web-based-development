@@ -1,0 +1,35 @@
+{{/*
+Grup pilihan berbentuk kartu (radio): judul tebal + keterangan kecil, kartu terpilih berbingkai biru.
+Memakai <input type="radio"> asli, jadi bisa dipilih dengan keyboard (panah) dan ikut form.
+
+{{template `radio-card-group` (dict `Legend` `Level akses` `Name` `level` `ID` `level` `Value` `view` `Options`
+.LevelChoices)}}
+
+Parameter:
+Legend teks judul grup (tampil di atas kartu)
+Name name radio. WAJIB: ini yang membuat radio saling meniadakan. Kalau grup berada di luar
+<form>, nilainya tidak ikut terkirim (dipakai begitu di pop up "Tambah Database")
+    ID awalan id tiap radio (<ID>-<Value>)
+            Value nilai terpilih awal (kosong -> pilihan pertama)
+            Options daftar []web.RadioOption: Value, Label, Description (lihat modal.go)
+
+            CATATAN: string di dalam tag HTML pakai backtick (`...`), lihat button.html.
+            */}}
+
+            {{define "radio-card-group"}}
+            {{- $sel := .Value}}{{if and (not $sel) .Options}}{{with index .Options 0}}{{$sel = .Value}}{{end}}{{end}}
+            <fieldset class="radio-cards">
+                <legend class="input__label radio-cards__legend">{{.Legend}}</legend>
+                {{- range .Options}}
+                <label class="radio-card" for="{{$.ID}}-{{.Value}}">
+                    <input class="radio-card__input" type="radio" id="{{$.ID}}-{{.Value}}" name="{{$.Name}}"
+                        value="{{.Value}}" {{if eq .Value $sel}} checked{{end}}>
+                    <span class="radio-card__mark" aria-hidden="true"></span>
+                    <span class="radio-card__text">
+                        <span class="radio-card__label">{{.Label}}</span>
+                        {{- with .Description}}<span class="radio-card__desc">{{.}}</span>{{end}}
+                    </span>
+                </label>
+                {{- end}}
+            </fieldset>
+            {{end}}

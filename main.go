@@ -11,10 +11,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/access"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/admin"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/config"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/db"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/dbm"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 	"github.com/Vixrlie/tubes-1-web-based-development/migrations"
@@ -72,21 +74,51 @@ func run() error {
 	authHandlers := auth.NewHandlers(userStore, sessions, renderer, cfg.CookieSecure)
 
 	adminUsers := admin.NewPGUserStore(pool)
+
+	// Akses database per group + registry pool target untuk route /databases/*.
+	accessPolicy := access.NewPolicy(access.NewPGLevelSource(pool))
+	registry := dbm.NewURLRegistry(pool)
+	defer registry.Close()
+	connStore := admin.NewPGConnectionStore(pool)
+	groupStore := admin.NewPGGroupStore(pool)
+	connLister := admin.NewPGConnectionLister(pool)
+	migrationStore := dbm.NewPGMigrationStore(pool)
+	dbmHandlers := dbm.NewHandlers(dbm.Config{
+		Platform:   pool,
+		Policy:     accessPolicy,
+		Registry:   registry,
+		Renderer:   renderer,
+		Migrations: migrationStore,
+	})
+
+	// Mode developing
+	devMode := os.Getenv("DEV_COMPONENTS") == "1"
 	r := web.NewRouter()
 
-	// Rute publik: belum ada session (login punya perlindungan Origin sendiri).
 	authHandlers.PublicRoutes(r)
 
-	// Rute terlindungi: session wajib valid, lalu token CSRF untuk request
-	// pengubah state. Fitur lain (viewer, migration, admin) dipasang di grup ini.
+	if devMode {
+		web.DevRoutes{R: renderer}.Routes(r)
+	}
+
+	// Rute protected
 	r.Group(func(r chi.Router) {
 		r.Use(auth.AuthMiddleware(auth.NewSessionValidator(sessions), cfg.CookieSecure))
 		r.Use(auth.CSRFProtect)
 
 		authHandlers.ProtectedRoutes(r)
-		admin.NewHandlers(
+		dbmHandlers.Routes(r)
+
+		adminOpts := []admin.Option{
 			admin.WithUserAdmin(adminUsers, sessions, renderer),
-		).Routes(r)
+			admin.WithGroupAdmin(groupStore, adminUsers, connLister, sessions, renderer),
+			admin.WithDashboard(adminUsers, groupStore, connLister, renderer),
+		}
+		if !devMode {
+			adminOpts = append(adminOpts,
+				admin.WithConnectionAdmin(connStore, renderer, registry, sessions))
+		}
+		admin.NewHandlers(adminOpts...).Routes(r)
 	})
 
 	srv := &http.Server{

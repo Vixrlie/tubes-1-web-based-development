@@ -1,0 +1,82 @@
+/* Kerangka halaman: header (sticky) + [sidebar | konten] */
+:root {
+    --sidebar-w: 16rem;
+    --shell-pad-y: var(--space-6);
+}
+
+.app-shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-6);
+    padding: var(--shell-pad-y) 1.75rem var(--shell-pad-y) 2.8125rem;
+}
+
+/* halaman tanpa sidebar (login, dll) */
+.app-shell--solo {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.app-shell__main {
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .app-shell {
+        grid-template-columns: minmax(0, 1fr);
+        padding-inline: var(--space-4);
+    }
+}
+
+
+:root {
+    --page-bg: linear-gradient(to bottom right, var(--color-primary-50) 0%, var(--color-primary-200) 100%);
+}
+
+:root[data-theme="dark"] {
+    --page-bg: var(--color-bg);
+}
+
+body {
+    min-height: 100vh;
+    background: var(--page-bg) fixed;
+}
+
+/* tumpukan vertikal dengan jarak seragam (mis. beberapa kartu di satu halaman) */
+.stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+}
+
+/* varian rapat (mis. tabs + kartu di bawahnya) */
+.stack--sm {
+    gap: var(--space-3);
+}
+
+/* kartu berdampingan: 1 item = penuh, 2+ = bagi rata; turun ke bawah kalau sempit */
+.split {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+    gap: var(--space-4);
+    align-items: stretch;
+}
+
+/* kartu berdampingan tapi tinggi sesuai isi masing-masing (tidak disamakan) */
+.split--start {
+    align-items: start;
+}
+
+/* Action bar melayang berada di kolom konten, tepat di sebelah kanan sidebar
+   (padding kiri shell + lebar sidebar + gap; padding kanan sama dengan shell). */
+.app-shell:not(.app-shell--solo) {
+    --action-bar-left: calc(2.8125rem + var(--sidebar-w) + var(--space-6));
+    --action-bar-right: 1.75rem;
+}
+
+@media (max-width: 768px) {
+    .app-shell:not(.app-shell--solo) {
+        --action-bar-left: var(--space-4);
+        --action-bar-right: var(--space-4);
+    }
+}

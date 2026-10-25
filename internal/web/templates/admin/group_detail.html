@@ -1,0 +1,122 @@
+{{/*
+Halaman Detail Grup: kartu Anggota + kartu Akses Database. Dua mode dalam satu template:
+lihat (Editor == nil) dan ubah akses (Editor != nil, lengkap dengan action bar).
+Pop up: "Tambah Anggota" (AddMembers != nil) dan "Tambah Database" (di dalam access-editor).
+Data: web.GroupDetailPage (lihat groups.go)
+*/}}
+{{define "content"}}
+<div {{if .Editor}}class="has-action-bar" {{end}}>
+    {{template `page-header` .PageHeader}}
+
+    {{- with .DeleteAction}}
+    {{/* Pop up konfirmasi hapus group: ketik nama group + centang persetujuan
+         (scr10); tombol di PageHeader membukanya lewat data-modal-open. */}}
+    <dialog class="modal confirm-delete-modal" id="delete-group-modal"
+        aria-labelledby="delete-group-modal-title">
+        <div class="modal__panel">
+            {{template `modal-head` (dict `ID` `delete-group-modal` `Title` (printf `Hapus group %s` $.GroupName))}}
+            <form class="modal__form" method="post" action="{{.}}" data-modal-reset>
+                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                <div class="modal__body">
+                    <p class="confirm-delete-modal__text">Menghapus group mencabut seluruh akses
+                        database dari group ini. Hak dari group lain tetap berlaku.</p>
+                    <div class="input">
+                        <label class="input__label" for="del-grp-name">Ketik {{$.GroupName}} untuk konfirmasi</label>
+                        <div class="input__box">
+                            <input class="input__control" id="del-grp-name" type="text" autocomplete="off"
+                                data-expected="{{$.GroupName}}" placeholder="{{$.GroupName}}">
+                        </div>
+                    </div>
+                    <p class="card__note">Nama harus sama persis dengan nama group.</p>
+                    <p><label><input type="checkbox" id="del-grp-agree">
+                        Saya memahami akses dari {{$.GroupName}} akan dicabut.</label></p>
+                </div>
+                <div class="modal__foot">
+                    {{template `button` (dict `Label` `Batal` `Variant` `secondary` `Attrs` (attr `data-modal-close`))}}
+                    {{template `button` (dict `Label` `Ya, Hapus Group` `Variant` `soft-danger` `Type` `submit`
+                        `State` `disabled` `ID` `del-grp-submit`)}}
+                </div>
+            </form>
+        </div>
+    </dialog>
+    {{- end}}
+
+    {{/* Pop up konfirmasi keluarkan anggota (scr10: konfirmasi diperlukan sebelum
+         menghapus anggota). Aksi form diisi dari data-form-action tombol baris. */}}
+    <dialog class="modal confirm-delete-modal" id="remove-member-modal"
+        aria-labelledby="remove-member-modal-title">
+        <div class="modal__panel">
+            {{template `modal-head` (dict `ID` `remove-member-modal` `Title` `Keluarkan anggota`)}}
+            <form class="modal__form" method="post" id="remove-member-form" data-modal-reset>
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div class="modal__body">
+                    <p class="confirm-delete-modal__text">Keluarkan <strong id="rm-subject">anggota</strong>
+                        dari grup ini?</p>
+                    <p class="card__note">Dampak: akses efektif dihitung ulang dari group lain yang
+                        masih diikuti. Konfirmasi diperlukan sebelum menghapus anggota.</p>
+                </div>
+                <div class="modal__foot">
+                    {{template `button` (dict `Label` `Batal` `Variant` `secondary` `Attrs` (attr `data-modal-close`))}}
+                    {{template `button` (dict `Label` `Ya, Keluarkan` `Variant` `soft-danger` `Type` `submit` `ID` `rm-submit`)}}
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <div class="split split--start">
+        {{template `list-card` .Members}}
+        {{- if .Editor}}
+        {{template `access-editor` .Editor}}
+        {{- else}}
+        {{template `list-card` .Access}}
+        {{- end}}
+    </div>
+
+    {{- with .AddMembers}}
+    {{template `add-members-modal` .}}
+    {{- end}}
+
+    {{- with .Editor}}
+    {{template `action-bar` (dict `Message` .Message `ID` `access-bar` `Hidden` true `CancelHref` .CancelHref
+    `SubmitAttrs`
+    (attr `form="access-form"`))}}
+    {{- end}}
+
+    <script>
+        (function () {
+            // Validasi ketik-nama + persetujuan sebelum tombol hapus group aktif.
+            var name = document.getElementById('del-grp-name'),
+                agree = document.getElementById('del-grp-agree'),
+                submit = document.getElementById('del-grp-submit');
+            if (name && agree && submit) {
+                var sync = function () {
+                    var off = !(name.value.trim() === name.getAttribute('data-expected') && agree.checked);
+                    submit.disabled = off;
+                    submit.classList.toggle('is-disabled', off);
+                };
+                name.addEventListener('input', sync);
+                agree.addEventListener('change', sync);
+                sync();
+            }
+            // Tombol "Keluarkan" per baris mengisi aksi & nama anggota ke dialog
+            // sebelum modal.js membukanya (capture supaya berjalan lebih dulu).
+            document.addEventListener('click', function (e) {
+                var t = e.target.closest('[data-form-action]');
+                if (!t) return;
+                var form = document.getElementById('remove-member-form');
+                if (form) form.setAttribute('action', t.getAttribute('data-form-action'));
+                var subj = document.getElementById('rm-subject');
+                if (subj) subj.textContent = t.getAttribute('data-subject');
+            }, true);
+        })();
+    </script>
+    {{/* Urutan penting: modal.js dulu (buka / tutup pop up), baru JS komponen */}}
+    <script src="/static/js/modal.js" defer></script>
+    {{- if .AddMembers}}
+    <script src="/static/js/add-members.js" defer></script>
+    {{- end}}
+    {{- if .Editor}}
+    <script src="/static/js/access-editor.js" defer></script>
+    {{- end}}
+</div>
+{{end}}

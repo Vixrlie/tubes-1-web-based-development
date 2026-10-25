@@ -1,0 +1,93 @@
+/* Komponen tabel (templates/components/table.html).
+   Semua aturan di-scope ke .table / .table-card supaya <table> polos di
+   halaman lain tidak berubah. Hanya memakai token dari themes.css. */
+
+.table-card {
+    padding: var(--space-6);
+    background: var(--color-surface-raised);
+    border-radius: var(--radius-xl);
+}
+
+/* judul + tag (opsional) sebaris */
+.table-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.table-card__title {
+    margin: 0;
+    font-size: var(--font-size-t5);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+}
+
+/* kalau layar sempit, tabel scroll di dalam kartu, bukan melebarkan halaman */
+.table-card__scroll {
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-family-paragraph);
+}
+
+.table th,
+.table td {
+    padding: var(--space-4) var(--space-3);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.table th {
+    font-size: var(--font-size-p4);
+    font-weight: var(--font-weight-regular);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.table td {
+    font-size: var(--font-size-p3);
+    color: var(--color-text);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.table td.is-bold {
+    font-weight: var(--font-weight-semibold);
+}
+
+.table .is-center {
+    text-align: center;
+}
+
+.table .is-right {
+    text-align: right;
+}
+
+.table td.table__empty {
+    padding: var(--space-8) var(--space-3);
+    text-align: center;
+    color: var(--color-text-muted);
+}
+
+/* header kolom yang bisa diurutkan */
+.table__sort {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: inherit;
+    text-decoration: none;
+}
+
+.table__sort:hover {
+    color: var(--color-text);
+}
+
+.table__sort .icon {
+    width: 0.75rem;
+    height: 0.75rem;
+}

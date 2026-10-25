@@ -1,0 +1,225 @@
+/* Varian : .btn--primary | .btn--secondary | .btn--tertiary
+   State  : (default) | .is-active | .is-disabled   (+ :hover / :active asli)
+   Hanya memakai token semantik dari themes.css.
+   Override per-instance lewat CSS variable (diisi oleh templates/components/button.html):
+     --btn-fill  --btn-fg  --btn-stroke  --btn-padding  --btn-px  --btn-py
+   Kalau variable tidak diset -> jatuh ke nilai default variant/state (--_*). */
+
+.btn {
+    /* default (diganti per variant/state di bawah) */
+    --_fill: transparent;
+    --_fg: var(--color-text);
+    --_stroke: transparent;
+    --_px: var(--space-6);
+    --_py: var(--space-2);
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--btn-padding, var(--btn-py, var(--_py)) var(--btn-px, var(--_px)));
+    background: var(--btn-fill, var(--_fill));
+    color: var(--btn-fg, var(--_fg));
+    border: 1.5px solid var(--btn-stroke, var(--_stroke));
+    border-radius: var(--radius-full);
+    font-family: var(--font-family-cta);
+    font-size: var(--font-size-p3);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-auto);
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), color var(--transition-fast),
+        border-color var(--transition-fast), filter var(--transition-fast);
+}
+
+.btn .icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex: none;
+}
+
+.btn:focus-visible {
+    box-shadow: var(--focus-ring);
+    border-radius: var(--radius-full);
+}
+
+.btn:link,
+.btn:visited,
+.btn:hover,
+.btn:active,
+.btn:focus-visible {
+    color: var(--btn-fg, var(--_fg));
+    text-decoration: none;
+}
+
+/* Primary (fill) */
+.btn--primary {
+    --_fill: var(--color-primary);
+    --_fg: var(--color-on-primary);
+    --_stroke: var(--color-primary);
+}
+
+.btn--primary:not(.is-disabled):hover {
+    --_fill: var(--color-primary-hover);
+    --_stroke: var(--color-primary-hover);
+}
+
+.btn--primary.is-active,
+.btn--primary:not(.is-disabled):active {
+    --_fill: var(--color-primary-active);
+    --_stroke: var(--color-primary-active);
+}
+
+.btn--primary.is-disabled {
+    --_fill: var(--color-primary-disabled-bg);
+    --_fg: var(--color-primary-disabled-fg);
+    --_stroke: var(--color-primary-disabled-bg);
+}
+
+/* Secondary (outline) */
+.btn--secondary {
+    --_fill: transparent;
+    --_fg: var(--color-text-muted);
+    --_stroke: var(--color-border);
+}
+
+.btn--secondary:not(.is-disabled):hover {
+    --_fill: var(--color-surface);
+    --_stroke: var(--color-border-strong);
+}
+
+.btn--secondary.is-active,
+.btn--secondary:not(.is-disabled):active {
+    --_fill: transparent;
+    --_fg: var(--color-primary);
+    --_stroke: var(--color-primary);
+}
+
+.btn--secondary.is-disabled {
+    --_fg: var(--color-disabled-fg);
+    --_stroke: var(--color-disabled-border);
+}
+
+/* Tertiary (text/link) */
+.btn--tertiary {
+    --_fill: transparent;
+    --_fg: var(--color-link);
+    --_stroke: transparent;
+    --_px: var(--space-3);
+}
+
+.btn--tertiary .btn__label {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+
+.btn--tertiary:not(.is-disabled):hover {
+    --_fg: var(--color-link-hover);
+}
+
+.btn--tertiary.is-active,
+.btn--tertiary:not(.is-disabled):active {
+    --_fg: var(--color-primary-active);
+}
+
+.btn--tertiary.is-disabled {
+    --_fg: var(--color-primary-disabled-fg);
+}
+
+/* Disabled (umum) */
+.btn.is-disabled {
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Custom fill/color/stroke */
+/* Warna hover/active bawaan variant tidak berlaku saat di-override,
+   jadi dibedakan dengan filter supaya tetap ada feedback. */
+.btn--custom:not(.is-disabled):hover {
+    filter: brightness(0.92);
+}
+
+.btn--custom.is-active,
+.btn--custom:not(.is-disabled):active {
+    filter: brightness(0.85);
+}
+
+.btn--custom.is-disabled {
+    opacity: 0.5;
+}
+
+/* Soft danger (aksi kecil destruktif: Keluarkan, Cabut) */
+.btn--soft-danger {
+    --_fill: var(--color-label-error-bg);
+    --_fg: var(--color-label-error-fg);
+    --_stroke: transparent;
+    --_px: var(--space-3);
+    --_py: var(--space-1);
+    font-size: var(--font-size-p4);
+}
+
+.btn--soft-danger:not(.is-disabled):hover {
+    filter: brightness(0.95);
+}
+
+.btn--soft-danger.is-active,
+.btn--soft-danger:not(.is-disabled):active {
+    filter: brightness(0.9);
+}
+
+.btn--soft-danger.is-disabled {
+    opacity: 0.5;
+}
+
+
+/* Outline (garis & teks primary; aksi sekunder yang menonjol) */
+.btn--outline {
+    --_fill: transparent;
+    --_fg: var(--color-primary);
+    --_stroke: var(--color-primary);
+}
+
+.btn--outline:not(.is-disabled):hover {
+    --_fill: var(--color-primary-soft);
+}
+
+.btn--outline.is-active,
+.btn--outline:not(.is-disabled):active {
+    --_fill: var(--color-primary);
+    --_fg: var(--color-on-primary);
+    --_stroke: var(--color-primary);
+}
+
+.btn--outline.is-disabled {
+    --_fg: var(--color-disabled-fg);
+    --_stroke: var(--color-disabled-border);
+}
+
+
+/* ---------- Hover isi penuh (Tes Koneksi, Edit Koneksi) ----------
+   Dipasang lewat Class "btn--hover-fill" bersama variant secondary / outline.
+   Default : latar putih, garis & tulisan sesuai variant.
+   Hover   : latar = warna tulisan, tulisan putih. */
+.btn--hover-fill {
+    --_fill: var(--color-surface-raised);
+}
+
+.btn--hover-fill.btn--secondary {
+    --_fg: var(--color-text-muted);
+    --_stroke: var(--color-text-muted);
+}
+
+.btn--hover-fill:not(.is-disabled):hover {
+    --_fg: var(--color-on-primary);
+}
+
+.btn--hover-fill.btn--secondary:not(.is-disabled):hover {
+    --_fill: var(--color-text-muted);
+    --_stroke: var(--color-text-muted);
+}
+
+.btn--hover-fill.btn--outline:not(.is-disabled):hover {
+    --_fill: var(--color-primary);
+    --_stroke: var(--color-primary);
+}

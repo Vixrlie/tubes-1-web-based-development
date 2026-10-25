@@ -1,0 +1,152 @@
+/* Text style classes (pakai di elemen apa saja) */
+.text-t1,
+.text-t2,
+.text-t3,
+.text-t4,
+.text-t5,
+.text-t6 {
+    font-family: var(--font-family-heading);
+    font-weight: var(--font-weight-semibold);
+    /* asumsi: title = semibold, cek di Figma */
+    line-height: var(--line-height-auto);
+}
+
+.text-t1 {
+    font-size: var(--font-size-t1);
+}
+
+.text-t2 {
+    font-size: var(--font-size-t2);
+}
+
+.text-t3 {
+    font-size: var(--font-size-t3);
+}
+
+.text-t4 {
+    font-size: var(--font-size-t4);
+}
+
+.text-t5 {
+    font-size: var(--font-size-t5);
+}
+
+.text-t6 {
+    font-size: var(--font-size-t6);
+}
+
+.text-p1,
+.text-p2,
+.text-p3,
+.text-p4,
+.text-p5,
+.text-p6 {
+    font-family: var(--font-family-paragraph);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-auto);
+}
+
+.text-p1 {
+    font-size: var(--font-size-p1);
+}
+
+.text-p2 {
+    font-size: var(--font-size-p2);
+}
+
+.text-p3 {
+    font-size: var(--font-size-p3);
+}
+
+.text-p4 {
+    font-size: var(--font-size-p4);
+}
+
+.text-p5 {
+    font-size: var(--font-size-p5);
+}
+
+.text-p6 {
+    font-size: var(--font-size-p6);
+}
+
+/* Heading default (elemen semantik) */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-family-heading);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-auto);
+    color: var(--color-text);
+}
+
+h1 {
+    font-size: var(--font-size-t1);
+}
+
+/* 22 */
+h2 {
+    font-size: var(--font-size-t3);
+}
+
+/* 20 */
+h3 {
+    font-size: var(--font-size-t2);
+}
+
+/* 18 */
+h4 {
+    font-size: var(--font-size-t4);
+}
+
+/* 16 */
+h5 {
+    font-size: var(--font-size-t5);
+}
+
+/* 14 */
+h6 {
+    font-size: var(--font-size-t6);
+}
+
+/* 12 */
+
+/* Modifier */
+.text-muted {
+    color: var(--color-text-muted);
+}
+
+.text-subtle {
+    color: var(--color-text-subtle);
+}
+
+.text-danger {
+    color: var(--color-error-text);
+}
+
+.text-success {
+    color: var(--color-success-text);
+}
+
+.font-regular {
+    font-weight: var(--font-weight-regular);
+}
+
+.font-medium {
+    font-weight: var(--font-weight-medium);
+}
+
+.font-semibold {
+    font-weight: var(--font-weight-semibold);
+}
+
+.font-bold {
+    font-weight: var(--font-weight-bold);
+}
+
+.font-mono {
+    font-family: var(--font-family-mono);
+}

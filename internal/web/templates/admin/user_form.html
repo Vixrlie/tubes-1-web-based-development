@@ -1,50 +1,203 @@
+{{/*
+Halaman Form User: buat (/admin/users/new) atau ubah (/admin/users/{id}),
+lengkap dengan kartu Status akun, Reset password, dan Hapus user.
+Data: admin.userFormPage (lihat admin/users_handler.go):
+.IsNew .IsSelf .FormAction .ID .Username .FullName .Email .IsPlatformAdmin
+.IsActive .Error .Notice .CSRFToken .User .Nav .SideActive
+
+CATATAN: Go template melarang (if ...) di dalam pipeline berkurung (dict ...),
+jadi nilai kondisional dihitung dulu ke variabel $.
+*/}}
 {{define "content"}}
-<p><a href="/admin/users">&larr; Daftar user</a></p>
-{{if .IsNew}}<h1>Buat User</h1>{{else}}<h1>Ubah User: {{.Username}}</h1>{{end}}
-{{if .Notice}}<p role="status">{{.Notice}}</p>{{end}}
-{{if .Error}}<p role="alert" class="error">{{.Error}}</p>{{end}}
+{{- $title := printf `Ubah User: %s` .Username -}}
+{{- $crumb := .Username -}}
+{{- $state := `default` -}}
+{{- $role := `off` -}}
+{{- $roleHelper := `Admin mengelola platform (user, grup, koneksi), bukan akses database.` -}}
+{{- if .IsNew -}}
+    {{- $title = `Buat User` -}}
+    {{- $crumb = `Baru` -}}
+{{- end -}}
+{{- if .IsPlatformAdmin -}}{{- $role = `on` -}}{{- end -}}
+{{- if .IsSelf -}}
+    {{- $state = `disabled` -}}
+    {{- $roleHelper = `Tidak bisa mengubah peran sendiri.` -}}
+{{- end -}}
+{{template `page-header` (dict
+    `Title` $title
+    `Crumbs` (list
+        (dict `Label` `Admin` `Href` `/admin`)
+        (dict `Label` `Daftar User` `Href` `/admin/users`)
+        (dict `Label` $crumb)))}}
 
-<form method="post" action="{{.FormAction}}">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    {{if .IsNew}}
-    <p><label>Username <input name="username" value="{{.Username}}" required autocomplete="off"></label></p>
-    <p><label>Password <input type="password" name="password" required autocomplete="new-password"></label></p>
+<div class="stack">
+    {{- with .Notice}}
+    <section class="card">
+        {{template `card-head` (dict `Title` `Info`)}}
+        <p role="status">{{.}}</p>
+    </section>
+    {{- end}}
+    {{- with .Error}}
+    <section class="card">
+        {{template `card-head` (dict `Title` `Gagal`)}}
+        <p role="alert">{{.}}</p>
+    </section>
+    {{- end}}
+
+    {{/* --- Form utama: data akun --- */}}
+    <form class="card" method="post" action="{{.FormAction}}">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        {{template `card-head` (dict `Title` `Detail akun` `Actions` (list
+            (dict `Label` `Simpan` `Type` `submit`)
+            (dict `Label` `Batal` `Variant` `secondary` `Href` `/admin/users`)))}}
+        {{if .IsNew}}
+        {{template `input` (dict `Label` `Username` `Name` `username` `Placeholder` `budi.santoso`
+            `Helper` `Wajib diisi dan unik di platform.` `Required` true
+            `Attrs` (attr `autocomplete="off"`))}}
+        {{template `input` (dict `Label` `Password awal` `Name` `password` `Type` `password`
+            `Helper` `Wajib diisi, minimal 8 karakter.` `Required` true
+            `Attrs` (attr `autocomplete="new-password"`))}}
+        {{end}}
+        {{template `input` (dict `Label` `Nama lengkap` `Name` `full_name` `Value` .FullName
+            `Placeholder` `Budi Santoso`)}}
+        {{template `input` (dict `Label` `Email` `Name` `email` `Type` `email` `Value` .Email
+            `Placeholder` `budi@contoh.test` `Helper` `Opsional; harus unik bila diisi.`)}}
+        {{template `dropdown` (dict `Label` `Peran platform` `Name` `is_platform_admin`
+            `Value` $role
+            `Options` (list
+                (dict `Value` `off` `Label` `User biasa`)
+                (dict `Value` `on` `Label` `Administrator platform`))
+            `State` $state
+            `Helper` $roleHelper)}}
+    </form>
+
+    {{if not .IsNew}}
+    {{/* --- Kartu status akun: nonaktifkan / aktifkan --- */}}
+    {{if .IsActive}}
+    <form class="card" method="post" action="/admin/users/{{.ID}}/deactivate">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        {{template `card-head` (dict `Title` `Status akun` `Actions` (list
+            (dict `Label` `Nonaktifkan` `Variant` `soft-danger` `Type` `button` `State` $state
+                `Attrs` (attr `data-modal-open="toggle-user-modal" aria-controls="toggle-user-modal"`))))}}
+        <p>Akun <strong>Aktif</strong>: user bisa masuk dan sesi berjalan normal.
+            Menonaktifkan mengakhiri seluruh session user tersebut.</p>
+        {{if .IsSelf}}<p class="card__note">Anda tidak bisa menonaktifkan akun sendiri.</p>{{end}}
+    </form>
+    {{else}}
+    <form class="card" method="post" action="/admin/users/{{.ID}}/activate">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        {{template `card-head` (dict `Title` `Status akun` `Actions` (list
+            (dict `Label` `Aktifkan kembali` `Type` `button`
+                `Attrs` (attr `data-modal-open="toggle-user-modal" aria-controls="toggle-user-modal"`))))}}
+        <p>Akun <strong>Nonaktif</strong>: user tidak bisa masuk dan sesi lamanya sudah
+            dicabut saat dinonaktifkan.</p>
+    </form>
     {{end}}
-    <p><label>Nama lengkap <input name="full_name" value="{{.FullName}}"></label></p>
-    <p><label>Email <input type="email" name="email" value="{{.Email}}"></label></p>
-    <p>
-        <label><input type="checkbox" name="is_platform_admin" {{if .IsPlatformAdmin}}checked{{end}} {{if
-                .IsSelf}}disabled{{end}}> Platform Admin</label>
-        {{if .IsSelf}}<small>(tidak bisa mengubah peran sendiri)</small>{{end}}
-    </p>
-    <button type="submit">Simpan</button>
-</form>
 
-{{if not .IsNew}}
-<hr>
-<h2>Status akun: {{if .IsActive}}Aktif{{else}}Nonaktif{{end}}</h2>
-{{if .IsActive}}
-{{if .IsSelf}}
-<p>Anda tidak bisa menonaktifkan akun sendiri.</p>
-{{else}}
-<form method="post" action="/admin/users/{{.ID}}/deactivate">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    <button type="submit">Nonaktifkan user</button>
-</form>
-{{end}}
-{{else}}
-<form method="post" action="/admin/users/{{.ID}}/activate">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    <button type="submit">Aktifkan kembali</button>
-</form>
-{{end}}
+    {{/* --- Kartu reset password --- */}}
+    <form class="card" id="reset-password-form" method="post" action="/admin/users/{{.ID}}/password">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        {{template `card-head` (dict `Title` `Reset password` `Actions` (list
+            (dict `Label` `Reset Password` `Type` `button`
+                `Attrs` (attr `data-modal-open="reset-password-modal" aria-controls="reset-password-modal"`))))}}
+        {{template `input` (dict `Label` `Password baru` `Name` `new_password` `Type` `password`
+            `Helper` `Minimal 8 karakter; semua session user dicabut setelah reset.`
+            `Required` true `Attrs` (attr `autocomplete="new-password"`))}}
+    </form>
 
-<hr>
-<h2>Reset password</h2>
-<form method="post" action="/admin/users/{{.ID}}/password">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    <p><label>Password baru <input type="password" name="new_password" required autocomplete="new-password"></label></p>
-    <button type="submit">Reset password</button>
-</form>
-{{end}}
+    {{/* --- Kartu hapus permanen --- */}}
+    <section class="card">
+        {{template `card-head` (dict `Title` `Hapus user` `Actions` (list
+            (dict `Label` `Hapus User` `Variant` `soft-danger` `Type` `button` `State` $state
+                `Attrs` (attr `data-modal-open="delete-user-modal" aria-controls="delete-user-modal"`))))}}
+        <p>Hapus permanen hanya untuk user tanpa riwayat migration; selain itu gunakan
+            Nonaktifkan. Admin aktif terakhir tidak bisa dihapus.</p>
+        {{if .IsSelf}}<p class="card__note">Anda tidak bisa menghapus akun sendiri.</p>{{end}}
+    </section>
+
+    <dialog class="modal confirm-delete-modal" id="delete-user-modal" aria-labelledby="delete-user-modal-title">
+        <div class="modal__panel">
+            {{template `modal-head` (dict `ID` `delete-user-modal` `Title` (printf `Hapus user %s` .Username))}}
+            <form class="modal__form" method="post" action="/admin/users/{{.ID}}/delete">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div class="modal__body">
+                    <p class="confirm-delete-modal__text">Yakin ingin menghapus user ini? Tindakan ini permanen dan tidak dapat dibatalkan.</p>
+                    <dl class="confirm-delete-modal__meta" role="list">
+                        <div class="confirm-delete-modal__meta-row">
+                            <dt>Username:</dt>
+                            <dd>{{.Username}}</dd>
+                        </div>
+                        <div class="confirm-delete-modal__meta-row">
+                            <dt>Nama:</dt>
+                            <dd>{{or .FullName `-`}}</dd>
+                        </div>
+                        <div class="confirm-delete-modal__meta-row">
+                            <dt>Email:</dt>
+                            <dd>{{or .Email `-`}}</dd>
+                        </div>
+                    </dl>
+                </div>
+                <div class="modal__foot">
+                    {{template `button` (dict `Label` `Batal` `Variant` `secondary` `Attrs` (attr `data-modal-close`))}}
+                    {{template `button` (dict `Label` `Ya, Hapus User` `Fill` `var(--color-danger)` `Color` `var(--color-on-danger)` `Stroke` `var(--color-danger)` `Type` `submit` `State` $state)}}
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    {{/* Pop up konfirmasi nonaktifkan/aktifkan (aksi destruktif: session dicabut). */}}
+    <dialog class="modal confirm-delete-modal" id="toggle-user-modal"
+        aria-labelledby="toggle-user-modal-title">
+        <div class="modal__panel">
+            {{if .IsActive}}
+            {{template `modal-head` (dict `ID` `toggle-user-modal` `Title` (printf `Nonaktifkan user %s` .Username))}}
+            <form class="modal__form" method="post" action="/admin/users/{{.ID}}/deactivate" data-modal-reset>
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div class="modal__body">
+                    <p class="confirm-delete-modal__text">Menonaktifkan mengakhiri seluruh session
+                        user ini dan menghentikan akses masuk sampai diaktifkan kembali.</p>
+                    <p class="card__note">Akun, group, dan riwayat tetap tersimpan.</p>
+                </div>
+                <div class="modal__foot">
+                    {{template `button` (dict `Label` `Batal` `Variant` `secondary` `Attrs` (attr `data-modal-close`))}}
+                    {{template `button` (dict `Label` `Ya, Nonaktifkan` `Variant` `soft-danger` `Type` `submit` `ID` `toggle-submit`)}}
+                </div>
+            </form>
+            {{else}}
+            {{template `modal-head` (dict `ID` `toggle-user-modal` `Title` (printf `Aktifkan kembali user %s` .Username))}}
+            <form class="modal__form" method="post" action="/admin/users/{{.ID}}/activate" data-modal-reset>
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div class="modal__body">
+                    <p class="confirm-delete-modal__text">User ini akan bisa masuk kembali dengan
+                        kredensialnya. Group dan hak akses tetap seperti semula.</p>
+                </div>
+                <div class="modal__foot">
+                    {{template `button` (dict `Label` `Batal` `Variant` `secondary` `Attrs` (attr `data-modal-close`))}}
+                    {{template `button` (dict `Label` `Ya, Aktifkan` `Type` `submit` `ID` `toggle-submit`)}}
+                </div>
+            </form>
+            {{end}}
+        </div>
+    </dialog>
+
+    {{/* Pop up konfirmasi reset password; tombol submit memakai atribut form=
+         ke kartu Reset password sehingga password yang diisikan ikut terkirim. */}}
+    <dialog class="modal confirm-delete-modal" id="reset-password-modal"
+        aria-labelledby="reset-password-modal-title">
+        <div class="modal__panel">
+            {{template `modal-head` (dict `ID` `reset-password-modal` `Title` (printf `Reset password %s` .Username))}}
+            <div class="modal__body">
+                <p class="confirm-delete-modal__text">Password baru akan disimpan dan seluruh
+                    session user ini dicabut.</p>
+                <p class="card__note">Pastikan kolom Password baru pada kartu Reset password sudah diisi.</p>
+            </div>
+            <div class="modal__foot">
+                {{template `button` (dict `Label` `Batal` `Variant` `secondary` `Attrs` (attr `data-modal-close`))}}
+                {{template `button` (dict `Label` `Ya, Reset Password` `Type` `submit` `ID` `reset-submit`
+                    `Attrs` (attr `form="reset-password-form"`))}}
+            </div>
+        </div>
+    </dialog>
+    {{end}}
+</div>
 {{end}}

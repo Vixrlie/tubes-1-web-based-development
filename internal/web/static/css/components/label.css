@@ -1,0 +1,44 @@
+/* Varian : .label--success | --error | --warning | --info | --neutral
+   Hanya memakai token semantik dari themes.css. */
+
+.label {
+    --_bg: var(--color-label-neutral-bg);
+    --_fg: var(--color-label-neutral-fg);
+
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    background: var(--_bg);
+    color: var(--_fg);
+    border-radius: var(--radius-full);
+    font-family: var(--font-family-cta);
+    font-size: var(--font-size-p4);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-auto);
+    white-space: nowrap;
+}
+
+.label--success {
+    --_bg: var(--color-label-success-bg);
+    --_fg: var(--color-label-success-fg);
+}
+
+.label--error {
+    --_bg: var(--color-label-error-bg);
+    --_fg: var(--color-label-error-fg);
+}
+
+.label--warning {
+    --_bg: var(--color-label-warning-bg);
+    --_fg: var(--color-label-warning-fg);
+}
+
+.label--info {
+    --_bg: var(--color-label-info-bg);
+    --_fg: var(--color-label-info-fg);
+}
+
+.label--neutral {
+    --_bg: var(--color-label-neutral-bg);
+    --_fg: var(--color-label-neutral-fg);
+}
