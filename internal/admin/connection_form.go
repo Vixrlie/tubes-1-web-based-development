@@ -56,7 +56,6 @@ func connectionFields(row *ConnectionRow) []map[string]any {
 	}
 }
 
-// connectionFormActions = tombol Simpan + Batal untuk halaman form.
 func connectionFormActions(cancelHref string) []web.Button {
 	return []web.Button{
 		{Label: "Simpan", Type: "submit"},
@@ -99,7 +98,7 @@ func connectionInput(r *http.Request, requirePassword bool) (ConnectionInput, st
 	return in, ""
 }
 
-// --- tambah -----------------------------------------------------------------
+// Tambah
 
 // newFormPage membangun halaman form "Koneksi Baru" (errMsg untuk galat validasi).
 func (c *connectionHandlers) newFormPage(r *http.Request, errMsg string) connectionFormPage {
@@ -152,7 +151,7 @@ func (c *connectionHandlers) create(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/connections/"+strconv.FormatInt(row.ID, 10), http.StatusSeeOther)
 }
 
-// --- ubah -------------------------------------------------------------------
+// Ubah
 
 // editFormPage membangun halaman form "Ubah Koneksi" (errMsg untuk galat validasi).
 func (c *connectionHandlers) editFormPage(r *http.Request, row ConnectionRow, errMsg string) connectionFormPage {

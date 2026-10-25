@@ -157,7 +157,7 @@ func redirectUser(w http.ResponseWriter, r *http.Request, id int64, code string)
 	http.Redirect(w, r, "/admin/users/"+strconv.FormatInt(id, 10)+"?status="+code, http.StatusSeeOther)
 }
 
-// ---- daftar ----
+// Daftar
 
 func (u *userHandlers) list(w http.ResponseWriter, r *http.Request) {
 	users, err := u.store.List(r.Context())
@@ -221,7 +221,7 @@ func (u *userHandlers) list(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ---- buat ----
+// Buat
 
 func (u *userHandlers) newForm(w http.ResponseWriter, r *http.Request) {
 	me, csrf := u.base(r)
@@ -269,7 +269,7 @@ func (u *userHandlers) create(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ---- ubah ----
+// Ubah
 
 func (u *userHandlers) editForm(w http.ResponseWriter, r *http.Request) {
 	t, ok := u.load(w, r)
@@ -325,7 +325,7 @@ func (u *userHandlers) update(w http.ResponseWriter, r *http.Request) {
 	redirectUser(w, r, t.ID, "updated")
 }
 
-// ---- nonaktifkan / aktifkan ----
+// Nonaktifkan / aktifkan
 
 func (u *userHandlers) deactivate(w http.ResponseWriter, r *http.Request) {
 	t, ok := u.load(w, r)
@@ -394,7 +394,7 @@ func (u *userHandlers) delete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/users?status=deleted", http.StatusSeeOther)
 }
 
-// ---- reset password ----
+// Reset password
 
 func (u *userHandlers) resetPassword(w http.ResponseWriter, r *http.Request) {
 	t, ok := u.load(w, r)

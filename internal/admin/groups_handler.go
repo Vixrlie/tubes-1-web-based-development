@@ -385,10 +385,8 @@ func (g *groupHandlers) removeMember(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/groups/"+strconv.FormatInt(grp.ID, 10), http.StatusSeeOther)
 }
 
-// saveAccess menerima perubahan batch dari access-editor (format fe-components).
-// Field form: access:<connID> (level baru), remove (ID dicabut, boleh berulang),
-// serta pasangan add_db/add_access. Penurunan level atau pencabutan mencabut
-// session semua anggota group.
+// saveAccess memproses batch access-editor: access:<connID> (level baru), remove
+// (boleh berulang), pasangan add_db/add_access. Penurunan/pencabutan mencabut session anggota.
 func (g *groupHandlers) saveAccess(w http.ResponseWriter, r *http.Request) {
 	grp, ok := g.loadGroup(w, r)
 	if !ok {
