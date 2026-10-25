@@ -234,9 +234,7 @@ func (g *groupHandlers) renderDetail(w http.ResponseWriter, r *http.Request, sta
 	g.render(w, status, "admin/group_detail.html", page)
 }
 
-// revokeUsers mencabut session semua user terdampak perubahan akses.
-// User yang sedang melakukan aksi dilewati supaya admin tidak ikut ter-logout
-// saat mengubah grup yang di dalamnya ia sendiri menjadi anggota.
+// revokeUsers cabut session semua affected user kecuali current admin
 func (g *groupHandlers) revokeUsers(ctx context.Context, ids []int64) error {
 	me, _ := auth.UserFromContext(ctx)
 	for _, id := range ids {
@@ -256,6 +254,24 @@ func (g *groupHandlers) revokeGroupMembers(ctx context.Context, groupID int64) e
 		return err
 	}
 	return g.revokeUsers(ctx, ids)
+}
+
+// forceRotateUsers tndain session user supaya token rotate di next req w/o logout
+func (g *groupHandlers) forceRotateUsers(ctx context.Context, ids []int64) error {
+	for _, id := range ids {
+		if err := g.revoker.ForceRotateSessionsByUser(ctx, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (g *groupHandlers) forceRotateGroupMembers(ctx context.Context, groupID int64) error {
+	ids, err := g.store.MemberIDs(ctx, groupID)
+	if err != nil {
+		return err
+	}
+	return g.forceRotateUsers(ctx, ids)
 }
 
 // list menampilkan tabel kelola group format fe-components.
@@ -360,9 +376,16 @@ func (g *groupHandlers) addMember(w http.ResponseWriter, r *http.Request) {
 		}
 		added = append(added, userID)
 	}
-	if err := g.revokeUsers(r.Context(), added); err != nil {
-		g.serverError(w, "cabut session anggota baru", err)
+	grants, err := g.store.ListGrants(r.Context(), grp.ID)
+	if err != nil {
+		g.serverError(w, "ambil grant group", err)
 		return
+	}
+	if len(grants) > 0 {
+		if err := g.forceRotateUsers(r.Context(), added); err != nil {
+			g.serverError(w, "tandai rotasi session anggota baru", err)
+			return
+		}
 	}
 	http.Redirect(w, r, "/admin/groups/"+strconv.FormatInt(grp.ID, 10), http.StatusSeeOther)
 }
@@ -392,8 +415,16 @@ func (g *groupHandlers) removeMember(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/groups/"+strconv.FormatInt(grp.ID, 10), http.StatusSeeOther)
 }
 
-// saveAccess memproses batch access-editor: access:<connID> (level baru), remove
-// (boleh berulang), pasangan add_db/add_access. Penurunan/pencabutan mencabut session anggota.
+type grantChange int
+
+const (
+	grantUnchanged grantChange = iota
+	grantUpgraded
+	grantDowngraded
+)
+
+// saveAccess memproses batch access-editor 
+// privilege esc = rotasi session, turun = cabut session.
 func (g *groupHandlers) saveAccess(w http.ResponseWriter, r *http.Request) {
 	grp, ok := g.loadGroup(w, r)
 	if !ok {
@@ -406,21 +437,29 @@ func (g *groupHandlers) saveAccess(w http.ResponseWriter, r *http.Request) {
 	validLevel := func(l access.Action) bool {
 		return l == access.ActionView || l == access.ActionEdit
 	}
-	apply := func(connID int64, level access.Action) (bool, error) {
+	apply := func(connID int64, level access.Action) (grantChange, error) {
 		old, existed, err := g.store.GetGrant(r.Context(), grp.ID, connID)
 		if err != nil {
-			return false, err
+			return grantUnchanged, err
 		}
 		if existed && old == level {
-			return false, nil
+			return grantUnchanged, nil
 		}
 		if err := g.store.SetGrant(r.Context(), grp.ID, connID, level); err != nil {
-			return false, err
+			return grantUnchanged, err
 		}
-		return existed && access.Rank(level) < access.Rank(old), nil
+		switch {
+		case !existed:
+			return grantUpgraded, nil
+		case access.Rank(level) > access.Rank(old):
+			return grantUpgraded, nil
+		default:
+			return grantDowngraded, nil
+		}
 	}
 
 	needsRevoke := false
+	needsRotate := false
 
 	for _, raw := range r.PostForm["remove"] {
 		connID, err := strconv.ParseInt(raw, 10, 64)
@@ -452,7 +491,7 @@ func (g *groupHandlers) saveAccess(w http.ResponseWriter, r *http.Request) {
 			g.renderDetail(w, r, http.StatusBadRequest, "", ErrInvalidLevel.Error())
 			return
 		}
-		downgraded, err := apply(connID, level)
+		change, err := apply(connID, level)
 		if errors.Is(err, ErrConnectionNotFound) || errors.Is(err, ErrGroupNotFound) {
 			http.NotFound(w, r)
 			return
@@ -461,7 +500,10 @@ func (g *groupHandlers) saveAccess(w http.ResponseWriter, r *http.Request) {
 			g.serverError(w, "simpan grant", err)
 			return
 		}
-		if downgraded {
+		switch change {
+		case grantUpgraded:
+			needsRotate = true
+		case grantDowngraded:
 			needsRevoke = true
 		}
 	}
@@ -481,7 +523,7 @@ func (g *groupHandlers) saveAccess(w http.ResponseWriter, r *http.Request) {
 			g.renderDetail(w, r, http.StatusBadRequest, "", ErrInvalidLevel.Error())
 			return
 		}
-		downgraded, err := apply(connID, level)
+		change, err := apply(connID, level)
 		if errors.Is(err, ErrConnectionNotFound) || errors.Is(err, ErrGroupNotFound) {
 			http.NotFound(w, r)
 			return
@@ -490,7 +532,10 @@ func (g *groupHandlers) saveAccess(w http.ResponseWriter, r *http.Request) {
 			g.serverError(w, "simpan grant", err)
 			return
 		}
-		if downgraded {
+		switch change {
+		case grantUpgraded:
+			needsRotate = true
+		case grantDowngraded:
 			needsRevoke = true
 		}
 	}
@@ -498,6 +543,11 @@ func (g *groupHandlers) saveAccess(w http.ResponseWriter, r *http.Request) {
 	if needsRevoke {
 		if err := g.revokeGroupMembers(r.Context(), grp.ID); err != nil {
 			g.serverError(w, "cabut session anggota", err)
+			return
+		}
+	} else if needsRotate {
+		if err := g.forceRotateGroupMembers(r.Context(), grp.ID); err != nil {
+			g.serverError(w, "tandai rotasi session anggota", err)
 			return
 		}
 	}

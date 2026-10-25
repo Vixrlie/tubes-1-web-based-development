@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -30,12 +31,13 @@ type connectionHandlers struct {
 	store   ConnectionStore
 	view    connectionView
 	evictor PoolEvictor
+	revoker session.Revoker
 }
 
 // WithConnectionAdmin mengaktifkan halaman kelola koneksi (/admin/connections).
-func WithConnectionAdmin(store ConnectionStore, view connectionView, evictor PoolEvictor) Option {
+func WithConnectionAdmin(store ConnectionStore, view connectionView, evictor PoolEvictor, revoker session.Revoker) Option {
 	return func(h *Handlers) {
-		h.connections = &connectionHandlers{store: store, view: view, evictor: evictor}
+		h.connections = &connectionHandlers{store: store, view: view, evictor: evictor, revoker: revoker}
 	}
 }
 
@@ -252,6 +254,11 @@ func (c *connectionHandlers) remove(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "permintaan tidak valid", http.StatusBadRequest)
 		return
 	}
+	affected, err := c.store.UsersWithAccess(r.Context(), row.ID)
+	if err != nil {
+		c.serverError(w, "ambil user dengan akses", err)
+		return
+	}
 	if err := c.store.Delete(r.Context(), row.ID); err != nil {
 		if errors.Is(err, ErrConnectionNotFound) {
 			http.NotFound(w, r)
@@ -261,5 +268,23 @@ func (c *connectionHandlers) remove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.evict(row.ID)
+	if err := c.revokeUsers(r.Context(), affected); err != nil {
+		c.serverError(w, "cabut session setelah hapus koneksi", err)
+		return
+	}
 	http.Redirect(w, r, "/admin/connections", http.StatusSeeOther)
+}
+
+// revokeUsers cabut session affected users, kecuali current admin
+func (c *connectionHandlers) revokeUsers(ctx context.Context, ids []int64) error {
+	me, _ := auth.UserFromContext(ctx)
+	for _, id := range ids {
+		if me.ID != 0 && id == me.ID {
+			continue
+		}
+		if err := c.revoker.RevokeSessionsByUser(ctx, id); err != nil {
+			return err
+		}
+	}
+	return nil
 }

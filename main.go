@@ -91,21 +91,17 @@ func run() error {
 		Migrations: migrationStore,
 	})
 
-	// Mode dev: DevRoutes memasang redirect /admin/connections -> /dev/connections
-	// (lihat komentar di devpage.go), jadi route asli tidak didaftarkan agar
-	// chi tidak menimpa route ganda di mode dev.
+	// Mode developing
 	devMode := os.Getenv("DEV_COMPONENTS") == "1"
 	r := web.NewRouter()
 
-	// Rute publik: belum ada session (login punya perlindungan Origin sendiri).
 	authHandlers.PublicRoutes(r)
 
-	// Halaman uji komponen (khusus development, tanpa login).
 	if devMode {
 		web.DevRoutes{R: renderer}.Routes(r)
 	}
 
-	// Rute terlindungi: session wajib valid, ...
+	// Rute protected
 	r.Group(func(r chi.Router) {
 		r.Use(auth.AuthMiddleware(auth.NewSessionValidator(sessions), cfg.CookieSecure))
 		r.Use(auth.CSRFProtect)
@@ -120,7 +116,7 @@ func run() error {
 		}
 		if !devMode {
 			adminOpts = append(adminOpts,
-				admin.WithConnectionAdmin(connStore, renderer, registry))
+				admin.WithConnectionAdmin(connStore, renderer, registry, sessions))
 		}
 		admin.NewHandlers(adminOpts...).Routes(r)
 	})

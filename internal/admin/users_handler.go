@@ -10,8 +10,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
-	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 )
 
 type userHandlers struct {
@@ -333,9 +333,15 @@ func (u *userHandlers) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Peran berubah (naik atau turun): session lama tidak boleh membawa hak lama.
+	// naik: rotasi transparan pada next req  
+	// turun: session harus berhenti pake priv sblmny
 	if upd.IsPlatformAdmin != t.IsPlatformAdmin {
-		if err := u.revoker.RevokeSessionsByUser(r.Context(), t.ID); err != nil {
+		if upd.IsPlatformAdmin {
+			if err := u.revoker.ForceRotateSessionsByUser(r.Context(), t.ID); err != nil {
+				u.serverError(w, "tandai rotasi session setelah perubahan peran", err)
+				return
+			}
+		} else if err := u.revoker.RevokeSessionsByUser(r.Context(), t.ID); err != nil {
 			u.serverError(w, "cabut session setelah perubahan peran", err)
 			return
 		}

@@ -59,6 +59,8 @@ type ConnectionStore interface {
 	Create(ctx context.Context, in ConnectionInput, createdBy int64) (ConnectionRow, error)
 	Update(ctx context.Context, id int64, in ConnectionInput) (ConnectionRow, error)
 	Delete(ctx context.Context, id int64) error
+	// UsersWithAccess mengembalikan user yang mendapat akses ke koneksi lewat group.
+	UsersWithAccess(ctx context.Context, id int64) ([]int64, error)
 	// Test membuka koneksi ke tujuan lalu menjalankan SELECT 1.
 	Test(ctx context.Context, id int64) error
 	// TestInput menguji isi form; id > 0 memakai password tersimpan saat password kosong.
@@ -145,6 +147,28 @@ func (s *PGConnectionStore) Update(ctx context.Context, id int64, in ConnectionI
 		return ConnectionRow{}, ErrConnectionNameTaken
 	}
 	return c, err
+}
+
+func (s *PGConnectionStore) UsersWithAccess(ctx context.Context, id int64) ([]int64, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT DISTINCT m.user_id
+		   FROM grants gr
+		   JOIN memberships m ON m.group_id = gr.group_id
+		  WHERE gr.connection_id = $1`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []int64
+	for rows.Next() {
+		var userID int64
+		if err := rows.Scan(&userID); err != nil {
+			return nil, err
+		}
+		out = append(out, userID)
+	}
+	return out, rows.Err()
 }
 
 func (s *PGConnectionStore) Delete(ctx context.Context, id int64) error {
