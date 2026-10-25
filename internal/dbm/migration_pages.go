@@ -149,16 +149,26 @@ func (h *Handlers) migrationsList(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	canEdit := false
+	if user, ok := auth.UserFromContext(r.Context()); ok {
+		allowed, err := h.policy.Can(r.Context(), user.ID, connID, access.ActionEdit)
+		canEdit = err == nil && allowed
+	}
+
+	actions := []web.Button{
+		{Label: "Schema Diff", Variant: "outline", Href: base + "/diff"},
+	}
+	if canEdit {
+		actions = append([]web.Button{{Label: "Migration Baru", IconLeft: "plus", Href: base + "/new"}}, actions...)
+	}
+
 	h.render(w, http.StatusOK, "migrations.html", migrationsPage{
 		Shell: h.migrationShell(r.Context(), connID, name),
 		Crumbs: []web.Crumb{
 			{Label: name, Href: "/databases"},
 			{Label: "Migrasi"},
 		},
-		Actions: []web.Button{
-			{Label: "Migration Baru", IconLeft: "plus", Href: base + "/new"},
-			{Label: "Schema Diff", Variant: "outline", Href: base + "/diff"},
-		},
+		Actions: actions,
 		Table: t,
 	})
 }
