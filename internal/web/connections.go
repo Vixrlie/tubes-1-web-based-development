@@ -2,7 +2,6 @@ package web
 
 import "fmt"
 
-// ---------------------------------------------------------------------------
 // Kelola Koneksi (templates/admin/connections.html)
 //
 //	view.Render(w, "admin/connections.html", web.ConnectionsPage{
@@ -10,7 +9,6 @@ import "fmt"
 //	    PageHeader:  web.ConnectionsHeader("/admin/connections/new"),
 //	    Connections: web.NewConnectionsTable(summaries),
 //	})
-// ---------------------------------------------------------------------------
 
 // Status koneksi sebuah database (hasil tes koneksi terakhir).
 const (
@@ -96,14 +94,12 @@ func NewConnectionsTable(conns []ConnectionSummary) Table {
 	}
 }
 
-// ---------------------------------------------------------------------------
 // Detail Koneksi (templates/admin/connection_detail.html)
 //
 // Dua kartu berdampingan: "Parameter Koneksi" (Params) dan "Group dengan Akses"
 // (Groups, hanya tampil; akses diatur dari halaman Grup). Tiga tombol di kepala
 // halaman: Tes Koneksi (POST TestAction), Edit Koneksi (link EditHref), Hapus
 // (POST DeleteAction, ada konfirmasi).
-// ---------------------------------------------------------------------------
 
 type ConnectionDetailPage struct {
 	Shell      // Nav "admin", SideActive "connections"

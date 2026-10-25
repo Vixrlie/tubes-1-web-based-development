@@ -14,7 +14,6 @@ type PageHeader struct {
 	Actions []Button
 }
 
-// ---------------------------------------------------------------------------
 // Kelola Grup (templates/admin/groups.html)
 //
 //	view.Render(w, "admin/groups.html", web.GroupsPage{
@@ -22,7 +21,6 @@ type PageHeader struct {
 //	    PageHeader: web.GroupsHeader("/admin/groups/new"),
 //	    Groups:     web.NewGroupsTable(summaries),
 //	})
-// ---------------------------------------------------------------------------
 
 type GroupsPage struct {
 	Shell      // Nav "admin", SideActive "groups"
@@ -79,7 +77,6 @@ func NewGroupsTable(groups []GroupSummary) Table {
 	}
 }
 
-// ---------------------------------------------------------------------------
 // Detail Grup (templates/admin/group_detail.html)
 //
 // Satu halaman, dua mode:
@@ -88,7 +85,6 @@ func NewGroupsTable(groups []GroupSummary) Table {
 //
 // Dua pop up: "Tambah Anggota" (AddMembers, kedua mode) dan "Tambah Database" (bagian dari
 // access-editor, hanya mode ubah).
-// ---------------------------------------------------------------------------
 
 type GroupDetailPage struct {
 	Shell      // Nav "admin", SideActive "groups"
