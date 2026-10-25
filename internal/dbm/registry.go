@@ -12,7 +12,7 @@ import (
 var ErrConnNotFound = errors.New("koneksi database target tidak ditemukan")
 
 type Registry interface {
-	Get(ctx context.Context, connID int64) (*pgxpool.Pool, error)
+	Get(ctx context.Context, connID int64) (*Target, error)
 	Evict(connID int64)
 	Close()
 }
@@ -23,7 +23,7 @@ type StubRegistry struct{}
 
 var _ Registry = StubRegistry{}
 
-func (StubRegistry) Get(ctx context.Context, connID int64) (*pgxpool.Pool, error) {
+func (StubRegistry) Get(ctx context.Context, connID int64) (*Target, error) {
 	return nil, ErrConnNotFound
 }
 
@@ -35,127 +35,89 @@ func (StubRegistry) Close() {}
 // tidak menggantung lama saat host tidak merespons.
 const connectTimeout = 5 * time.Second
 
-// PGRegistry menyimpan pool database target per connID. Pool dibuat sekali
-// (lazy) lalu dipakai ulang; Evict menutup pool saat koneksi diubah/dihapus,
-// dan Close menutup semua pool saat aplikasi berhenti.
-type PGRegistry struct {
+// URLRegistry menyimpan koneksi database target per connID. Koneksi dibuka
+// sekali (lazy) sesuai skema URL di db_connections (postgres:// atau mysql://)
+// lalu dipakai ulang; Evict menutup saat koneksi diubah/dihapus, dan Close
+// menutup semua saat aplikasi berhenti.
+type URLRegistry struct {
 	mu       sync.Mutex
-	pools    map[int64]*pgxpool.Pool
+	targets  map[int64]*Target
 	platform *pgxpool.Pool
 	closed   bool
 }
 
-var _ Registry = (*PGRegistry)(nil)
+var _ Registry = (*URLRegistry)(nil)
 
-func NewPGRegistry(platform *pgxpool.Pool) *PGRegistry {
-	return &PGRegistry{
-		pools:    map[int64]*pgxpool.Pool{},
+func NewURLRegistry(platform *pgxpool.Pool) *URLRegistry {
+	return &URLRegistry{
+		targets:  map[int64]*Target{},
 		platform: platform,
 	}
 }
 
-func (r *PGRegistry) Get(ctx context.Context, connID int64) (*pgxpool.Pool, error) {
+func (r *URLRegistry) Get(ctx context.Context, connID int64) (*Target, error) {
 	if r == nil || r.platform == nil {
 		return nil, ErrConnNotFound
 	}
 
 	r.mu.Lock()
-	if pool, ok := r.pools[connID]; ok && pool != nil {
+	if target, ok := r.targets[connID]; ok && target != nil {
 		r.mu.Unlock()
-		return pool, nil
+		return target, nil
 	}
 	r.mu.Unlock()
 
-	var url string
+	var rawURL string
 	if err := r.platform.QueryRow(ctx,
 		`SELECT connection_url FROM db_connections WHERE id = $1`, connID,
-	).Scan(&url); err != nil {
-		return nil, ErrConnNotFound
-	}
-	if url == "" {
+	).Scan(&rawURL); err != nil {
 		return nil, ErrConnNotFound
 	}
 
-	connectCtx, cancel := context.WithTimeout(ctx, connectTimeout)
-	defer cancel()
-
-	pool, err := pgxpool.New(connectCtx, url)
+	target, err := OpenTarget(ctx, rawURL)
 	if err != nil {
-		return nil, err
-	}
-	if err := pool.Ping(connectCtx); err != nil {
-		pool.Close()
 		return nil, err
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.closed {
-		pool.Close()
+		target.Close()
 		return nil, ErrConnNotFound
 	}
 	// Keduluan pembuat lain: pakai yang sudah ada, tutup yang baru.
-	if existing, ok := r.pools[connID]; ok && existing != nil {
-		pool.Close()
+	if existing, ok := r.targets[connID]; ok && existing != nil {
+		target.Close()
 		return existing, nil
 	}
-	r.pools[connID] = pool
-	return pool, nil
+	r.targets[connID] = target
+	return target, nil
 }
 
-// Evict menutup dan melupakan pool sebuah koneksi (dipanggil admin saat
+// Evict menutup dan melupakan koneksi sebuah target (dipanggil admin saat
 // koneksi diubah atau dihapus supaya kredensial lama tidak dipakai lagi).
-func (r *PGRegistry) Evict(connID int64) {
+func (r *URLRegistry) Evict(connID int64) {
 	if r == nil {
 		return
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if pool, ok := r.pools[connID]; ok {
-		delete(r.pools, connID)
-		if pool != nil {
-			pool.Close()
-		}
+	if target, ok := r.targets[connID]; ok {
+		delete(r.targets, connID)
+		target.Close()
 	}
 }
 
-// Close menutup semua pool. Aman dipanggil lebih dari sekali.
-func (r *PGRegistry) Close() {
+// Close menutup semua koneksi target. Aman dipanggil lebih dari sekali.
+func (r *URLRegistry) Close() {
 	if r == nil {
 		return
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.closed = true
-	for id, pool := range r.pools {
-		delete(r.pools, id)
-		if pool != nil {
-			pool.Close()
-		}
+	for id, target := range r.targets {
+		delete(r.targets, id)
+		target.Close()
 	}
 }
-
-// PoolRegistry adalah registry yang pool-nya sudah disiapkan pemanggil
-// (dipakai integration test).
-type PoolRegistry struct {
-	pools map[int64]*pgxpool.Pool
-}
-
-func NewPoolRegistry(pools map[int64]*pgxpool.Pool) *PoolRegistry {
-	return &PoolRegistry{pools: pools}
-}
-
-func (r *PoolRegistry) Get(ctx context.Context, connID int64) (*pgxpool.Pool, error) {
-	if r == nil || r.pools == nil {
-		return nil, ErrConnNotFound
-	}
-	pool, ok := r.pools[connID]
-	if !ok || pool == nil {
-		return nil, ErrConnNotFound
-	}
-	return pool, nil
-}
-
-func (r *PoolRegistry) Evict(connID int64) {}
-
-func (r *PoolRegistry) Close() {}

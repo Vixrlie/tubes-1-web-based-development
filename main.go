@@ -77,7 +77,7 @@ func run() error {
 
 	// Akses database per group + registry pool target untuk route /databases/*.
 	accessPolicy := access.NewPolicy(access.NewPGLevelSource(pool))
-	registry := dbm.NewPGRegistry(pool)
+	registry := dbm.NewURLRegistry(pool)
 	defer registry.Close()
 	connStore := admin.NewPGConnectionStore(pool)
 	groupStore := admin.NewPGGroupStore(pool)

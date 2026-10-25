@@ -272,12 +272,9 @@ func userOrZero(ctx context.Context) int64 {
 	return me.ID
 }
 
-func countTables(ctx context.Context, pool *pgxpool.Pool) (int, error) {
+func countTables(ctx context.Context, pool *Target) (int, error) {
 	var n int
-	err := pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM information_schema.tables
-		  WHERE table_type = 'BASE TABLE'
-		    AND table_schema NOT IN ('pg_catalog', 'information_schema')`).Scan(&n)
+	err := pool.DB.QueryRowContext(ctx, pool.Dialect.Queries().CountTables).Scan(&n)
 	return n, err
 }
 
@@ -304,7 +301,7 @@ func (h *Handlers) render(w http.ResponseWriter, status int, name string, data a
 }
 
 // targetPool mengambil pool database target; gagal -> halaman 503 aman.
-func (h *Handlers) targetPool(w http.ResponseWriter, r *http.Request, connID int64) (*pgxpool.Pool, bool) {
+func (h *Handlers) targetPool(w http.ResponseWriter, r *http.Request, connID int64) (*Target, bool) {
 	pool, err := h.registry.Get(r.Context(), connID)
 	if err != nil || pool == nil {
 		h.renderDbError(w)
@@ -507,7 +504,7 @@ func (h *Handlers) renderTable(w http.ResponseWriter, r *http.Request, tab strin
 	h.render(w, http.StatusOK, "table_detail.html", page)
 }
 
-func columnTable(r *http.Request, pool *pgxpool.Pool, schemaName, tableName string) []web.Table {
+func columnTable(r *http.Request, pool *Target, schemaName, tableName string) []web.Table {
 	t := web.Table{
 		Title: "Column",
 		Columns: []web.TableColumn{
@@ -541,7 +538,7 @@ func columnTable(r *http.Request, pool *pgxpool.Pool, schemaName, tableName stri
 	return []web.Table{t}
 }
 
-func constraintTables(r *http.Request, pool *pgxpool.Pool, schemaName, tableName string) []web.Table {
+func constraintTables(r *http.Request, pool *Target, schemaName, tableName string) []web.Table {
 	kindVariant := func(kind string) string {
 		switch kind {
 		case "PRIMARY KEY":
@@ -601,7 +598,7 @@ func constraintTables(r *http.Request, pool *pgxpool.Pool, schemaName, tableName
 // dataPageSize = jumlah baris per halaman data viewer.
 const dataPageSize = 20
 
-func dataTables(r *http.Request, w http.ResponseWriter, pool *pgxpool.Pool, connID int64, schemaName, tableName, tab string) []web.Table {
+func dataTables(r *http.Request, w http.ResponseWriter, pool *Target, connID int64, schemaName, tableName, tab string) []web.Table {
 	t := web.Table{
 		Title: "Isi table",
 		Tag:   web.TableCell{Text: "View-only", Variant: "neutral"},

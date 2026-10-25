@@ -12,7 +12,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // ExplainItem = hasil analisa satu statement.
@@ -41,7 +40,7 @@ type PlanSummary struct {
 const ddlNoPlanNote = "Statement DDL/utility tidak memiliki execution plan."
 
 // ExplainAll menganalisa seluruh statement dalam satu SQL migration.
-func ExplainAll(ctx context.Context, pool *pgxpool.Pool, sqlText string, analyze bool) []ExplainItem {
+func ExplainAll(ctx context.Context, pool *Target, sqlText string, analyze bool) []ExplainItem {
 	stmts := SplitStatements(sqlText)
 	items := make([]ExplainItem, 0, len(stmts))
 	for i, stmt := range stmts {
@@ -52,32 +51,29 @@ func ExplainAll(ctx context.Context, pool *pgxpool.Pool, sqlText string, analyze
 
 // Explain menganalisa satu statement. DDL dilewati tanpa query (memang tidak
 // punya plan); statement lain dijelaskan lewat EXPLAIN [ANALYZE] FORMAT JSON.
-func Explain(ctx context.Context, pool *pgxpool.Pool, n int, stmt string, analyze bool) ExplainItem {
+func Explain(ctx context.Context, pool *Target, n int, stmt string, analyze bool) ExplainItem {
 	item := ExplainItem{N: n, Stmt: shortStmt(stmt), Kind: stmtKind(stmt), Analyze: analyze}
 	if item.Kind == "ddl" {
 		item.Note = ddlNoPlanNote
 		return item
 	}
 
-	query := "EXPLAIN (FORMAT JSON) " + stmt
-	if analyze {
-		query = "EXPLAIN (ANALYZE, FORMAT JSON) " + stmt
-	}
+	query := pool.Dialect.Explain(analyze, stmt)
 
 	var raw []byte
 	var err error
 	if analyze {
 		// ANALYZE benar-benar mengeksekusi statement: transaksi dibuka hanya
 		// untuk ini lalu selalu di-ROLLBACK (defer), termasuk bila gagal.
-		tx, txErr := pool.Begin(ctx)
+		tx, txErr := pool.DB.BeginTx(ctx, nil)
 		if txErr != nil {
 			item.Note = "gagal memulai transaksi: " + sanitizePGError(txErr)
 			return item
 		}
-		defer tx.Rollback(ctx)
-		err = tx.QueryRow(ctx, query).Scan(&raw)
+		defer tx.Rollback()
+		err = tx.QueryRowContext(ctx, query).Scan(&raw)
 	} else {
-		err = pool.QueryRow(ctx, query).Scan(&raw)
+		err = pool.DB.QueryRowContext(ctx, query).Scan(&raw)
 	}
 	if err != nil {
 		item.Note = "tidak memiliki execution plan: " + sanitizePGError(err)
@@ -87,8 +83,13 @@ func Explain(ctx context.Context, pool *pgxpool.Pool, n int, stmt string, analyz
 	var payload []struct {
 		Plan map[string]any `json:"Plan"`
 	}
-	if err := json.Unmarshal(raw, &payload); err != nil || len(payload) == 0 || payload[0].Plan == nil {
-		item.Note = "format rencana eksekusi tidak dikenali"
+	if !pool.Dialect.ExplainIsJSON(analyze) ||
+		json.Unmarshal(raw, &payload) != nil ||
+		len(payload) == 0 || payload[0].Plan == nil {
+		// Bentuk keluaran tidak dikenali (mis. EXPLAIN ANALYZE MySQL yang
+		// berupa pohon teks): tampilkan apa adanya, jangan mengarang ringkasan.
+		item.Tree = strings.TrimSpace(string(raw)) + "\n"
+		item.Note = "Ringkasan otomatis tidak tersedia untuk DBMS ini; ditampilkan keluaran mentah EXPLAIN."
 		return item
 	}
 	root := payload[0].Plan

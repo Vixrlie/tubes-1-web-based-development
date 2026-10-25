@@ -9,9 +9,6 @@ import (
 	"context"
 	"sort"
 	"strings"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // DiffItem = satu perbedaan; SQL = kandidat perubahan pada kondisi saat ini.
@@ -47,7 +44,7 @@ func tkey(schema, table string) string { return schema + "." + table }
 
 // loadSchemaState memuat kondisi schema satu database target: tabel + kolom
 // per tabel, index per tabel, dan seluruh foreign key.
-func loadSchemaState(ctx context.Context, pool *pgxpool.Pool) (*schemaState, error) {
+func loadSchemaState(ctx context.Context, pool *Target) (*schemaState, error) {
 	st := &schemaState{
 		Tables: map[string]*tableState{},
 		FKs:    map[string]ForeignKey{},
@@ -91,8 +88,9 @@ func loadSchemaState(ctx context.Context, pool *pgxpool.Pool) (*schemaState, err
 	return st, nil
 }
 
-// DiffSchemas membandingkan kondisi saat ini (cur) dengan referensi (ref).
-func DiffSchemas(cur, ref *schemaState) []DiffItem {
+// DiffSchemas membandingkan kondisi saat ini (cur) dengan referensi (ref)
+// memakai pengutipan identifier milik dialect koneksi tersebut.
+func DiffSchemas(cur, ref *schemaState, d Dialect) []DiffItem {
 	var items []DiffItem
 
 	keys := map[string]bool{}
@@ -117,28 +115,28 @@ func DiffSchemas(cur, ref *schemaState) []DiffItem {
 			items = append(items, DiffItem{
 				Schema: b.Schema, Table: b.Name, Kind: "table", Status: "tambah",
 				Detail: "tabel tidak ada di kondisi saat ini",
-				SQL:    generateCreate(b),
+				SQL:    generateCreate(b, d),
 			})
 		case inA && !inB: // tabel berlebih di sini
 			items = append(items, DiffItem{
 				Schema: a.Schema, Table: a.Name, Kind: "table", Status: "hapus",
 				Detail: "tabel tidak ada di referensi",
-				SQL:    "DROP TABLE " + quoteIdent(a.Schema, a.Name) + ";",
+				SQL:    "DROP TABLE " + d.QuoteIdent(a.Schema, a.Name) + ";",
 			})
 		default:
-			items = append(items, diffTable(a, b)...)
+			items = append(items, diffTable(a, b, d)...)
 		}
 	}
 
-	items = append(items, diffFKs(cur, ref)...)
+	items = append(items, diffFKs(cur, ref, d)...)
 	return items
 }
 
 // diffTable membandingkan isi satu tabel yang ada di kedua sisi.
-func diffTable(a, b *tableState) []DiffItem {
+func diffTable(a, b *tableState, d Dialect) []DiffItem {
 	var items []DiffItem
 	schema, name := a.Schema, a.Name
-	q := quoteIdent(schema, name)
+	q := d.QuoteIdent(schema, name)
 
 	cols := map[string]bool{}
 	for c := range a.Columns {
@@ -161,16 +159,16 @@ func diffTable(a, b *tableState) []DiffItem {
 			items = append(items, DiffItem{
 				Schema: schema, Table: name, Kind: "column", Status: "tambah",
 				Detail: "kolom " + cname + " tidak ada di kondisi saat ini",
-				SQL:    "ALTER TABLE " + q + " ADD COLUMN " + columnDef(cb) + ";",
+				SQL:    "ALTER TABLE " + q + " ADD COLUMN " + columnDef(cb, d) + ";",
 			})
 		case inA && !inB:
 			items = append(items, DiffItem{
 				Schema: schema, Table: name, Kind: "column", Status: "hapus",
 				Detail: "kolom " + cname + " tidak ada di referensi",
-				SQL:    "ALTER TABLE " + q + " DROP COLUMN " + quoteIdent(cname) + ";",
+				SQL:    "ALTER TABLE " + q + " DROP COLUMN " + d.QuoteIdent(cname) + ";",
 			})
 		default:
-			qc := quoteIdent(cname)
+			qc := d.QuoteIdent(cname)
 			if !strings.EqualFold(ca.Type, cb.Type) {
 				items = append(items, DiffItem{
 					Schema: schema, Table: name, Kind: "column", Status: "ubah",
@@ -208,10 +206,10 @@ func diffTable(a, b *tableState) []DiffItem {
 		detail := "primary key berbeda (" + labelPK(a.PK) + " → " + labelPK(b.PK) + ")"
 		sql := ""
 		if b.PK != "" {
-			sql = "ALTER TABLE " + q + " DROP CONSTRAINT IF EXISTS " + quoteIdent(name+"_pkey") + ";\n" +
-				"ALTER TABLE " + q + " ADD PRIMARY KEY (" + quoteList(b.PK) + ");"
+			sql = "ALTER TABLE " + q + " DROP CONSTRAINT IF EXISTS " + d.QuoteIdent(name+"_pkey") + ";\n" +
+				"ALTER TABLE " + q + " ADD PRIMARY KEY (" + quoteList(b.PK, d) + ");"
 		} else if a.PK != "" {
-			sql = "ALTER TABLE " + q + " DROP CONSTRAINT IF EXISTS " + quoteIdent(name+"_pkey") + ";"
+			sql = "ALTER TABLE " + q + " DROP CONSTRAINT IF EXISTS " + d.QuoteIdent(name+"_pkey") + ";"
 		}
 		items = append(items, DiffItem{
 			Schema: schema, Table: name, Kind: "pk", Status: "ubah",
@@ -240,7 +238,7 @@ func diffTable(a, b *tableState) []DiffItem {
 			if x.Unique {
 				s += "UNIQUE "
 			}
-			return s + "INDEX " + quoteIdent(schema, x.Name) + " ON " + q + " (" + quoteList(x.Columns) + ");"
+			return s + "INDEX " + d.QuoteIdent(schema, x.Name) + " ON " + q + " (" + quoteList(x.Columns, d) + ");"
 		}
 		switch {
 		case !inA && inB:
@@ -253,14 +251,14 @@ func diffTable(a, b *tableState) []DiffItem {
 			items = append(items, DiffItem{
 				Schema: schema, Table: name, Kind: "index", Status: "hapus",
 				Detail: "index " + iname + " tidak ada di referensi",
-				SQL:    "DROP INDEX " + quoteIdent(schema, ia.Name) + ";",
+				SQL:    "DROP INDEX " + d.QuoteIdent(schema, ia.Name) + ";",
 			})
 		default:
 			if ia.Columns != ib.Columns || ia.Unique != ib.Unique {
 				items = append(items, DiffItem{
 					Schema: schema, Table: name, Kind: "index", Status: "ubah",
 					Detail: "index " + iname + ": definisi berbeda (" + ia.Columns + "/" + boolLabel(ia.Unique) + " → " + ib.Columns + "/" + boolLabel(ib.Unique) + ")",
-					SQL:    "DROP INDEX " + quoteIdent(schema, ia.Name) + ";\n" + create(ib),
+					SQL:    "DROP INDEX " + d.QuoteIdent(schema, ia.Name) + ";\n" + create(ib),
 				})
 			}
 		}
@@ -269,7 +267,7 @@ func diffTable(a, b *tableState) []DiffItem {
 }
 
 // diffFKs membandingkan foreign key per pemilik tabel|nama constraint.
-func diffFKs(cur, ref *schemaState) []DiffItem {
+func diffFKs(cur, ref *schemaState, d Dialect) []DiffItem {
 	var items []DiffItem
 	keys := map[string]bool{}
 	for k := range cur.FKs {
@@ -289,13 +287,13 @@ func diffFKs(cur, ref *schemaState) []DiffItem {
 		oschema, otable := split2(ownerRef)
 		targetRef, targetCols := splitFKRef(f.ToRef)
 		tschema, ttable := split2(targetRef)
-		return "ALTER TABLE " + quoteIdent(oschema, otable) + " ADD CONSTRAINT " + quoteIdent(f.Name) +
-			" FOREIGN KEY (" + quoteList(cols) + ") REFERENCES " + quoteIdent(tschema, ttable) +
-			" (" + quoteList(targetCols) + ");"
+		return "ALTER TABLE " + d.QuoteIdent(oschema, otable) + " ADD CONSTRAINT " + d.QuoteIdent(f.Name) +
+			" FOREIGN KEY (" + quoteList(cols, d) + ") REFERENCES " + d.QuoteIdent(tschema, ttable) +
+			" (" + quoteList(targetCols, d) + ");"
 	}
 	dropSQL := func(owner, name string) string {
 		schema, table := split2(owner)
-		return "ALTER TABLE " + quoteIdent(schema, table) + " DROP CONSTRAINT IF EXISTS " + quoteIdent(name) + ";"
+		return "ALTER TABLE " + d.QuoteIdent(schema, table) + " DROP CONSTRAINT IF EXISTS " + d.QuoteIdent(name) + ";"
 	}
 	for _, k := range ordered {
 		owner := k[:strings.IndexByte(k, '|')]
@@ -359,30 +357,30 @@ func GenerateSQL(items []DiffItem) string {
 }
 
 // generateCreate menyusun CREATE TABLE dari kondisi referensi.
-func generateCreate(t *tableState) string {
+func generateCreate(t *tableState, d Dialect) string {
 	var b strings.Builder
-	b.WriteString("CREATE TABLE " + quoteIdent(t.Schema, t.Name) + " (\n")
+	b.WriteString("CREATE TABLE " + d.QuoteIdent(t.Schema, t.Name) + " (\n")
 	names := make([]string, 0, len(t.Columns))
 	for n := range t.Columns {
 		names = append(names, n)
 	}
 	sort.Strings(names)
 	for i, n := range names {
-		b.WriteString("    " + columnDef(t.Columns[n]))
+		b.WriteString("    " + columnDef(t.Columns[n], d))
 		if i < len(names)-1 || t.PK != "" {
 			b.WriteString(",")
 		}
 		b.WriteString("\n")
 	}
 	if t.PK != "" {
-		b.WriteString("    PRIMARY KEY (" + quoteList(t.PK) + ")\n")
+		b.WriteString("    PRIMARY KEY (" + quoteList(t.PK, d) + ")\n")
 	}
 	b.WriteString(");")
 	return b.String()
 }
 
-func columnDef(c ColumnInfo) string {
-	def := quoteIdent(c.Name) + " " + c.Type
+func columnDef(c ColumnInfo, d Dialect) string {
+	def := d.QuoteIdent(c.Name) + " " + c.Type
 	if !c.Nullable {
 		def += " NOT NULL"
 	}
@@ -392,16 +390,11 @@ func columnDef(c ColumnInfo) string {
 	return def
 }
 
-// quoteIdent mengutip identifier ("schema"."tabel" / "kolom").
-func quoteIdent(parts ...string) string {
-	return pgx.Identifier(parts).Sanitize()
-}
-
-// quoteList mengutip daftar "a, b" per kolom.
-func quoteList(csv string) string {
+// quoteList mengutip daftar "a, b" per kolom sesuai dialect.
+func quoteList(csv string, d Dialect) string {
 	parts := strings.Split(csv, ",")
 	for i := range parts {
-		parts[i] = quoteIdent(strings.TrimSpace(parts[i]))
+		parts[i] = d.QuoteIdent(strings.TrimSpace(parts[i]))
 	}
 	return strings.Join(parts, ", ")
 }

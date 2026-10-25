@@ -204,8 +204,13 @@ func (h *Handlers) diffRun(w http.ResponseWriter, r *http.Request) {
 		h.serverError(w, "baca schema pembanding", err)
 		return
 	}
+	if curPool.Dialect.Name() != refPool.Dialect.Name() {
+		page.Error = "Schema diff hanya tersedia untuk dua koneksi dengan DBMS yang sama."
+		h.render(w, http.StatusBadRequest, "diff.html", page)
+		return
+	}
 
-	items := DiffSchemas(cur, ref)
+	items := DiffSchemas(cur, ref, curPool.Dialect)
 	page.HasResult = true
 	page.RefName = refName
 	page.Count = len(items)

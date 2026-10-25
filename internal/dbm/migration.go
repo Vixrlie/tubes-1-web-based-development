@@ -353,18 +353,35 @@ func (r *MigrationRunner) Execute(ctx context.Context, connID, migrationID, user
 
 // runOnTarget menjalankan SQL di database target dalam satu transaksi.
 // Advisory lock mencegah dua eksekusi bersamaan pada koneksi yang sama.
-func runOnTarget(ctx context.Context, pool *pgxpool.Pool, connID int64, sqlText string) error {
-	tx, err := pool.Begin(ctx)
+func runOnTarget(ctx context.Context, pool *Target, connID int64, sqlText string) error {
+	// Kunci dan eksekusi harus pada koneksi yang sama (MySQL GET_LOCK per sesi),
+	// jadi ambil satu Conn dari pool dan jalankan transaksi di atasnya.
+	conn, err := pool.DB.Conn(ctx)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer conn.Close()
 
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, connID); err != nil {
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, sqlText); err != nil {
+	defer tx.Rollback()
+
+	if lock := pool.Dialect.LockSQL(connID); lock != "" {
+		if _, err := tx.ExecContext(ctx, lock); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, sqlText); err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	if unlock := pool.Dialect.UnlockSQL(connID); unlock != "" {
+		// Lepas kunci setelah transaksi; bila gagal, kunci lepas saat koneksi ditutup.
+		_, _ = conn.ExecContext(ctx, unlock)
+	}
+	return nil
 }
