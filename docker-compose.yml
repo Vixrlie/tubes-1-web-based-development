@@ -26,6 +26,18 @@ services:
     ports: [ "5434:5432" ]
     tmpfs: [ /var/lib/postgresql/data ]
 
+  mysql-db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: target
+      MYSQL_PASSWORD: target
+      MYSQL_DATABASE: sample
+    ports: [ "5435:3306" ]
+    volumes: [ mysql-data:/var/lib/mysql ]
+
 volumes:
   platform-data:
   target-data:
+  mysql-data:
