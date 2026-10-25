@@ -182,6 +182,31 @@ muncul daftar selisih + kandidat SQL yang bisa disimpan jadi draft lewat
 Kredensial database target berasal dari container: user `target`, password
 `target`, port `5433` (database `sample` dan `banding`).
 
+**e. (Bonus) Koneksi MySQL / MariaDB:**
+
+`docker-compose.yml` juga menyediakan container `mysql-db` (port **5435**,
+database `sample`, user `target`, password `target`, sudah berisi tabel contoh
+`customers`). Nyalakan bersama container lain:
+
+```bash
+docker compose up -d mysql-db
+```
+
+Daftarkan lewat **Admin → Koneksi Database → Tambah Koneksi**, pilih **Jenis
+DBMS: MySQL / MariaDB**, isi host `127.0.0.1`, port `5435`, database `sample`,
+user `target`, password `target`, lalu **Tes Koneksi**. Setelah diberi grant
+lewat grup, viewer (schema/kolom/index/data), migration, dan EXPLAIN berjalan
+sama seperti PostgreSQL.
+
+Batasan yang perlu diketahui (dijelaskan apa adanya di UI):
+
+- **Schema diff** hanya untuk dua koneksi dengan DBMS yang sama.
+- **EXPLAIN** PostgreSQL menampilkan ringkasan plan terstruktur; EXPLAIN
+  MySQL ditampilkan sebagai keluaran mentah (bentuk JSON-nya berbeda).
+- **MySQL tidak memiliki DDL transaksional**: untuk migration multi-statement
+  yang gagal di tengah, statement yang sudah jalan sebelumnya tidak bisa
+  di-rollback. Gunakan satu statement per migration DDL di MySQL.
+
 ### Reset database dari nol
 
 ```bash
@@ -341,7 +366,8 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 - [x] Unit dan integration test (akses, admin, auth, session, config, db, dbm, web)
 - [x] Bonus (BON-02/03): schema diff antar dua koneksi + generator kandidat SQL migration
 - [x] Bonus (BON-04/05): `EXPLAIN` / `EXPLAIN ANALYZE` sebelum eksekusi + ringkasan execution plan
-- [ ] Bonus (BON-01): dukungan DBMS tambahan (MySQL/MariaDB): belum diimplementasi
+- [x] Bonus (BON-01): dukungan DBMS tambahan (MySQL/MariaDB): koneksi, viewer, migration,
+  EXPLAIN, dan diff bekerja lewat abstraksi dialect per DBMS
 
 Alur minimum (GEN-07) berjalan end-to-end: Login → Access Control → Pilih Database → Lihat Schema/Data → Buat Migration → Execute → Commit/Rollback → Riwayat Migration ter-update.
 
