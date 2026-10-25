@@ -157,6 +157,7 @@ func (h *Handlers) migrationsList(w http.ResponseWriter, r *http.Request) {
 		},
 		Actions: []web.Button{
 			{Label: "Migration Baru", IconLeft: "plus", Href: base + "/new"},
+			{Label: "Schema Diff", Variant: "outline", Href: base + "/diff"},
 		},
 		Table: t,
 	})

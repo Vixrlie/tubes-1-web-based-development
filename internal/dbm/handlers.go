@@ -77,6 +77,11 @@ func (h *Handlers) Routes(r chi.Router) {
 		// Halaman migration: riwayat, editor (draft), detail, preview & eksekusi.
 		r.Get("/{connID}/migrations", h.migrationsList)
 		r.Post("/{connID}/migrations", h.migrationsCreate)
+		// Diff: canonical sekeluarga /migrations/* + alias pendek /diff.
+		r.Get("/{connID}/migrations/diff", h.diffForm)
+		r.Post("/{connID}/migrations/diff", h.diffRun)
+		r.Get("/{connID}/diff", h.diffForm)
+		r.Post("/{connID}/diff", h.diffRun)
 		r.Get("/{connID}/migrations/new", h.migrationEditor)
 		r.Get("/{connID}/migrations/{mID}", h.migrationDetail)
 		r.Get("/{connID}/migrations/{mID}/preview", h.migrationPreview)

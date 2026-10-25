@@ -1,0 +1,47 @@
+{{/*
+Halaman Schema Diff (BON-02/03): bandingkan schema database ini dengan
+koneksi pembanding, tampilkan selisih + kandidat SQL, simpan sbg draft.
+Data: dbm.diffPage (lihat dbm/diff_pages.go):
+.Shell, .Title, .Crumbs, .FormAction, .DraftAction, .Fields, .Actions,
+.Error, .HasResult, .RefName, .Count, .Table, .DraftSQL, .SQLNote, .CanDraft
+CSRF: .User.CSRFToken (dari Shell).
+*/}}
+{{define "content"}}
+{{- $draft := `disabled` -}}{{- if .CanDraft -}}{{- $draft = `default` -}}{{- end -}}
+{{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs)}}
+
+<div class="stack">
+    {{- with .Error}}
+    <section class="card">
+        {{template `card-head` (dict `Title` `Gagal`)}}
+        <p role="alert">{{.}}</p>
+    </section>
+    {{- end}}
+
+    <form class="card" method="post" action="{{.FormAction}}">
+        <input type="hidden" name="csrf_token" value="{{.User.CSRFToken}}">
+        {{template `card-head` (dict `Title` `Bandingkan dengan koneksi lain` `Actions` .Actions)}}
+        <p class="card__note">Schema database ini dibaca sebagai kondisi saat ini; koneksi pembanding
+            menjadi kondisi yang diinginkan. Hasilnya berupa daftar selisih + kandidat SQL.</p>
+        {{range .Fields}}{{template `dropdown` .}}{{end}}
+    </form>
+
+    {{- if .HasResult}}
+    {{template `table` .Table}}
+
+    <form method="post" action="{{.DraftAction}}">
+        <input type="hidden" name="csrf_token" value="{{.User.CSRFToken}}">
+        <input type="hidden" name="sql" value="{{.DraftSQL}}">
+        <section class="card">
+            {{template `card-head` (dict `Title` (printf `Kandidat SQL Migration (%d selisih)` .Count)
+                `Actions` (list (dict `Label` `Buat Draft Migration` `Type` `submit`
+                    `State` $draft)))}}
+            <p class="card__note">{{.SQLNote}}</p>
+            {{if not .CanDraft}}<p class="card__note">Anda hanya memiliki izin view pada database ini;
+                pembuatan draft butuh akses View + Edit.</p>{{end}}
+            <pre>{{.DraftSQL}}</pre>
+        </section>
+    </form>
+    {{- end}}
+</div>
+{{end}}
