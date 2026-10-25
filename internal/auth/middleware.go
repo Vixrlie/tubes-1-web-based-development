@@ -45,10 +45,8 @@ type SessionInfo struct {
 	NewToken string
 }
 
-// SessionValidator diimplementasikan session manager (paket session).
-// Validate harus: mencari token (termasuk token lama selama grace period),
-// memeriksa revoked, idle timeout, dan absolute expiration, memperbarui
-// last_seen_at, dan merotasi token bila sudah jatuh tempo.
+// SessionValidator diimplementasikan session manager. Validate menerima token lama
+// selama grace period, menolak revoked & timeout, menyegarkan last_seen_at, merotasi token.
 type SessionValidator interface {
 	Validate(ctx context.Context, token string) (SessionInfo, error)
 }
