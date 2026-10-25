@@ -1,8 +1,33 @@
+{{/*
+Halaman Beranda (GET / setelah masuk; rujukan: halaman utama memakai shell FE
+dengan header + sidebar mengikuti .Nav). Data: auth.homePage (lihat auth/handlers.go):
+.Title .Username .IsPlatformAdmin .CSRFToken .User .Nav
+*/}}
 {{define "content"}}
-<h1>Halo, {{.Username}}</h1>
-<p>Halaman sementara. Akan diganti daftar database.</p>
-<form method="post" action="/logout">
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    <button type="submit">Keluar</button>
-</form>
+{{template `page-header` (dict `Title` `Beranda` `Crumbs` (list (dict `Label` `Beranda`)))}}
+
+<div class="stack">
+    <section class="card">
+        {{template `card-head` (dict `Title` (printf `Selamat datang, %s` .Username))}}
+        <p>Pathgres adalah platform pengelolaan akses dan migrasi database PostgreSQL:
+            telusuri schema, inspeksi data, dan jalankan migration dalam satu tempat.</p>
+        <p>Anda masuk sebagai <strong>{{if .IsPlatformAdmin}}admin platform{{else}}peserta{{end}}</strong>.</p>
+    </section>
+
+    <section class="card">
+        {{template `card-head` (dict `Title` `Jalan pintas`)}}
+        <p>Buka daftar database yang Anda izinkan, atau kelola platform
+            (user, grup, koneksi) khusus administrator.</p>
+        <div class="card__actions">
+            {{template `button` (dict `Label` `Buka Database` `Href` `/databases`)}}
+            {{if .IsPlatformAdmin}}{{template `button` (dict `Label` `Dashboard Admin` `Href` `/admin`)}}{{end}}
+        </div>
+    </section>
+
+    <section class="card">
+        {{template `card-head` (dict `Title` `Akses & keamanan`)}}
+        <p>Anda hanya melihat database yang digrant ke grup Anda. Perubahan akses selalu
+            tercatat di audit log, dan sesi dicabut otomatis saat hak Anda berubah.</p>
+    </section>
+</div>
 {{end}}

@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 )
 
 const (
@@ -176,10 +177,18 @@ type homePage struct {
 
 func (h *Handlers) home(w http.ResponseWriter, r *http.Request) {
 	u, _ := UserFromContext(r.Context())
+	csrf := session.CSRFToken(r.Context())
 	h.view.Render(w, "home.html", homePage{
 		Title:           "Beranda",
 		Username:        u.Username,
-		CSRFToken:       session.CSRFToken(r.Context()),
+		CSRFToken:       csrf,
 		IsPlatformAdmin: u.IsPlatformAdmin,
+		// Layout FE: header (avatar + menu akun) aktif di halaman ini.
+		User: &web.ShellUser{
+			Username:        u.Username,
+			IsPlatformAdmin: u.IsPlatformAdmin,
+			CSRFToken:       csrf,
+		},
+		Nav: "databases",
 	})
 }
