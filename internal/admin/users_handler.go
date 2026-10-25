@@ -41,6 +41,7 @@ func (h *Handlers) usersRoutes(r chi.Router) {
 	r.Post("/users/{id}/deactivate", u.deactivate)
 	r.Post("/users/{id}/activate", u.activate)
 	r.Post("/users/{id}/password", u.resetPassword)
+	r.Post("/users/{id}/delete", u.delete)
 }
 
 // Pesan sukses dipilih lewat kode di query string; teks bebas dari URL tidak pernah dirender.
@@ -50,16 +51,18 @@ var notices = map[string]string{
 	"deactivated": "User dinonaktifkan dan semua session-nya dicabut.",
 	"activated":   "User diaktifkan kembali.",
 	"password":    "Password direset dan semua session user dicabut.",
+	"deleted":     "User dihapus permanen beserta keanggotaannya.",
 }
 
 type usersPage struct {
-	Me         auth.User
-	CSRFToken  string
-	Users      []UserRow
-	Notice     string
 	User       *web.ShellUser // layout FE: header + sidebar admin
 	Nav        string
 	SideActive string
+	Title      string
+	Crumbs     []web.Crumb
+	Actions    []web.Button
+	Table      web.Table
+	Notice     string
 }
 
 type userFormPage struct {
@@ -162,15 +165,59 @@ func (u *userHandlers) list(w http.ResponseWriter, r *http.Request) {
 		u.serverError(w, "daftar user", err)
 		return
 	}
+	groups, err := u.store.GroupNamesByUser(r.Context())
+	if err != nil {
+		u.serverError(w, "grup per user", err)
+		return
+	}
 	me, csrf := u.base(r)
+
+	table := web.Table{
+		Title: "Akun platform",
+		Tag:   web.TableCell{Text: strconv.Itoa(len(users)) + " item"},
+		Columns: []web.TableColumn{
+			{Key: "username", Label: "Username", Bold: true},
+			{Key: "status", Label: "Status / peran platform"},
+			{Key: "group", Label: "Group"},
+			{Key: "aksi", Label: "Aksi"},
+		},
+		Empty: "Belum ada user.",
+	}
+	for _, usr := range users {
+		status := "Nonaktif"
+		if usr.IsActive {
+			status = "Aktif"
+		}
+		role := "Non-admin"
+		if usr.IsPlatformAdmin {
+			role = "Admin"
+		}
+		groupList := strings.Join(groups[usr.ID], ", ")
+		if groupList == "" {
+			groupList = "—"
+		}
+		table.Rows = append(table.Rows, web.TableRow{
+			"username": {Text: usr.Username},
+			"status":   {Text: status + " · " + role},
+			"group":    {Text: groupList},
+			"aksi":     {Text: "Kelola", Href: "/admin/users/" + strconv.FormatInt(usr.ID, 10)},
+		})
+	}
+
 	u.render(w, http.StatusOK, "admin/users.html", usersPage{
-		Me:         me,
-		CSRFToken:  csrf,
 		User:       shellUserData(me, csrf),
 		Nav:        "admin",
 		SideActive: "users",
-		Users:     users,
-		Notice:    notices[r.URL.Query().Get("status")],
+		Title:      "Kelola User",
+		Crumbs: []web.Crumb{
+			{Label: "Admin", Href: "/admin"},
+			{Label: "Daftar User"},
+		},
+		Actions: []web.Button{
+			{Label: "Tambah User", IconLeft: "plus", Href: "/admin/users/new"},
+		},
+		Table:  table,
+		Notice: notices[r.URL.Query().Get("status")],
 	})
 }
 
@@ -314,6 +361,37 @@ func (u *userHandlers) activate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	redirectUser(w, r, t.ID, "activated")
+}
+
+// delete menghapus user permanen. Guard dari store: admin aktif terakhir dan
+// user ber-riwayat migration ditolak (muncul sebagai pesan error di form).
+func (u *userHandlers) delete(w http.ResponseWriter, r *http.Request) {
+	t, ok := u.load(w, r)
+	if !ok {
+		return
+	}
+	me, _ := auth.UserFromContext(r.Context())
+	if t.ID == me.ID {
+		page := u.editPage(r, t)
+		page.Error = "Anda tidak bisa menghapus akun sendiri."
+		u.render(w, http.StatusBadRequest, "admin/user_form.html", page)
+		return
+	}
+	if err := u.store.Delete(r.Context(), t.ID); err != nil {
+		switch {
+		case errors.Is(err, ErrLastAdmin), errors.Is(err, ErrUserHasHistory):
+			page := u.editPage(r, t)
+			page.Error = err.Error()
+			u.render(w, http.StatusBadRequest, "admin/user_form.html", page)
+		case errors.Is(err, auth.ErrUserNotFound):
+			http.NotFound(w, r)
+		default:
+			u.serverError(w, "hapus user", err)
+		}
+		return
+	}
+	// Keanggotaan & session terhapus cascade oleh store.
+	http.Redirect(w, r, "/admin/users?status=deleted", http.StatusSeeOther)
 }
 
 // ---- reset password ----

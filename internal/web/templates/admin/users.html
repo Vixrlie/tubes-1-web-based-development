@@ -1,33 +1,27 @@
+{{/*
+Halaman Daftar User (format fe-components, rujukan scr09_admin_user).
+Data: admin.usersPage (lihat admin/users_handler.go):
+.Shell(user/nav/side), .Title, .Crumbs, .Actions, .Table (kolom username/status/group/aksi),
+.Notice (dari ?status=)
+*/}}
 {{define "content"}}
-<h1>Kelola User</h1>
-<p><a href="/">Beranda</a> | <a href="/admin/users/new">Buat user</a></p>
-{{if .Notice}}<p role="status">{{.Notice}}</p>{{end}}
-<table>
-    <thead>
-        <tr>
-            <th>Username</th>
-            <th>Nama</th>
-            <th>Email</th>
-            <th>Peran</th>
-            <th>Status</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        {{range .Users}}
-        <tr>
-            <td>{{.Username}}</td>
-            <td>{{.FullName}}</td>
-            <td>{{.Email}}</td>
-            <td>{{if .IsPlatformAdmin}}Platform Admin{{else}}User{{end}}</td>
-            <td>{{if .IsActive}}Aktif{{else}}Nonaktif{{end}}</td>
-            <td><a href="/admin/users/{{.ID}}">Ubah</a></td>
-        </tr>
-        {{else}}
-        <tr>
-            <td colspan="6">Belum ada user.</td>
-        </tr>
-        {{end}}
-    </tbody>
-</table>
+{{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs `Actions` .Actions)}}
+
+<div class="stack">
+    {{- with .Notice}}
+    <section class="card">
+        {{template `card-head` (dict `Title` `Info`)}}
+        <p role="status">{{.}}</p>
+    </section>
+    {{- end}}
+
+    {{template `table` .Table}}
+
+    <section class="card">
+        {{template `card-head` (dict `Title` `Perlindungan administrator`)}}
+        <p>Anda tidak bisa menonaktifkan, menghapus, atau mengubah peran akun sendiri.
+            Admin aktif terakhir juga tidak bisa dinonaktifkan/dihapus. User dengan riwayat
+            migration hanya dapat dinonaktifkan, bukan dihapus.</p>
+    </section>
+</div>
 {{end}}
