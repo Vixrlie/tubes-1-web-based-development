@@ -7,9 +7,7 @@ import (
 	"time"
 )
 
-// ErrInvalid dikembalikan untuk semua alasan session tidak sah: tidak dikenal,
-// dicabut, user nonaktif, idle timeout, absolute expiration, atau token lama
-// di luar grace period. Sengaja satu error agar alasannya tidak bocor.
+// ErrInvalid return untuk semua alasan invalid session
 var ErrInvalid = errors.New("session tidak valid")
 
 type Config struct {
@@ -33,13 +31,13 @@ func (c Config) validate() error {
 	return nil
 }
 
-// Info adalah hasil validasi. Paket auth menerjemahkannya ke auth.SessionInfo.
+// Info adalah hasil validasi. Packet auth translate ke auth.SessionInfo
 type Info struct {
 	UserID          int64
 	Username        string
 	IsPlatformAdmin bool
 	CSRFToken       string
-	// NewToken terisi bila session baru saja dirotasi.
+	// NewToken terisi jika session baru dirotasi
 	NewToken string
 }
 
@@ -51,7 +49,7 @@ type Manager struct {
 
 var _ Revoker = (*Manager)(nil)
 
-// NewManager membuat Manager. clock boleh nil (memakai waktu sistem).
+// NewManager membuat Manager. clock bisa nil
 func NewManager(store Store, cfg Config, clock Clock) (*Manager, error) {
 	if err := cfg.validate(); err != nil {
 		return nil, fmt.Errorf("konfigurasi session: %w", err)
@@ -62,8 +60,8 @@ func NewManager(store Store, cfg Config, clock Clock) (*Manager, error) {
 	return &Manager{store: store, cfg: cfg, clock: clock}, nil
 }
 
-// Create membuat session baru untuk user dan mengembalikan token yang
-// harus ditaruh di cookie. Pemanggil (handler login) wajib sudah memverifikasi
+// Create buat session baru untuk user dan return token yang
+// harus ditaruh di cookie. Pemanggil wajib sudah verify
 // kredensial dan memastikan user aktif.
 func (m *Manager) Create(ctx context.Context, userID int64) (string, error) {
 	token, err := NewToken()
@@ -130,7 +128,25 @@ func (m *Manager) Validate(ctx context.Context, token string) (Info, error) {
 		CSRFToken:       rec.CSRFSecret,
 	}
 
-	// Rotasi berkala: hanya dari token saat ini, dan tidak mengubah absolute expiration.
+	// Force rotate setelah privilege escalation, tanpa logout
+	// Hanya dari current token saat ini
+	if !usingPrevious && rec.ForceRotate {
+		newToken, err := NewToken()
+		if err != nil {
+			return Info{}, err
+		}
+		rotated, err := m.store.Rotate(ctx, rec.ID, hash, HashToken(newToken), now, now.Add(m.cfg.GracePeriod))
+		if err != nil {
+			return Info{}, err
+		}
+		if rotated {
+			info.NewToken = newToken
+			return info, nil
+		}
+		// Keduluan request lain: lanjut dengan token lama selama masih dalam grace.
+	}
+
+	// Rotasi berkala: hanya dari current token, dan tidak ubah absolute expiration.
 	if !usingPrevious && !now.Before(rec.RotatedAt.Add(m.cfg.RotateInterval)) {
 		newToken, err := NewToken()
 		if err != nil {
@@ -153,8 +169,7 @@ func (m *Manager) Validate(ctx context.Context, token string) (Info, error) {
 	return info, nil
 }
 
-// Revoke menonaktifkan session (logout). Token tidak dikenal bukan error,
-// supaya logout selalu berhasil dan idempotent.
+// Revoke menonaktifkan session (logout)
 func (m *Manager) Revoke(ctx context.Context, token string) error {
 	if token == "" {
 		return nil
@@ -162,8 +177,12 @@ func (m *Manager) Revoke(ctx context.Context, token string) error {
 	return m.store.Revoke(ctx, HashToken(token), m.clock.Now())
 }
 
-// RevokeSessionsByUser mencabut semua session aktif milik user
-// (dipakai saat akses dicabut, user dinonaktifkan, atau password direset).
+// RevokeSessionsByUser cabut semua session aktif milik user
 func (m *Manager) RevokeSessionsByUser(ctx context.Context, userID int64) error {
 	return m.store.RevokeByUser(ctx, userID, m.clock.Now())
+}
+
+// ForceRotateSessionsByUser marks session user spy dirotasi di next req
+func (m *Manager) ForceRotateSessionsByUser(ctx context.Context, userID int64) error {
+	return m.store.ForceRotateByUser(ctx, userID)
 }
