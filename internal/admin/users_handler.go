@@ -157,6 +157,20 @@ func redirectUser(w http.ResponseWriter, r *http.Request, id int64, code string)
 	http.Redirect(w, r, "/admin/users/"+strconv.FormatInt(id, 10)+"?status="+code, http.StatusSeeOther)
 }
 
+func userStatusCell(isActive bool) web.TableCell {
+	if isActive {
+		return web.TableCell{Text: "Aktif", Variant: "success"}
+	}
+	return web.TableCell{Text: "Nonaktif", Variant: "error"}
+}
+
+func userRoleCell(isPlatformAdmin bool) web.TableCell {
+	if isPlatformAdmin {
+		return web.TableCell{Text: "Admin", Variant: "info"}
+	}
+	return web.TableCell{Text: "Non-admin", Variant: "neutral"}
+}
+
 // Daftar
 
 func (u *userHandlers) list(w http.ResponseWriter, r *http.Request) {
@@ -175,32 +189,36 @@ func (u *userHandlers) list(w http.ResponseWriter, r *http.Request) {
 	table := web.Table{
 		Title: "Akun platform",
 		Tag:   web.TableCell{Text: strconv.Itoa(len(users)) + " item"},
+		Class: "users-table",
 		Columns: []web.TableColumn{
 			{Key: "username", Label: "Username", Bold: true},
-			{Key: "status", Label: "Status / peran platform"},
+			{Key: "name", Label: "Nama"},
+			{Key: "status", Label: "Status"},
+			{Key: "role", Label: "Peran"},
 			{Key: "group", Label: "Group"},
-			{Key: "aksi", Label: "Aksi"},
+			{Key: "aksi", Label: "Aksi", Align: "right"},
 		},
 		Empty: "Belum ada user.",
 	}
 	for _, usr := range users {
-		status := "Nonaktif"
-		if usr.IsActive {
-			status = "Aktif"
-		}
-		role := "Non-admin"
-		if usr.IsPlatformAdmin {
-			role = "Admin"
+		name := strings.TrimSpace(usr.FullName)
+		if name == "" {
+			name = "-"
 		}
 		groupList := strings.Join(groups[usr.ID], ", ")
 		if groupList == "" {
 			groupList = "-"
 		}
+		manage := web.OutlineButton("Kelola", "/admin/users/"+strconv.FormatInt(usr.ID, 10))
+		manage.PaddingY = "var(--space-1)"
+		manage.PaddingX = "var(--space-4)"
 		table.Rows = append(table.Rows, web.TableRow{
 			"username": {Text: usr.Username},
-			"status":   {Text: status + " · " + role},
+			"name":     {Text: name},
+			"status":   userStatusCell(usr.IsActive),
+			"role":     userRoleCell(usr.IsPlatformAdmin),
 			"group":    {Text: groupList},
-			"aksi":     {Text: "Kelola", Href: "/admin/users/" + strconv.FormatInt(usr.ID, 10)},
+			"aksi":     {Button: &manage},
 		})
 	}
 
