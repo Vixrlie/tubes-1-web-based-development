@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -20,6 +21,8 @@ func (d DevRoutes) Routes(r chi.Router) {
 	r.Get("/dev/group", d.groupDetail)
 	r.Get("/dev/connections", d.connections)
 	r.Get("/dev/connection", d.connectionDetail)
+	r.Get("/dev/connection/edit", d.connectionForm)
+	r.Post("/dev/connection/test", d.connectionTest)
 	// Khusus dev: menu sidebar "Koneksi Database" menuju /admin/connections. Hapus baris ini
 	// kalau route asli /admin/connections sudah dipasang, supaya tidak menimpanya.
 	r.Get("/admin/connections", func(w http.ResponseWriter, r *http.Request) {
@@ -370,7 +373,7 @@ func (d DevRoutes) connections(w http.ResponseWriter, r *http.Request) {
 func devConnectionDetail() ConnectionDetailPage {
 	p := ConnectionDetailPage{
 		Shell:        devShell("admin", "connections", true),
-		PageHeader:   ConnectionDetailHeader("shop_db", "/dev/connections", "#"),
+		PageHeader:   ConnectionDetailHeader("shop_db", "/dev/connections", "/dev/connection/edit"),
 		TestAction:   "#",
 		DeleteAction: "#",
 		Params: NewConnectionParamsCard(ConnectionParams{
@@ -388,4 +391,47 @@ func devConnectionDetail() ConnectionDetailPage {
 // Halaman Detail Koneksi dengan data contoh: /dev/connection
 func (d DevRoutes) connectionDetail(w http.ResponseWriter, r *http.Request) {
 	d.R.Render(w, "admin/connection_detail.html", devConnectionDetail())
+}
+
+// devConnectionForm membuat data contoh halaman Edit Koneksi. test: "" (belum dites) | "ok" | "fail".
+func devConnectionForm(test string) ConnectionFormPage {
+	p := ConnectionFormPage{
+		Shell:      devShell("admin", "connections", true),
+		PageHeader: ConnectionEditHeader("shop_db", "/dev/connections"),
+		FormAction: "#",
+		CancelHref: "/dev/connection",
+		Values:     FormValuesFrom("shop_db", "shop", "db-shop.internal", 5432, "pathgres_app"),
+		Test:       ConnectionTestPanel{TestAction: "/dev/connection/test"},
+	}
+	switch test {
+	case "ok":
+		p.Test.Result = devTestResult(true)
+	case "fail":
+		p.Test.Result = devTestResult(false)
+	}
+	p.SetCSRF("dev-token")
+	return p
+}
+
+func devTestResult(ok bool) *ConnectionTestResult {
+	if ok {
+		return &ConnectionTestResult{OK: true, Title: "Koneksi berhasil diuji.", Detail: "Server membalas dalam 38 ms."}
+	}
+	return &ConnectionTestResult{Title: "Koneksi gagal diuji.", InvalidField: "host",
+		Detail: "Server menolak koneksi (connection refused) pada db-shop.internal:5432. Periksa host, port, dan aturan firewall."}
+}
+
+// Halaman Edit Koneksi dengan data contoh: /dev/connection/edit[?test=ok|fail]
+func (d DevRoutes) connectionForm(w http.ResponseWriter, r *http.Request) {
+	d.R.Render(w, "admin/connection_form.html", devConnectionForm(r.URL.Query().Get("test")))
+}
+
+// Jawaban htmx tombol Test Koneksi di halaman dev. Gagal kalau isi Host mengandung "gagal"
+// (mis. ketik "gagal.internal"), selain itu berhasil.
+func (d DevRoutes) connectionTest(w http.ResponseWriter, r *http.Request) {
+	_ = r.ParseForm()
+	d.R.RenderConnectionTest(w, ConnectionTestPanel{
+		TestAction: "/dev/connection/test",
+		Result:     devTestResult(!strings.Contains(r.FormValue("host"), "gagal")),
+	})
 }

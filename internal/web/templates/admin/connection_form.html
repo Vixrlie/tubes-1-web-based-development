@@ -1,0 +1,28 @@
+{{/*
+Halaman Edit Koneksi: form Parameter Koneksi + tombol Test Koneksi (htmx) + action bar
+Batal / Simpan Perubahan (muncul begitu ada isian yang berubah, lihat static/js/connection-form.js).
+Data: web.ConnectionFormPage (lihat connectionform.go)
+*/}}
+{{define "content"}}
+<div class="has-action-bar">
+    {{template `page-header` .PageHeader}}
+
+    <form id="connection-form" class="card connection-form" method="post" action="{{.FormAction}}" data-bar="connection-bar">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <header class="card__head">
+            <h2 class="card__title">Parameter Koneksi</h2>
+        </header>
+        <div class="form-grid">
+            {{- range .Fields}}
+            {{template `input` .}}
+            {{- end}}
+        </div>
+        {{template `connection-test` .Test}}
+    </form>
+
+    {{template `action-bar` (dict `Message` `Ada perubahan yang belum disimpan` `ID` `connection-bar` `Hidden` true
+    `CancelHref` .CancelHref `SubmitAttrs` (attr `form="connection-form"`))}}
+
+    <script src="/static/js/connection-form.js" defer></script>
+</div>
+{{end}}

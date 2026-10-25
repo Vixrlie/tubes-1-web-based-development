@@ -1,0 +1,21 @@
+{{/*
+Tombol "Test Koneksi" + hasil tesnya (banner hijau / merah). Data: web.ConnectionTestPanel
+(lihat connectionform.go). Tombol mem-POST isi form lewat htmx dan menggantikan seluruh
+komponen ini dengan jawaban server (Renderer.RenderConnectionTest).
+
+{{template `connection-test` .Test}}
+
+Hasil gagal dengan InvalidField diisi -> input bernama itu disorot merah oleh
+static/js/connection-form.js.
+*/}}
+{{define "connection-test"}}
+<div class="connection-test" id="connection-test" aria-live="polite">
+    {{template `button` .Button}}
+    {{- with .Result}}
+    <p class="test-result test-result--{{if .OK}}ok{{else}}fail{{end}}" {{with .InvalidField}}
+        data-invalid-field="{{.}}" {{end}}>
+        <strong>{{.Title}}</strong>{{with .Detail}} {{.}}{{end}}
+    </p>
+    {{- end}}
+</div>
+{{end}}

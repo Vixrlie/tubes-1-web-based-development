@@ -12,6 +12,8 @@ type PageHeader struct {
 	Title   string
 	Crumbs  []Crumb
 	Actions []Button
+	// Tag = label kecil di kanan kepala halaman (opsional), mis. {Text: "Mode edit", Variant: "warning"}
+	Tag *TableCell
 }
 
 // ---------------------------------------------------------------------------
