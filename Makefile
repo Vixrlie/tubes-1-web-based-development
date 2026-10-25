@@ -1,7 +1,7 @@
 -include .env
 export
 
-.PHONY: up down run test test-integration lint
+.PHONY: up down run test lint
 
 up:
 	docker compose up -d
@@ -14,9 +14,6 @@ run:
 
 test:
 	go test ./... -short
-
-test-integration:
-	go test ./... -count=1
 
 lint:
 	golangci-lint run ./...
