@@ -88,6 +88,7 @@ func NewGroupsTable(groups []GroupSummary) Table {
 
 type GroupDetailPage struct {
 	Shell      // Nav "admin", SideActive "groups"
+	GroupName  string // nama group untuk judul/konfirmasi pop up hapus
 	PageHeader // "Grup <nama>" + tombol "Hapus Grup"
 	CSRFToken  string
 	// DeleteAction = URL POST hapus grup. Kosong -> form hapus tidak dirender
@@ -104,12 +105,12 @@ type GroupDetailPage struct {
 // ID form tersembunyi untuk hapus grup; dirujuk tombol lewat atribut form=.
 const deleteGroupFormID = "delete-group-form"
 
-// DeleteGroupButton = tombol "Hapus Grup" untuk PageHeader.Actions; men-submit
-// form hapus (DeleteAction) milik halaman.
+// DeleteGroupButton = tombol "Hapus Grup" untuk PageHeader.Actions; membuka
+// pop up konfirmasi ketik-nama (delete-group-modal, lihat group_detail.html).
 func DeleteGroupButton() Button {
 	b := DangerButton("Hapus Grup")
-	b.Type = "submit"
-	b.Attrs = `form="` + deleteGroupFormID + `"`
+	b.Type = "button"
+	b.Attrs = `data-modal-open="delete-group-modal" aria-controls="delete-group-modal"`
 	return b
 }
 
@@ -180,7 +181,7 @@ func NewMembersCard(members []Member, addHref string, removeAction func(i int) s
 		item := ListItem{
 			Title: m.DisplayName(),
 			Action: &ListAction{Label: "Keluarkan", FormAction: removeAction(i),
-				Confirm: "Keluarkan " + m.DisplayName() + " dari grup ini?"},
+				Dialog: "remove-member-modal", Subject: m.DisplayName()},
 		}
 		if m.FullName != "" {
 			item.Subtitle = m.Username // tanpa nama lengkap, username sudah jadi judul

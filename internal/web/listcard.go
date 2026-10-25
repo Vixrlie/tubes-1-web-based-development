@@ -21,7 +21,9 @@ package web
 type ListAction struct {
 	Label      string
 	FormAction string // URL tujuan POST
-	Confirm    string // opsional; kalau diisi muncul konfirmasi browser sebelum submit
+	Confirm    string // opsional; konfirmasi browser bila dialog tidak dipakai
+	Dialog     string // opsional; id <dialog> yang dibuka sebagai konfirmasi
+	Subject    string // opsional; nama entitas untuk teks dialog (mis. anggota)
 }
 
 // ListItem = satu baris.

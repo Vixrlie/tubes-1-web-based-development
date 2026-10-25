@@ -35,11 +35,19 @@ CSRFToken token csrf untuk form aksi baris
             </div>
             {{- with $it.Tag.Text}}{{template `table-cell` $it.Tag}}{{end}}
             {{- with $it.Action}}
+            {{- if .Dialog}}
+            <div class="list-card__action">
+                <button type="button" class="btn btn--soft-danger" data-modal-open="{{.Dialog}}"
+                    data-form-action="{{.FormAction}}" data-subject="{{.Subject}}">
+                    <span class="btn__label">{{.Label}}</span></button>
+            </div>
+            {{- else}}
             <form class="list-card__action" method="post" action="{{.FormAction}}" {{with .Confirm}}
                 onsubmit="return confirm({{.}})" {{end}}>
                 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
                 {{template `button` (dict `Label` .Label `Type` `submit` `Variant` `soft-danger`)}}
             </form>
+            {{- end}}
             {{- end}}
         </li>
         {{- else}}

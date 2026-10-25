@@ -180,6 +180,7 @@ func (g *groupHandlers) buildDetailView(r *http.Request, grp Group, editMode boo
 
 	page := web.GroupDetailPage{
 		Shell:        g.shell(r),
+		GroupName:    grp.Name,
 		PageHeader:   web.GroupDetailHeader(grp.Name, "/admin/groups"),
 		DeleteAction: base + "/delete",
 		Members:      web.NewMembersCard(webMembers, base+"/members", removeAction),
