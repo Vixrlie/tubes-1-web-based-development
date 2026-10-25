@@ -3,6 +3,7 @@ tmp/
 bin/
 *.log
 .DS_Store
+scripts/
 
 # Unit test tidak ikut di-commit
 *_test.go
