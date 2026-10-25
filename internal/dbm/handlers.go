@@ -212,7 +212,7 @@ func (h *Handlers) databaseShell(ctx context.Context, connID int64, connName, ac
 // list menampilkan kartu database yang boleh dibuka user (Access Control).
 func (h *Handlers) list(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.platform.Query(r.Context(),
-		`SELECT id, name FROM db_connections ORDER BY name`)
+		`SELECT id, name, connection_url FROM db_connections ORDER BY name`)
 	if err != nil {
 		h.serverError(w, "daftar database", err)
 		return
@@ -222,8 +222,8 @@ func (h *Handlers) list(w http.ResponseWriter, r *http.Request) {
 	page := web.DatabasesPage{Shell: web.Shell{Nav: "databases", User: shellUser(r.Context())}}
 	for rows.Next() {
 		var id int64
-		var name string
-		if err := rows.Scan(&id, &name); err != nil {
+		var name, rawURL string
+		if err := rows.Scan(&id, &name, &rawURL); err != nil {
 			h.serverError(w, "daftar database", err)
 			return
 		}
@@ -247,13 +247,13 @@ func (h *Handlers) list(w http.ResponseWriter, r *http.Request) {
 			card.Status = web.ConnFailed
 			card.Error = "Tidak dapat terhubung ke database. Coba lagi beberapa saat."
 			card.RetryHref = "/databases"
-			card.Meta = "PostgreSQL"
+			card.Meta = schemeLabel(rawURL)
 			page.Cards = append(page.Cards, card)
 			continue
 		}
-		card.Meta = "PostgreSQL"
+		card.Meta = schemeLabel(rawURL)
 		if n, err := countTables(r.Context(), pool); err == nil {
-			card.Meta = fmt.Sprintf("PostgreSQL · %d tabel", n)
+			card.Meta = fmt.Sprintf("%s · %d tabel", schemeLabel(rawURL), n)
 		}
 		page.Cards = append(page.Cards, card)
 	}

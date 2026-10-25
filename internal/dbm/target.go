@@ -109,6 +109,15 @@ func urlScheme(rawURL string) string {
 	return strings.ToLower(u.Scheme)
 }
 
+// schemeLabel = nama DBMS untuk tampilan, diturunkan dari skema connection_url
+// sehingga kartu database tetap benar walau koneksi target sedang gagal.
+func schemeLabel(rawURL string) string {
+	if urlScheme(rawURL) == "mysql" {
+		return "MySQL"
+	}
+	return "PostgreSQL"
+}
+
 // --- PostgreSQL -------------------------------------------------------------
 
 // Postgres = dialect PostgreSQL. Kueri dipertahankan seperti versi pgx
