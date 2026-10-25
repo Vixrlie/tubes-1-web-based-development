@@ -1,12 +1,7 @@
 package dbm
 
-// Halaman migration format fe-components: riwayat, editor draft, detail, dan
-// preview + eksekusi. Semua data diambil dari MigrationStore (tabel
-// migration_history di db platform); eksekusi lewat MigrationRunner yang
-// berjalan transaksional pada database target.
-//
-// Izin: halaman baca cukup ActionView; buat draft & eksekusi wajib ActionEdit
-// (read-only user tidak boleh menyentuh database target).
+// Halaman migration (riwayat, editor draft, detail, preview + eksekusi) di atas
+// MigrationStore; izin: baca cukup ActionView, buat draft & eksekusi wajib ActionEdit.
 
 import (
 	"context"
@@ -24,7 +19,7 @@ import (
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 )
 
-// --- helpers bersama --------------------------------------------------------
+// Helpers bersama
 
 // migrationsHref = URL daftar riwayat migration sebuah koneksi.
 func migrationsHref(connID int64) string {
@@ -96,7 +91,7 @@ func shortChecksum(sum string) string {
 	return sum
 }
 
-// --- riwayat (daftar) -------------------------------------------------------
+// Riwayat (daftar)
 
 // migrationsPage = data halaman templates/migrations.html fe-components.
 type migrationsPage struct {
@@ -167,7 +162,7 @@ func (h *Handlers) migrationsList(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// --- editor (draft baru) ----------------------------------------------------
+// Editor (draft baru)
 
 // migrationEditorPage = data templates/migration_editor.html fe-components.
 type migrationEditorPage struct {
@@ -239,7 +234,7 @@ func (h *Handlers) migrationsCreate(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, migrationsHref(connID)+"/"+strconv.FormatInt(m.ID, 10), http.StatusSeeOther)
 }
 
-// --- detail -----------------------------------------------------------------
+// Detail
 
 // migrationDetailPage = data templates/migration_detail.html fe-components.
 type migrationDetailPage struct {
@@ -325,7 +320,7 @@ func (h *Handlers) migrationDetail(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// --- preview & eksekusi -----------------------------------------------------
+// Preview & eksekusi
 
 // migrationPreviewPage = data templates/migration_preview.html fe-components.
 type migrationPreviewPage struct {

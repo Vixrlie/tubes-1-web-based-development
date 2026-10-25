@@ -18,7 +18,6 @@ import (
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 )
 
-// Config adalah dependensi handler database management.
 type Config struct {
 	Platform *pgxpool.Pool // baca db_connections
 	Policy   access.Policy
@@ -29,10 +28,8 @@ type Config struct {
 	Migrations MigrationStore
 }
 
-// Handlers melayani userflow database: daftar database, penjelajah schema,
-// dan detail tabel (columns / constraints / data). Semua route memeriksa
-// izin lewat access.Policy di backend; penolakan memakai 403 polos
-// (FE belum menyediakan halaman error khusus).
+// Handlers melayani userflow database (daftar, schema, detail tabel). Semua route
+// memeriksa izin via access.Policy; penolakan 403 polos — FE belum punya halaman error.
 type Handlers struct {
 	platform   *pgxpool.Pool
 	policy     access.Policy
@@ -115,7 +112,7 @@ func (h *Handlers) authorizeAction(w http.ResponseWriter, r *http.Request, actio
 	return connID, true
 }
 
-// --- helpers shell & data ---------------------------------------------------
+// Helpers shell & data
 
 func shellUser(ctx context.Context) *web.ShellUser {
 	me, ok := auth.UserFromContext(ctx)
@@ -204,7 +201,7 @@ func (h *Handlers) databaseShell(ctx context.Context, connID int64, connName, ac
 	return sh
 }
 
-// --- daftar database --------------------------------------------------------
+// Daftar database
 
 // list menampilkan kartu database yang boleh dibuka user (Access Control).
 func (h *Handlers) list(w http.ResponseWriter, r *http.Request) {
@@ -315,7 +312,7 @@ func (h *Handlers) renderDbError(w http.ResponseWriter) {
 	http.Error(w, "database tidak dapat dihubungi", http.StatusServiceUnavailable)
 }
 
-// --- penjelajah schema ------------------------------------------------------
+// Penjelajah schema
 
 // schemaPage adalah data halaman schema (templates/schema.html fe-components).
 type schemaPage struct {
@@ -425,7 +422,7 @@ func (h *Handlers) schema(w http.ResponseWriter, r *http.Request) {
 	h.render(w, http.StatusOK, "schema.html", page)
 }
 
-// --- detail tabel -----------------------------------------------------------
+// Detail tabel
 
 // tablePage adalah data detail tabel (templates/table_detail.html fe-components).
 type tablePage struct {
