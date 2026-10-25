@@ -409,7 +409,7 @@ func (u *userHandlers) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Keanggotaan & session terhapus cascade oleh store.
-	http.Redirect(w, r, "/admin/users?status=deleted", http.StatusSeeOther)
+	http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
 }
 
 // Reset password

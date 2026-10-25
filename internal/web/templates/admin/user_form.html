@@ -103,15 +103,44 @@ jadi nilai kondisional dihitung dulu ke variabel $.
     </form>
 
     {{/* --- Kartu hapus permanen --- */}}
-    <form class="card" method="post" action="/admin/users/{{.ID}}/delete"
-        onsubmit="return confirm('Hapus user {{.Username}}? Tindakan ini permanen.')">
-        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <section class="card">
         {{template `card-head` (dict `Title` `Hapus user` `Actions` (list
-            (dict `Label` `Hapus User` `Variant` `soft-danger` `Type` `submit` `State` $state)))}}
+            (dict `Label` `Hapus User` `Variant` `soft-danger` `Type` `button` `State` $state
+                `Attrs` (attr `data-modal-open="delete-user-modal" aria-controls="delete-user-modal"`))))}}
         <p>Hapus permanen hanya untuk user tanpa riwayat migration; selain itu gunakan
             Nonaktifkan. Admin aktif terakhir tidak bisa dihapus.</p>
         {{if .IsSelf}}<p class="card__note">Anda tidak bisa menghapus akun sendiri.</p>{{end}}
-    </form>
+    </section>
+
+    <dialog class="modal confirm-delete-modal" id="delete-user-modal" aria-labelledby="delete-user-modal-title">
+        <div class="modal__panel">
+            {{template `modal-head` (dict `ID` `delete-user-modal` `Title` (printf `Hapus user %s` .Username))}}
+            <form class="modal__form" method="post" action="/admin/users/{{.ID}}/delete">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div class="modal__body">
+                    <p class="confirm-delete-modal__text">Yakin ingin menghapus user ini? Tindakan ini permanen dan tidak dapat dibatalkan.</p>
+                    <dl class="confirm-delete-modal__meta" role="list">
+                        <div class="confirm-delete-modal__meta-row">
+                            <dt>Username:</dt>
+                            <dd>{{.Username}}</dd>
+                        </div>
+                        <div class="confirm-delete-modal__meta-row">
+                            <dt>Nama:</dt>
+                            <dd>{{or .FullName `-`}}</dd>
+                        </div>
+                        <div class="confirm-delete-modal__meta-row">
+                            <dt>Email:</dt>
+                            <dd>{{or .Email `-`}}</dd>
+                        </div>
+                    </dl>
+                </div>
+                <div class="modal__foot">
+                    {{template `button` (dict `Label` `Batal` `Variant` `secondary` `Attrs` (attr `data-modal-close`))}}
+                    {{template `button` (dict `Label` `Ya, Hapus User` `Fill` `var(--color-danger)` `Color` `var(--color-on-danger)` `Stroke` `var(--color-danger)` `Type` `submit` `State` $state)}}
+                </div>
+            </form>
+        </div>
+    </dialog>
     {{end}}
 </div>
 {{end}}

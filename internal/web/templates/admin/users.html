@@ -8,12 +8,12 @@ Data: admin.usersPage (lihat admin/users_handler.go):
 {{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs `Actions` .Actions)}}
 
 <div class="stack">
-    {{- with .Notice}}
+    <!-- {{- with .Notice}}
     <section class="card">
         {{template `card-head` (dict `Title` `Info`)}}
         <p role="status">{{.}}</p>
     </section>
-    {{- end}}
+    {{- end}} -->
 
     {{template `table` .Table}}
 
