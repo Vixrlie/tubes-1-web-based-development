@@ -153,7 +153,7 @@ func ListConstraints(ctx context.Context, pool *pgxpool.Pool, schema, table stri
 func ListIndexes(ctx context.Context, pool *pgxpool.Pool, schema, table string) ([]IndexInfo, error) {
 	rows, err := pool.Query(ctx, `
 		SELECT ic.relname AS name,
-		       string_agg(a.attname, ', ' ORDER BY k.ordinal_position) AS columns,
+		       string_agg(a.attname, ', ' ORDER BY k.ordinal) AS columns,
 		       ix.indisunique AS unique,
 		       am.amname AS method
 		FROM pg_index ix
@@ -164,7 +164,7 @@ func ListIndexes(ctx context.Context, pool *pgxpool.Pool, schema, table string) 
 		JOIN LATERAL unnest(ix.indkey) WITH ORDINALITY AS k(attnum, ordinal) ON true
 		JOIN pg_attribute a ON a.attrelid = ix.indexrelid AND a.attnum = k.attnum
 		WHERE n.nspname = $1 AND t.relname = $2 AND ix.indisprimary = false AND a.attnum > 0
-		GROUP BY ic.indexrelid, ix.indisunique, am.amname
+		GROUP BY ic.oid, ic.relname, ix.indisunique, am.amname
 		ORDER BY name`, schema, table)
 	if err != nil {
 		return nil, err
