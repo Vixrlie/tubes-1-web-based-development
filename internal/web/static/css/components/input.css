@@ -1,10 +1,7 @@
-/* ==========================================================================
-   input.css
-   State : (default) | .is-error | .is-disabled
+/* State : (default) | .is-error | .is-disabled
    Teks  : kosong (placeholder) -> neutral-500, terisi -> neutral-900
            (dideteksi lewat :placeholder-shown, tanpa JS)
-   Hanya memakai token semantik dari themes.css.
-   ========================================================================== */
+   Hanya memakai token semantik dari themes.css. */
 
 .input {
     display: flex;
@@ -65,7 +62,7 @@
     color: var(--color-text-muted);
 }
 
-/* ---------- Hover & focus ---------- */
+/* Hover & focus */
 /* hover tidak boleh menimpa warna fokus: tanpa :not(:focus-within), selector hover
    (lebih spesifik daripada aturan fokus) menang selama kursor masih di atas field */
 .input:not(.is-disabled):not(.is-error) .input__box:hover:not(:focus-within) {
@@ -85,7 +82,7 @@
     border-color: var(--color-focus);
 }
 
-/* ---------- Error ---------- */
+/* Error */
 .input.is-error .input__label,
 .input.is-error .input__helper,
 .input.is-error .input__control,
@@ -102,7 +99,7 @@
     border-color: var(--color-danger);
 }
 
-/* ---------- Disabled ---------- */
+/* Disabled */
 .input.is-disabled .input__label,
 .input.is-disabled .input__helper,
 .input.is-disabled .input__control,
@@ -120,7 +117,7 @@
     cursor: not-allowed;
 }
 
-/* ---------- Tombol tampil/sembunyikan password ---------- */
+/* Tombol tampil/sembunyikan password */
 .input__toggle {
     display: inline-flex;
     align-items: center;

@@ -1,7 +1,5 @@
-/* ==========================================================================
-   detail-card.css  -  kartu "label + nilai" 2 kolom (templates/components/detail-card.html)
-   Kepala kartu memakai .card / .card__head dari card.css.
-   ========================================================================== */
+/* kartu "label + nilai" 2 kolom (templates/components/detail-card.html)
+   Kepala kartu memakai .card / .card__head dari card.css. */
 
 .detail-card__grid {
     display: grid;
@@ -40,7 +38,7 @@
     }
 }
 
-/* ---------- Tata letak: kolom pertama lebih lebar (mis. Parameter Koneksi | Group) ---------- */
+/* Tata letak: kolom pertama lebih lebar (mis. Parameter Koneksi | Group) */
 .split--lead {
     grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
 }

@@ -1,9 +1,6 @@
-/* ==========================================================================
-   table.css
-   Komponen tabel (templates/components/table.html).
+/* Komponen tabel (templates/components/table.html).
    Semua aturan di-scope ke .table / .table-card supaya <table> polos di
-   halaman lain tidak berubah. Hanya memakai token dari themes.css.
-   ========================================================================== */
+   halaman lain tidak berubah. Hanya memakai token dari themes.css. */
 
 .table-card {
     padding: var(--space-6);

@@ -1,10 +1,7 @@
-/* ==========================================================================
-   dropdown.css
-   Dropdown = <select> native di dalam .input__box (gaya dasar, state error /
+/* Dropdown = <select> native di dalam .input__box (gaya dasar, state error /
    disabled, focus ada di input.css, jadi input.css harus ikut dimuat).
    File ini hanya menambah hal khusus select: sembunyikan panah bawaan,
-   susun icon di atas select, dan warna placeholder.
-   ========================================================================== */
+   susun icon di atas select, dan warna placeholder. */
 
 /* select dan icon menumpuk di satu sel grid; select yang menangkap semua klik */
 .dropdown .input__box {

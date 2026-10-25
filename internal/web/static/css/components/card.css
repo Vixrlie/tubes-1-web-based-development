@@ -1,7 +1,5 @@
-/* ==========================================================================
-   card.css  -  kartu putih umum + kepala kartu (templates/components/card.html)
-   Dipakai bersama oleh list-card dan access-editor.
-   ========================================================================== */
+/* kartu putih umum + kepala kartu (templates/components/card.html)
+   Dipakai bersama oleh list-card dan access-editor. */
 
 .card {
     padding: var(--space-6);

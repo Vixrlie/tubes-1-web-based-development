@@ -1,10 +1,7 @@
-/* ==========================================================================
-   action-bar.css
-   Bar melayang di bawah layar (templates/components/action-bar.html).
+/* Bar melayang di bawah layar (templates/components/action-bar.html).
    Default : position fixed, muncul dengan animasi naik dari bawah.
    Modifier: .action-bar--static -> ikut alur halaman (untuk demo / dev page).
-   Sembunyikan dengan atribut `hidden`.
-   ========================================================================== */
+   Sembunyikan dengan atribut `hidden`. */
 
 .action-bar {
     position: fixed;

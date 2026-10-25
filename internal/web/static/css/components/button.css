@@ -1,13 +1,9 @@
-/* ==========================================================================
-   button.css
-   Varian : .btn--primary | .btn--secondary | .btn--tertiary
+/* Varian : .btn--primary | .btn--secondary | .btn--tertiary
    State  : (default) | .is-active | .is-disabled   (+ :hover / :active asli)
    Hanya memakai token semantik dari themes.css.
-
    Override per-instance lewat CSS variable (diisi oleh templates/components/button.html):
      --btn-fill  --btn-fg  --btn-stroke  --btn-padding  --btn-px  --btn-py
-   Kalau variable tidak diset -> jatuh ke nilai default variant/state (--_*).
-   ========================================================================== */
+   Kalau variable tidak diset -> jatuh ke nilai default variant/state (--_*). */
 
 .btn {
     /* default (diganti per variant/state di bawah) */
@@ -57,7 +53,7 @@
     text-decoration: none;
 }
 
-/* ---------- Primary (fill) ---------- */
+/* Primary (fill) */
 .btn--primary {
     --_fill: var(--color-primary);
     --_fg: var(--color-on-primary);
@@ -81,7 +77,7 @@
     --_stroke: var(--color-primary-disabled-bg);
 }
 
-/* ---------- Secondary (outline) ---------- */
+/* Secondary (outline) */
 .btn--secondary {
     --_fill: transparent;
     --_fg: var(--color-text-muted);
@@ -105,7 +101,7 @@
     --_stroke: var(--color-disabled-border);
 }
 
-/* ---------- Tertiary (text/link) ---------- */
+/* Tertiary (text/link) */
 .btn--tertiary {
     --_fill: transparent;
     --_fg: var(--color-link);
@@ -131,13 +127,13 @@
     --_fg: var(--color-primary-disabled-fg);
 }
 
-/* ---------- Disabled (umum) ---------- */
+/* Disabled (umum) */
 .btn.is-disabled {
     cursor: not-allowed;
     pointer-events: none;
 }
 
-/* ---------- Custom fill/color/stroke ---------- */
+/* Custom fill/color/stroke */
 /* Warna hover/active bawaan variant tidak berlaku saat di-override,
    jadi dibedakan dengan filter supaya tetap ada feedback. */
 .btn--custom:not(.is-disabled):hover {
@@ -153,7 +149,7 @@
     opacity: 0.5;
 }
 
-/* ---------- Soft danger (aksi kecil destruktif: Keluarkan, Cabut) ---------- */
+/* Soft danger (aksi kecil destruktif: Keluarkan, Cabut) */
 .btn--soft-danger {
     --_fill: var(--color-label-error-bg);
     --_fg: var(--color-label-error-fg);
@@ -177,7 +173,7 @@
 }
 
 
-/* ---------- Outline (garis & teks primary; aksi sekunder yang menonjol) ---------- */
+/* Outline (garis & teks primary; aksi sekunder yang menonjol) */
 .btn--outline {
     --_fill: transparent;
     --_fg: var(--color-primary);

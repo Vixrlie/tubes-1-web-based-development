@@ -1,8 +1,6 @@
-/* ==========================================================================
-   login.css  -  halaman login (templates/login.html)
+/* halaman login (templates/login.html)
    Kiri : panel gambar (static/img/login-page-image.png) + logo + tagline
-   Kanan: form. Di layar sempit panel kiri disembunyikan.
-   ========================================================================== */
+   Kanan: form. Di layar sempit panel kiri disembunyikan. */
 
 /* layout membungkus konten dengan padding .app-shell; login butuh full-bleed */
 .app-shell:has(.login) {
@@ -19,7 +17,7 @@
     background: var(--color-bg);
 }
 
-/* ---------- Panel kiri ---------- */
+/* Panel kiri */
 .login__aside {
     display: flex;
     flex-direction: column;
@@ -68,7 +66,7 @@
     color: var(--color-neutral-600);
 }
 
-/* ---------- Panel kanan ---------- */
+/* Panel kanan */
 .login__panel {
     display: flex;
     align-items: center;
@@ -127,7 +125,7 @@
     padding-block: var(--space-3);
 }
 
-/* ---------- Layar sempit: panel gambar jadi bar logo saja ---------- */
+/* Layar sempit: panel gambar jadi bar logo saja */
 @media (max-width: 900px) {
     .login {
         grid-template-columns: minmax(0, 1fr);

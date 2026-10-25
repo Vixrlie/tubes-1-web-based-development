@@ -1,9 +1,7 @@
-/* ==========================================================================
-   access-editor.css  -  kartu "Akses Database" mode ubah
+/* kartu "Akses Database" mode ubah
    (templates/components/access-editor.html + static/js/access-editor.js)
    Baris: [nama db | dropdown level] [Cabut]
-   State baris: data-state="removed" -> nama dicoret, dropdown hilang, muncul "Batal Cabut".
-   ========================================================================== */
+   State baris: data-state="removed" -> nama dicoret, dropdown hilang, muncul "Batal Cabut". */
 
 .access-editor__list {
     margin: 0;

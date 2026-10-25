@@ -1,8 +1,5 @@
-/* ==========================================================================
-   label.css
-   Varian : .label--success | --error | --warning | --info | --neutral
-   Hanya memakai token semantik dari themes.css.
-   ========================================================================== */
+/* Varian : .label--success | --error | --warning | --info | --neutral
+   Hanya memakai token semantik dari themes.css. */
 
 .label {
     --_bg: var(--color-label-neutral-bg);

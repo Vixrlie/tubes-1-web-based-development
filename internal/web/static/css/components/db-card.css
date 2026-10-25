@@ -1,9 +1,6 @@
-/* ==========================================================================
-   db-card.css
-   Kartu database. Varian: (default = terhubung) | .db-card--failed
+/* Kartu database. Varian: (default = terhubung) | .db-card--failed
    Dibangun dari komponen icon, label, dan button; hanya memakai token
-   semantik dari themes.css.
-   ========================================================================== */
+   semantik dari themes.css. */
 
 /* Grid daftar kartu: otomatis menyesuaikan jumlah kolom */
 .db-grid {

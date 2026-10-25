@@ -1,9 +1,7 @@
-/* ==========================================================================
-   user-menu.css  -  kartu akun di header (partials/header.html, partials/user-menu.html)
+/* kartu akun di header (partials/header.html, partials/user-menu.html)
    Avatar = tombol pemicu; kartu muncul tepat di bawahnya, rata kanan.
    Buka / tutup: static/js/user-menu.js (atribut hidden pada .user-menu__panel).
-   Hanya memakai token semantik dari themes.css.
-   ========================================================================== */
+   Hanya memakai token semantik dari themes.css. */
 
 .user-menu {
     position: relative;
@@ -54,7 +52,7 @@
     }
 }
 
-/* ---------- Isi kartu ---------- */
+/* Isi kartu */
 .user-card {
     padding: var(--space-5);
     background: var(--color-surface-raised);

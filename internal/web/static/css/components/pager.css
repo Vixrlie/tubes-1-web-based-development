@@ -1,8 +1,6 @@
-/* ==========================================================================
-   pager.css  -  paginasi (templates/components/pager.html)
+/* paginasi (templates/components/pager.html)
    Tombolnya adalah komponen .btn--secondary; di sini hanya tata letak
-   dan ukuran. Hanya memakai token dari themes.css.
-   ========================================================================== */
+   dan ukuran. Hanya memakai token dari themes.css. */
 
 .pager {
     display: flex;

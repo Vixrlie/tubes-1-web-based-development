@@ -1,10 +1,8 @@
-/* ==========================================================================
-   theme.css  -  SEMANTIC TOKENS
+/* Semantic tokens
    Komponen HANYA boleh memakai token di file ini (bukan --color-primary-600 dst).
    Ganti tema = ganti mapping di sini, komponen tidak perlu disentuh.
    Bagian "di luar Figma" (spacing, radius, shadow, dll) adalah asumsi:
-   sesuaikan kalau desainmu punya angka lain.
-   ========================================================================== */
+   sesuaikan kalau desainmu punya angka lain. */
 :root {
    color-scheme: light;
 
@@ -21,7 +19,7 @@
    --color-label-neutral-bg: var(--color-neutral-100);
    --color-label-neutral-fg: var(--color-neutral-700);
 
-   /* ---------- Surface & teks ---------- */
+   /* Surface & teks */
    --color-bg: var(--color-white);
    --color-surface: var(--color-neutral-50);
    --color-surface-muted: var(--color-neutral-100);
@@ -37,7 +35,7 @@
    --color-border: var(--color-neutral-200);
    --color-border-strong: var(--color-neutral-300);
 
-   /* ---------- Aksi: primary ---------- */
+   /* Aksi: primary */
    /* Pakai 600 sbg dasar: primary-500 + teks putih kontrasnya < 4.5:1 */
    --color-primary: var(--color-primary-500);
    --color-primary-hover: var(--color-primary-700);
@@ -51,24 +49,24 @@
    --color-link: var(--color-primary-600);
    --color-link-hover: var(--color-primary-500);
 
-   /* ---------- Brand (teks logo "Path" + "gres") - sesuaikan dgn Figma ---------- */
+   /* Brand (teks logo "Path" + "gres") - sesuaikan dgn Figma */
    --color-brand-strong: var(--color-primary-700);
    --color-brand-light: var(--color-primary-400);
 
-   /* ---------- Aksi: secondary ---------- */
+   /* Aksi: secondary */
    --color-secondary: var(--color-secondary-50);
    --color-secondary-hover: var(--color-secondary-100);
    --color-secondary-active: var(--color-secondary-200);
    --color-secondary-border: var(--color-secondary-200);
    --color-on-secondary: var(--color-secondary-700);
 
-   /* ---------- Aksi: danger ---------- */
+   /* Aksi: danger */
    --color-danger: var(--color-error-500);
    --color-danger-hover: var(--color-error-600);
    --color-danger-active: var(--color-error-700);
    --color-on-danger: var(--color-white);
 
-   /* ---------- Kontrol (disabled, fokus) ---------- */
+   /* Kontrol (disabled, fokus) */
    --color-disabled-bg: var(--color-neutral-100);
    --color-disabled-fg: var(--color-neutral-400);
    --color-disabled-border: var(--color-neutral-200);
@@ -76,7 +74,7 @@
    --focus-ring: 0 0 0 3px var(--color-primary-200);
    --focus-ring-danger: 0 0 0 3px var(--color-error-200);
 
-   /* ---------- Feedback (alert, badge) ---------- */
+   /* Feedback (alert, badge) */
    --color-info-bg: var(--color-primary-50);
    --color-info-border: var(--color-primary-200);
    --color-info-text: var(--color-primary-800);
@@ -98,7 +96,7 @@
    --color-error-text: var(--color-error-700);
    --color-error-solid: var(--color-error-500);
 
-   /* ---------- Label (badge kecil) ---------- */
+   /* Label (badge kecil) */
    --color-label-success-bg: var(--color-success-100);
    --color-label-success-fg: var(--color-success-700);
    --color-label-error-bg: var(--color-error-100);
@@ -110,10 +108,10 @@
    --color-label-neutral-bg: var(--color-neutral-100);
    --color-label-neutral-fg: var(--color-neutral-700);
 
-   /* ---------- Icon ---------- */
+   /* Icon */
    --color-icon: var(--color-neutral-500);
 
-   /* ---------- Label (badge kecil) ---------- */
+   /* Label (badge kecil) */
    --color-label-success-bg: var(--color-success-100);
    --color-label-success-fg: var(--color-success-700);
    --color-label-error-bg: var(--color-error-100);
@@ -125,11 +123,11 @@
    --color-label-neutral-bg: var(--color-neutral-100);
    --color-label-neutral-fg: var(--color-neutral-700);
 
-   /* ---------- Tabel ---------- */
+   /* Tabel */
    --color-table-head-bg: var(--color-neutral-50);
    --color-table-row-hover: var(--color-neutral-50);
 
-   /* ---------- Spacing (skala 4px) - di luar Figma ---------- */
+   /* Spacing (skala 4px) - di luar Figma */
    --space-0: 0;
    --space-1: 0.25rem;
    /* 4  */
@@ -152,19 +150,19 @@
    --space-16: 4rem;
    /* 64 */
 
-   /* ---------- Radius - di luar Figma ---------- */
+   /* Radius - di luar Figma */
    --radius-sm: 4px;
    --radius-md: 8px;
    --radius-lg: 12px;
    --radius-xl: 1.5rem;
    --radius-full: 9999px;
 
-   /* ---------- Shadow - di luar Figma ---------- */
+   /* Shadow - di luar Figma */
    --shadow-sm: 0 1px 2px rgb(36 43 54 / 0.06);
    --shadow-md: 0 4px 12px rgb(36 43 54 / 0.08);
    --shadow-lg: 0 12px 32px rgb(36 43 54 / 0.12);
 
-   /* ---------- Ukuran kontrol ---------- */
+   /* Ukuran kontrol */
    --control-h-sm: 2rem;
    /* 32 */
    --control-h-md: 2.5rem;
@@ -172,7 +170,7 @@
    --control-h-lg: 3rem;
    /* 48 */
 
-   /* ---------- Layout ---------- */
+   /* Layout */
    --header-h: 4rem;
    /* 64  */
    --sidebar-w: 15rem;
@@ -182,7 +180,7 @@
    --form-max: 32rem;
    /* 512 */
 
-   /* ---------- Motion & z-index ---------- */
+   /* Motion & z-index */
    --transition-fast: 150ms ease;
    --transition-base: 250ms ease;
    --z-header: 100;
@@ -196,10 +194,8 @@
    --color-icon: var(--color-neutral-500);
 }
 
-/* ==========================================================================
-   Dark theme (opsional, opt-in lewat <html data-theme="dark">)
-   Tidak otomatis ikut OS supaya tampilan tetap sama dengan desain Figma.
-   ========================================================================== */
+/* Dark theme (opsional, opt-in lewat <html data-theme="dark">)
+   Tidak otomatis ikut OS supaya tampilan tetap sama dengan desain Figma. */
 :root[data-theme="dark"] {
    color-scheme: dark;
 

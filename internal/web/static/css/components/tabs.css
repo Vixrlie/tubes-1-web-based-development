@@ -1,7 +1,5 @@
-/* ==========================================================================
-   tabs.css  -  filter pill (templates/components/tabs.html)
-   Item aktif: [aria-current="page"] -> pill putih, teks primary, tebal.
-   ========================================================================== */
+/* filter pill (templates/components/tabs.html)
+   Item aktif: [aria-current="page"] -> pill putih, teks primary, tebal. */
 
 .tabs__list {
     display: flex;

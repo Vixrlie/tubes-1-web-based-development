@@ -1,11 +1,9 @@
-/* ==========================================================================
-   modal.css  -  pop up (templates/components/modal.html + static/js/modal.js)
+/* pop up (templates/components/modal.html + static/js/modal.js)
    Berisi: .modal (kerangka <dialog>), .radio-card (pilihan berbentuk kartu),
    .member-picker (daftar centang di pop up "Tambah Anggota").
-   Hanya memakai token semantik dari themes.css.
-   ========================================================================== */
+   Hanya memakai token semantik dari themes.css. */
 
-/* ---------- Kerangka modal ---------- */
+/* Kerangka modal */
 .modal {
     width: min(31rem, calc(100vw - 2rem));
     max-width: none;
@@ -131,7 +129,7 @@
     }
 }
 
-/* ---------- Radio card (pilihan level akses, dll) ---------- */
+/* Radio card (pilihan level akses, dll) */
 .radio-cards {
     display: grid;
     gap: var(--space-2);
@@ -213,7 +211,7 @@
     box-shadow: var(--focus-ring);
 }
 
-/* ---------- Member picker (pop up "Tambah Anggota") ---------- */
+/* Member picker (pop up "Tambah Anggota") */
 .member-picker__search .input__box {
     padding: var(--space-3) var(--space-4);
     border-radius: var(--radius-full);

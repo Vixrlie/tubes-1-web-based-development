@@ -1,6 +1,5 @@
-/* ==========================================================================
-   page-header.css  -  judul halaman + breadcrumb (templates/components/page-header.html)
-   ========================================================================== */
+/* judul halaman + breadcrumb (templates/components/page-header.html)
+   judul halaman + breadcrumb (templates/components/page-header.html) */
 
 .page-header {
     display: flex;

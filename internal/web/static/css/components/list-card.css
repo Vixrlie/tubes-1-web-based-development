@@ -1,7 +1,5 @@
-/* ==========================================================================
-   list-card.css  -  daftar baris di dalam kartu (templates/components/list-card.html)
-   Baris: [judul + keterangan kecil] ........ [label] [aksi]
-   ========================================================================== */
+/* daftar baris di dalam kartu (templates/components/list-card.html)
+   Baris: [judul + keterangan kecil] ........ [label] [aksi] */
 
 .list-card__list {
     margin: 0;

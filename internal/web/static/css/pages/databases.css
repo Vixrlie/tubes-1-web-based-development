@@ -1,7 +1,5 @@
-/* ==========================================================================
-   databases.css  -  halaman Daftar Database (templates/databases.html)
-   Semua kartu ditampilkan sekaligus; halaman di-scroll kalau banyak.
-   ========================================================================== */
+/* halaman Daftar Database (templates/databases.html)
+   Semua kartu ditampilkan sekaligus; halaman di-scroll kalau banyak. */
 
 /* halaman ini mengatur padding sendiri (layout bawaan .app-shell dinolkan) */
 .app-shell:has(.db-page) {
