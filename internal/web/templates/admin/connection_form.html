@@ -7,14 +7,18 @@ CSRF: .User.CSRFToken (dari Shell).
 {{define "content"}}
 {{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs)}}
 
-<form class="stack" method="post" action="{{.FormAction}}">
+<form id="connection-form" class="stack" method="post" action="{{.FormAction}}">
     <input type="hidden" name="csrf_token" value="{{.User.CSRFToken}}">
+    {{- with .ID}}
+    <input type="hidden" name="connection_id" value="{{.}}">
+    {{- end}}
 
     <section class="card">
         {{template `card-head` (dict `Title` `Detail koneksi` `Actions` .Actions)}}
         <p class="card__note">Kredensial disimpan terenkripsi di platform.</p>
         {{with .Error}}<p role="alert">{{.}}</p>{{end}}
         {{range .Fields}}{{if .Options}}{{template `dropdown` .}}{{else}}{{template `input` .}}{{end}}{{end}}
+        {{template `connection-test` .Test}}
     </section>
 </form>
 {{end}}

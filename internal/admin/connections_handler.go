@@ -2,9 +2,12 @@ package admin
 
 import (
 	"errors"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -18,14 +21,19 @@ type PoolEvictor interface {
 	Evict(connID int64)
 }
 
+type connectionView interface {
+	auth.Renderer
+	RenderConnectionTest(w http.ResponseWriter, p web.ConnectionTestPanel)
+}
+
 type connectionHandlers struct {
 	store   ConnectionStore
-	view    auth.Renderer
+	view    connectionView
 	evictor PoolEvictor
 }
 
 // WithConnectionAdmin mengaktifkan halaman kelola koneksi (/admin/connections).
-func WithConnectionAdmin(store ConnectionStore, view auth.Renderer, evictor PoolEvictor) Option {
+func WithConnectionAdmin(store ConnectionStore, view connectionView, evictor PoolEvictor) Option {
 	return func(h *Handlers) {
 		h.connections = &connectionHandlers{store: store, view: view, evictor: evictor}
 	}
@@ -40,6 +48,7 @@ func (h *Handlers) connectionsRoutes(r chi.Router) {
 	// Form "Tambah Koneksi"/"Edit Koneksi": tampilan (GET) + simpan (POST).
 	r.Get("/connections/new", c.createForm)
 	r.Post("/connections", c.create)
+	r.Post("/connections/test", c.testForm)
 	r.Get("/connections/{id}", c.detail)
 	r.Post("/connections/{id}", c.update)
 	r.Get("/connections/{id}/edit", c.editForm)
@@ -181,6 +190,48 @@ func (c *connectionHandlers) test(w http.ResponseWriter, r *http.Request) {
 	}
 	// Hasil uji kembali ke halaman detail (FE belum punya slot flash terpisah).
 	http.Redirect(w, r, "/admin/connections/"+strconv.FormatInt(row.ID, 10)+"?status="+code, http.StatusSeeOther)
+}
+
+// testForm menguji isi form koneksi tanpa menyimpannya. Jawaban berupa
+// potongan HTML tombol tes + hasil untuk diganti htmx di halaman form.
+func (c *connectionHandlers) testForm(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "permintaan tidak valid", http.StatusBadRequest)
+		return
+	}
+	id, _ := strconv.ParseInt(r.PostFormValue("connection_id"), 10, 64)
+	in, errMsg := connectionInput(r, id == 0)
+	panel := web.ConnectionTestPanel{Action: "/admin/connections/test"}
+	if errMsg != "" {
+		panel.Result = &web.ConnectionTestResult{
+			Title:  "Koneksi belum bisa diuji.",
+			Detail: errMsg,
+		}
+		c.view.RenderConnectionTest(w, panel)
+		return
+	}
+
+	start := time.Now()
+	if err := c.store.TestInput(r.Context(), id, in); err != nil {
+		log.Printf("admin connections: uji koneksi dari form: %v", err)
+		result := &web.ConnectionTestResult{
+			Title: "Koneksi gagal diuji.",
+			Detail: "Tidak dapat terhubung ke " + net.JoinHostPort(in.Host, in.Port) +
+				". Periksa host, port, dan kredensial.",
+		}
+		if errors.Is(err, ErrConnectionNotFound) {
+			result.Title = "Koneksi tidak ditemukan."
+			result.Detail = "Muat ulang halaman lalu coba lagi."
+		}
+		panel.Result = result
+	} else {
+		panel.Result = &web.ConnectionTestResult{
+			OK:     true,
+			Title:  "Koneksi berhasil diuji.",
+			Detail: fmt.Sprintf("Server membalas dalam %d ms.", time.Since(start).Milliseconds()),
+		}
+	}
+	c.view.RenderConnectionTest(w, panel)
 }
 
 // remove menghapus koneksi. Konfirmasi memakai dialog browser (onsubmit di

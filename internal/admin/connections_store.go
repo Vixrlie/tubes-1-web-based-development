@@ -61,6 +61,8 @@ type ConnectionStore interface {
 	Delete(ctx context.Context, id int64) error
 	// Test membuka koneksi ke tujuan lalu menjalankan SELECT 1.
 	Test(ctx context.Context, id int64) error
+	// TestInput menguji isi form; id > 0 memakai password tersimpan saat password kosong.
+	TestInput(ctx context.Context, id int64, in ConnectionInput) error
 	// ConnectionGroups mengembalikan group yang punya akses per koneksi
 	// (tabel daftar & kartu "Group dengan Akses" format fe-components).
 	ConnectionGroups(ctx context.Context) (map[int64][]web.ConnectionGroup, error)
@@ -165,7 +167,28 @@ func (s *PGConnectionStore) Test(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
+	return testConnectionURL(ctx, rawURL)
+}
 
+func (s *PGConnectionStore) TestInput(ctx context.Context, id int64, in ConnectionInput) error {
+	var currentURL string
+	if id > 0 {
+		err := s.pool.QueryRow(ctx, `SELECT connection_url FROM db_connections WHERE id = $1`, id).Scan(&currentURL)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrConnectionNotFound
+		}
+		if err != nil {
+			return err
+		}
+	}
+	rawURL, err := buildConnectionURL(in, currentURL)
+	if err != nil {
+		return err
+	}
+	return testConnectionURL(ctx, rawURL)
+}
+
+func testConnectionURL(ctx context.Context, rawURL string) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 

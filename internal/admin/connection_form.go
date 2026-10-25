@@ -20,10 +20,12 @@ type connectionFormPage struct {
 	web.Shell
 	Title      string
 	Crumbs     []web.Crumb
+	ID         string
 	FormAction string
 	Error      string
 	Fields     []map[string]any
 	Actions    []web.Button
+	Test       web.ConnectionTestPanel
 }
 
 // connectionFields membangun daftar isian form (kontrak komponen `input`).
@@ -128,6 +130,7 @@ func (c *connectionHandlers) newFormPage(r *http.Request, errMsg string) connect
 		Error:      errMsg,
 		Fields:     connectionFields(nil),
 		Actions:    connectionFormActions("/admin/connections"),
+		Test:       web.ConnectionTestPanel{Action: "/admin/connections/test"},
 	}
 }
 
@@ -183,6 +186,8 @@ func (c *connectionHandlers) editFormPage(r *http.Request, row ConnectionRow, er
 		Error:      errMsg,
 		Fields:     connectionFields(&row),
 		Actions:    connectionFormActions("/admin/connections/" + id),
+		Test:       web.ConnectionTestPanel{Action: "/admin/connections/test"},
+		ID:         id,
 	}
 }
 

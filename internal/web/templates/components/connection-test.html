@@ -1,0 +1,10 @@
+{{define "connection-test"}}
+<div class="connection-test" id="connection-test" aria-live="polite">
+    {{template `button` .Button}}
+    {{- with .Result}}
+    <p class="test-result test-result--{{if .OK}}ok{{else}}fail{{end}}">
+        <strong>{{.Title}}</strong>{{with .Detail}} {{.}}{{end}}
+    </p>
+    {{- end}}
+</div>
+{{end}}
