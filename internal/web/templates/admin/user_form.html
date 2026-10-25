@@ -77,7 +77,8 @@ jadi nilai kondisional dihitung dulu ke variabel $.
     <form class="card" method="post" action="/admin/users/{{.ID}}/deactivate">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         {{template `card-head` (dict `Title` `Status akun` `Actions` (list
-            (dict `Label` `Nonaktifkan` `Variant` `soft-danger` `Type` `submit` `State` $state)))}}
+            (dict `Label` `Nonaktifkan` `Variant` `soft-danger` `Type` `button` `State` $state
+                `Attrs` (attr `data-modal-open="toggle-user-modal" aria-controls="toggle-user-modal"`))))}}
         <p>Akun <strong>Aktif</strong>: user bisa masuk dan sesi berjalan normal.
             Menonaktifkan mengakhiri seluruh session user tersebut.</p>
         {{if .IsSelf}}<p class="card__note">Anda tidak bisa menonaktifkan akun sendiri.</p>{{end}}
@@ -86,17 +87,19 @@ jadi nilai kondisional dihitung dulu ke variabel $.
     <form class="card" method="post" action="/admin/users/{{.ID}}/activate">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         {{template `card-head` (dict `Title` `Status akun` `Actions` (list
-            (dict `Label` `Aktifkan kembali` `Type` `submit`)))}}
+            (dict `Label` `Aktifkan kembali` `Type` `button`
+                `Attrs` (attr `data-modal-open="toggle-user-modal" aria-controls="toggle-user-modal"`))))}}
         <p>Akun <strong>Nonaktif</strong>: user tidak bisa masuk dan sesi lamanya sudah
             dicabut saat dinonaktifkan.</p>
     </form>
     {{end}}
 
     {{/* --- Kartu reset password --- */}}
-    <form class="card" method="post" action="/admin/users/{{.ID}}/password">
+    <form class="card" id="reset-password-form" method="post" action="/admin/users/{{.ID}}/password">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         {{template `card-head` (dict `Title` `Reset password` `Actions` (list
-            (dict `Label` `Reset Password` `Type` `submit`)))}}
+            (dict `Label` `Reset Password` `Type` `button`
+                `Attrs` (attr `data-modal-open="reset-password-modal" aria-controls="reset-password-modal"`))))}}
         {{template `input` (dict `Label` `Password baru` `Name` `new_password` `Type` `password`
             `Helper` `Minimal 8 karakter; semua session user dicabut setelah reset.`
             `Required` true `Attrs` (attr `autocomplete="new-password"`))}}
@@ -139,6 +142,60 @@ jadi nilai kondisional dihitung dulu ke variabel $.
                     {{template `button` (dict `Label` `Ya, Hapus User` `Fill` `var(--color-danger)` `Color` `var(--color-on-danger)` `Stroke` `var(--color-danger)` `Type` `submit` `State` $state)}}
                 </div>
             </form>
+        </div>
+    </dialog>
+
+    {{/* Pop up konfirmasi nonaktifkan/aktifkan (aksi destruktif: session dicabut). */}}
+    <dialog class="modal confirm-delete-modal" id="toggle-user-modal"
+        aria-labelledby="toggle-user-modal-title">
+        <div class="modal__panel">
+            {{if .IsActive}}
+            {{template `modal-head` (dict `ID` `toggle-user-modal` `Title` (printf `Nonaktifkan user %s` .Username))}}
+            <form class="modal__form" method="post" action="/admin/users/{{.ID}}/deactivate" data-modal-reset>
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div class="modal__body">
+                    <p class="confirm-delete-modal__text">Menonaktifkan mengakhiri seluruh session
+                        user ini dan menghentikan akses masuk sampai diaktifkan kembali.</p>
+                    <p class="card__note">Akun, group, dan riwayat tetap tersimpan.</p>
+                </div>
+                <div class="modal__foot">
+                    {{template `button` (dict `Label` `Batal` `Variant` `secondary` `Attrs` (attr `data-modal-close`))}}
+                    {{template `button` (dict `Label` `Ya, Nonaktifkan` `Variant` `soft-danger` `Type` `submit` `ID` `toggle-submit`)}}
+                </div>
+            </form>
+            {{else}}
+            {{template `modal-head` (dict `ID` `toggle-user-modal` `Title` (printf `Aktifkan kembali user %s` .Username))}}
+            <form class="modal__form" method="post" action="/admin/users/{{.ID}}/activate" data-modal-reset>
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div class="modal__body">
+                    <p class="confirm-delete-modal__text">User ini akan bisa masuk kembali dengan
+                        kredensialnya. Group dan hak akses tetap seperti semula.</p>
+                </div>
+                <div class="modal__foot">
+                    {{template `button` (dict `Label` `Batal` `Variant` `secondary` `Attrs` (attr `data-modal-close`))}}
+                    {{template `button` (dict `Label` `Ya, Aktifkan` `Type` `submit` `ID` `toggle-submit`)}}
+                </div>
+            </form>
+            {{end}}
+        </div>
+    </dialog>
+
+    {{/* Pop up konfirmasi reset password; tombol submit memakai atribut form=
+         ke kartu Reset password sehingga password yang diisikan ikut terkirim. */}}
+    <dialog class="modal confirm-delete-modal" id="reset-password-modal"
+        aria-labelledby="reset-password-modal-title">
+        <div class="modal__panel">
+            {{template `modal-head` (dict `ID` `reset-password-modal` `Title` (printf `Reset password %s` .Username))}}
+            <div class="modal__body">
+                <p class="confirm-delete-modal__text">Password baru akan disimpan dan seluruh
+                    session user ini dicabut.</p>
+                <p class="card__note">Pastikan kolom Password baru pada kartu Reset password sudah diisi.</p>
+            </div>
+            <div class="modal__foot">
+                {{template `button` (dict `Label` `Batal` `Variant` `secondary` `Attrs` (attr `data-modal-close`))}}
+                {{template `button` (dict `Label` `Ya, Reset Password` `Type` `submit` `ID` `reset-submit`
+                    `Attrs` (attr `form="reset-password-form"`))}}
+            </div>
         </div>
     </dialog>
     {{end}}
