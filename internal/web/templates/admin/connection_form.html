@@ -14,7 +14,7 @@ CSRF: .User.CSRFToken (dari Shell).
         {{template `card-head` (dict `Title` `Detail koneksi` `Actions` .Actions)}}
         <p class="card__note">Kredensial disimpan terenkripsi di platform.</p>
         {{with .Error}}<p role="alert">{{.}}</p>{{end}}
-        {{range .Fields}}{{template `input` .}}{{end}}
+        {{range .Fields}}{{if .Options}}{{template `dropdown` .}}{{else}}{{template `input` .}}{{end}}{{end}}
     </section>
 </form>
 {{end}}

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/dbm"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 )
 
@@ -37,10 +38,12 @@ type ConnectionRow struct {
 	Port        string
 	Database    string
 	Username    string
+	DBMS        string // "postgres" | "mysql" (dari skema connection_url)
 	CreatedAt   time.Time
 }
 
 type ConnectionInput struct {
+	DBMS        string // "postgres" (default) | "mysql"
 	Name        string
 	Description string
 	Host        string
@@ -166,14 +169,15 @@ func (s *PGConnectionStore) Test(ctx context.Context, id int64) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	conn, err := pgx.Connect(ctx, rawURL)
+	// OpenTarget memilih driver sesuai skema URL (postgres:// atau mysql://).
+	target, err := dbm.OpenTarget(ctx, rawURL)
 	if err != nil {
 		return err
 	}
-	defer conn.Close(ctx)
+	defer target.Close()
 
 	var one int
-	return conn.QueryRow(ctx, "SELECT 1").Scan(&one)
+	return target.DB.QueryRowContext(ctx, "SELECT 1").Scan(&one)
 }
 
 func scanConnection(row pgx.Row) (ConnectionRow, error) {
@@ -187,7 +191,20 @@ func scanConnection(row pgx.Row) (ConnectionRow, error) {
 		return ConnectionRow{}, err
 	}
 	c.Host, c.Port, c.Database, c.Username = parseConnectionURL(rawURL)
+	c.DBMS = schemeFromURL(rawURL)
 	return c, nil
+}
+
+// schemeFromURL mengembalikan DBMS dari skema connection_url ("postgres" | "mysql").
+func schemeFromURL(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "postgres"
+	}
+	if strings.ToLower(u.Scheme) == "mysql" {
+		return "mysql"
+	}
+	return "postgres"
 }
 
 // buildConnectionURL menyusun connection string dari isi formulir. Password
@@ -201,8 +218,12 @@ func buildConnectionURL(in ConnectionInput, currentURL string) (string, error) {
 		return "", ErrPasswordRequired
 	}
 
+	scheme := "postgres"
+	if in.DBMS == "mysql" {
+		scheme = "mysql"
+	}
 	target := &url.URL{
-		Scheme: "postgres",
+		Scheme: scheme,
 		User:   url.UserPassword(in.Username, password),
 		Host:   net.JoinHostPort(in.Host, in.Port),
 		Path:   "/" + in.Database,

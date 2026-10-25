@@ -30,11 +30,15 @@ type connectionFormPage struct {
 // row nil = form tambah; selain itu form ubah (password selalu kosong di
 // layar, maknanya "pertahankan yang tersimpan").
 func connectionFields(row *ConnectionRow) []map[string]any {
-	var name, host, port, database, username string
+	var name, host, port, database, username, dbms string
 	isNew := row == nil
+	dbms = "postgres"
 	if row != nil {
 		name, host, port = row.Name, row.Host, row.Port
 		database, username = row.Database, row.Username
+		if row.DBMS == "mysql" {
+			dbms = "mysql"
+		}
 	}
 	if port == "" {
 		port = "5432"
@@ -44,6 +48,12 @@ func connectionFields(row *ConnectionRow) []map[string]any {
 		passwordHelper = "Wajib diisi; disimpan terenkripsi."
 	}
 	return []map[string]any{
+		{"Label": "Jenis DBMS", "Name": "dbms", "Value": dbms,
+			"Options": []map[string]any{
+				{"Value": "postgres", "Label": "PostgreSQL"},
+				{"Value": "mysql", "Label": "MySQL / MariaDB"},
+			},
+			"Helper": "Menentukan driver koneksi; viewer, migration, dan EXPLAIN menyesuaikan."},
 		{"Label": "Nama tampilan", "Name": "name", "Value": name,
 			"Placeholder": "analitik-produksi", "Required": true},
 		{"Label": "Host", "Name": "host", "Value": host,
@@ -67,12 +77,16 @@ func connectionFormActions(cancelHref string) []web.Button {
 // ubah (password kosong = pertahankan). pesan kosong = valid.
 func connectionInput(r *http.Request, requirePassword bool) (ConnectionInput, string) {
 	in := ConnectionInput{
+		DBMS:     "postgres",
 		Name:     strings.TrimSpace(r.PostFormValue("name")),
 		Host:     strings.TrimSpace(r.PostFormValue("host")),
 		Port:     strings.TrimSpace(r.PostFormValue("port")),
 		Database: strings.TrimSpace(r.PostFormValue("database")),
 		Username: strings.TrimSpace(r.PostFormValue("username")),
 		Password: r.PostFormValue("password"),
+	}
+	if r.PostFormValue("dbms") == "mysql" {
+		in.DBMS = "mysql"
 	}
 	if in.Name == "" {
 		return in, "Nama tampilan wajib diisi."
