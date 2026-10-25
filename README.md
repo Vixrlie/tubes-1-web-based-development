@@ -16,6 +16,28 @@ Platform web untuk mengatur akses, menjelajahi, dan mencatat perubahan schema da
 | Docker Desktop | harus berstatus "Engine running" sebelum `docker compose` |
 | `make` | opsional (di Windows biasanya tidak ada, perintah alternatifnya ada di bawah) |
 
+## Quick Start dari Nol
+
+Satu rentetan perintah dari clone sampai server jalan:
+
+```bash
+git clone https://github.com/Vixrlie/tubes-1-web-based-development.git
+cd tubes-1-web-based-development
+
+cp .env.example .env
+# lalu buka .env, isi ADMIN_PASSWORD minimal 8 karakter
+# (ADMIN_USERNAME sudah default "admin")
+
+docker compose up -d      # 3 container PostgreSQL: platform :5432, target :5433, test :5434
+go run .                  # server + migrasi skema + seed admin; atau: make run
+```
+
+Buka **http://localhost:8080**, login dengan `admin` / password dari `.env`.
+
+Dari sini database platform masih kosong (belum ada koneksi, grup, tabel) —
+lanjut ke langkah **"Siapkan data awal"** di bawah supaya semua fitur
+(viewer, migration, EXPLAIN, schema diff) benar-benar bisa dicoba.
+
 ## Menjalankan untuk Development
 
 ### 1. Siapkan konfigurasi
@@ -87,7 +109,78 @@ curl -i http://localhost:8080/static/css/app.css   # 200
 
 Di Windows PowerShell, `curl` adalah alias `Invoke-WebRequest`. Pakai `curl.exe` supaya yang dipanggil curl asli: `curl.exe -i http://localhost:8080/static/css/app.css`.
 
-Route `/login` sudah aktif. Route `/admin/*` belum punya halaman, jadi tanpa session valid diarahkan ke `/login`, dan untuk non-admin mengembalikan 403.
+Route `/login` sudah aktif. Route terproteksi (termasuk `/admin/*`) mengarahkan ke `/login` kalau belum ada session valid, dan mengembalikan 403 untuk user non-admin.
+
+### 5. Siapkan data awal supaya semua fitur bisa dicoba
+
+Dari nol, aplikasi masih kosong: belum ada koneksi target, grup, grant, user
+kedua, maupun tabel. Tiga langkah berikut membuat satu alur lengkap
+(viewer → migration → EXPLAIN → schema diff).
+
+**a. Buat tabel contoh di database target** (wajib, agar viewer dan migration punya isi):
+
+```bash
+docker compose exec -T target-db psql -U target -d sample <<'SQL'
+CREATE TABLE customers (
+  id       BIGSERIAL PRIMARY KEY,
+  name     text NOT NULL,
+  phone    text,
+  status   text NOT NULL DEFAULT 'aktif',
+  priority int  NOT NULL DEFAULT 1,
+  note     text,
+  notes    text
+);
+CREATE INDEX idx_customers_name ON customers (name);
+INSERT INTO customers (name, phone, status, priority)
+SELECT 'Pelanggan ' || i, '0812' || i,
+       CASE WHEN i % 3 = 0 THEN 'nonaktif' ELSE 'aktif' END, i % 5
+FROM generate_series(1, 120) i;
+SQL
+```
+
+Windows PowerShell: simpan SQL di atas ke `seed.sql`, lalu
+`docker compose exec -T target-db psql -U target -d sample -f seed.sql`.
+
+**b. Daftarkan semuanya lewat UI (login sebagai `admin`):**
+
+1. **Admin → Koneksi Database → Tambah Koneksi** — Nama `target-demo`,
+   Host `127.0.0.1`, Port `5433`, Database `sample`, Username `target`,
+   Password `target` → **Simpan** → **Tes Koneksi** (harus berhasil).
+2. **Admin → Pengguna → Tambah User** — username `peserta`, password
+   minimal 8 karakter → **Simpan**.
+3. **Admin → Grup → Grup Baru** — nama `peserta-grup` → **Simpan**. Di
+   halaman detail grup: **Tambah Anggota** → pilih `peserta` **dan `admin`**
+   → **Tambahkan**. (Platform Admin tidak otomatis punya akses database —
+   makanya `admin` ikut dimasukkan grup.)
+4. Di kartu **Akses Database** klik **Kelola Database** → **Tambah Database**
+   → pilih `target-demo`, level **View + Edit** → **Tambahkan** →
+   **Simpan Perubahan**.
+
+**c. Coba seluruh alur (logout, lalu login sebagai `peserta`):**
+
+`/databases` → schema → detail tabel (kolom/constraints/index) → data
+berpaginasi → **Migration Baru** → simpan draft → **Preview** →
+**Jalankan EXPLAIN** (opsional centang ANALYZE, hasilnya di-rollback) →
+**Eksekusi Sekarang** → riwayat ter-update.
+
+**d. (Opsional) Schema diff antar dua koneksi:**
+
+```bash
+docker compose exec -T target-db psql -U target -d postgres -c "CREATE DATABASE banding;"
+docker compose exec -T target-db psql -U target -d banding <<'SQL'
+CREATE TABLE customers (id BIGSERIAL PRIMARY KEY, nama text NOT NULL, email text);
+CREATE TABLE orders (id int PRIMARY KEY, customer_id int REFERENCES customers (id));
+SQL
+```
+
+Daftarkan sebagai koneksi kedua (port `5433`, database `banding`), beri akses
+**View Only** ke grup `peserta-grup` lewat **Kelola Database**, lalu buka
+**Riwayat Migration → Schema Diff**, pilih koneksi `banding`, **Bandingkan**:
+muncul daftar selisih + kandidat SQL yang bisa disimpan jadi draft lewat
+**Buat Draft Migration**.
+
+Kredensial database target berasal dari container: user `target`, password
+`target`, port `5433` (database `sample` dan `banding`).
 
 ### Reset database dari nol
 
@@ -246,6 +339,9 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 - [x] Migration: draft, editor, preview + konfirmasi, eksekusi transaksional (commit/rollback), riwayat + filter status
 - [x] Halaman 403 (akses ditolak) dan koneksi gagal yang aman tanpa kredensial
 - [x] Unit dan integration test (akses, admin, auth, session, config, db, dbm, web)
+- [x] Bonus (BON-02/03): schema diff antar dua koneksi + generator kandidat SQL migration
+- [x] Bonus (BON-04/05): `EXPLAIN` / `EXPLAIN ANALYZE` sebelum eksekusi + ringkasan execution plan
+- [ ] Bonus (BON-01): dukungan DBMS tambahan (MySQL/MariaDB) — belum diimplementasi
 
 Alur minimum (GEN-07) berjalan end-to-end: Login → Access Control → Pilih Database → Lihat Schema/Data → Buat Migration → Execute → Commit/Rollback → Riwayat Migration ter-update.
 
@@ -255,28 +351,32 @@ Route database management:
 |-------|--------|
 | `/databases` | Daftar database yang boleh diakses user (lewat group) |
 | `/databases/{id}` | Redirect ke penjelajah schema |
-| `/databases/{id}/schema` | Pohon schema/tabel + pratinjau kolom (`?table=schema.nama`) |
-| `/databases/{id}/tables/{schema.nama}` | Detail tabel: `?tab=columns\|constraints\|indexes` |
+| `/databases/{id}/schema` | Pohon schema/tabel + daftar relasi foreign key |
+| `/databases/{id}/tables/{schema.nama}` | Detail tabel: `?tab=columns\|constraints` (kolom / constraint+index) |
 | `/databases/{id}/tables/{schema.nama}/data` | Data tabel dengan paginasi |
-| `/databases/{id}/migrations` | Riwayat migration (`?status=draft\|applied\|failed`) |
+| `/databases/{id}/migrations` | Riwayat migration + tombol **Migration Baru** dan **Schema Diff** |
+| POST `/databases/{id}/migrations` | Simpan SQL sebagai draft (View + Edit) |
 | `/databases/{id}/migrations/new` | Editor draft (View + Edit) |
-| `/databases/{id}/migrations/{mid}` | Detail migration |
-| `/databases/{id}/migrations/{mid}/edit` | Ubah draft (View + Edit) |
-| `/databases/{id}/migrations/{mid}/preview` | Pratinjau + konfirmasi ketik-nama (View + Edit) |
-| `/databases/{id}/migrations/{mid}/execute` | Eksekusi transaksional (View + Edit) |
+| `/databases/{id}/migrations/{mid}` | Detail migration (status, SQL, pelaksana) |
+| `/databases/{id}/migrations/{mid}/preview` | Pratinjau + tombol analisa EXPLAIN (baca) |
+| POST `/databases/{id}/migrations/{mid}/explain` | `EXPLAIN` / `EXPLAIN ANALYZE` sebelum eksekusi; ANALYZE dijalankan dalam transaksi lalu di-ROLLBACK (View + Edit) |
+| POST `/databases/{id}/migrations/{mid}/execute` | Eksekusi transaksional, commit/rollback (View + Edit) |
+| `/databases/{id}/migrations/diff` (alias `/databases/{id}/diff`) | Schema diff vs koneksi lain + kandidat SQL yang bisa dijadikan draft (baca; draft butuh View + Edit) |
 
 Setiap route memeriksa `access.Policy` di backend; penolakan dirender sebagai halaman 403 dengan level akses efektif. Kegagalan koneksi ke database target menampilkan halaman "koneksi gagal" tanpa kredensial. Pool database target di-cache per koneksi (`PGRegistry`) dan ditutup saat koneksi diubah/dihapus atau aplikasi berhenti.
 
-Halaman Platform Admin:
+Halaman Platform Admin (route utama: `/` untuk beranda, `/admin` untuk dashboard):
 
 | Route | Fungsi |
 |-------|--------|
-| `/admin/users` | Daftar user: status, group, tautan ubah/reset password/akses efektif |
-| `/admin/users/{id}/access` | Akses efektif user: gabungan grant seluruh group-nya, per database, dengan sumber hak tertinggi |
-| `/admin/users/{id}/delete` | Hapus user (konfirmasi ketik-nama); ditolak untuk admin terakhir, user dengan riwayat migration, dan diri sendiri |
-| `/admin/groups` | Daftar group dengan jumlah anggota dan ringkasan akses per database |
-| `/admin/groups/{id}` | Detail group: kelola anggota dan grant per koneksi |
-| `/admin/access` | Matriks akses group × database (Tidak ada akses / View Only / View + Edit), satu formulir simpan; penurunan atau pencabutan level otomatis mencabut session anggota group |
+| `/admin` | Dashboard: ringkasan jumlah user, grup, koneksi + jalan pintas |
+| `/admin/users` | Daftar user: status/peran, group, aksi Kelola |
+| `/admin/users/new`, `/admin/users/{id}` | Form buat/ubah user: data akun, peran, status akun, reset password, hapus |
+| POST `/admin/users/{id}/delete` | Hapus user; ditolak untuk diri sendiri, admin aktif terakhir, dan user dengan riwayat migration |
+| `/admin/groups`, `/admin/groups/{id}` | Daftar group; detail: anggota + akses database (mode ubah lewat `?edit=1`) |
+| `/admin/groups/new` | Form group baru |
+| `/admin/connections`, `/admin/connections/new`, `/admin/connections/{id}`, `/admin/connections/{id}/edit` | Daftar koneksi, form tambah/ubah, uji koneksi, hapus |
+| `/admin/access` | Dialihkan ke `/admin/groups` (editor akses berada di detail group) |
 
 ## Alur Kerja Git
 
