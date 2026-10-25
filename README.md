@@ -5,7 +5,7 @@ Platform web untuk mengatur akses, menjelajahi, dan mencatat perubahan schema da
 
 - Backend: Go (`chi`, `pgx`)
 - Frontend: Go template (server-rendered) dengan htmx dan CodeMirror
-- Database platform dan database target: PostgreSQL 16
+- Database platform dan database target: PostgreSQL 16; bonus MySQL/MariaDB untuk database target
 - Deadline Milestone 1: 25 Oktober 2026, 13.10 WIB
 
 ## Prasyarat
@@ -13,7 +13,7 @@ Platform web untuk mengatur akses, menjelajahi, dan mencatat perubahan schema da
 | Alat | Keterangan |
 |------|------------|
 | Go | versi sesuai `go.mod` |
-| Docker Desktop | harus berstatus "Engine running" sebelum `docker compose` |
+| Docker Engine + Compose plugin (atau Docker Desktop) | daemon harus berjalan sebelum `docker compose` |
 | `make` | opsional (di Windows biasanya tidak ada, perintah alternatifnya ada di bawah) |
 
 ## Quick Start dari Nol
@@ -28,7 +28,7 @@ cp .env.example .env
 # lalu buka .env, isi ADMIN_PASSWORD minimal 8 karakter
 # (ADMIN_USERNAME sudah default "admin")
 
-docker compose up -d      # 3 container PostgreSQL: platform :5432, target :5433, test :5434
+docker compose up -d      # 4 container: PostgreSQL platform :5432, target :5433, test :5434 + MySQL :5435
 go run .                  # server + migrasi skema + seed admin; atau: make run
 ```
 
@@ -57,13 +57,14 @@ docker compose up -d
 docker compose ps
 ```
 
-Tiga container berjalan:
+Empat container berjalan:
 
 | Service | Port di laptop | Fungsi |
 |---------|----------------|--------|
 | `platform-db` | `5432` (bisa diubah, lihat di bawah) | database internal platform: user, group, session, grants, riwayat migration |
 | `target-db` | `5433` | contoh database target yang dikelola platform |
-| `test-db` | `5434` | database khusus integration test (data hilang saat container mati) |
+| `test-db` | `5434` | database khusus test (data hilang saat container mati) |
+| `mysql-db` | `5435` | contoh database target MySQL/MariaDB untuk fitur bonus |
 
 **Kalau port 5432 sudah dipakai** (misalnya PostgreSQL lokal atau container proyek lain), `platform-db` gagal start dengan `port is already allocated`. Pindahkan port lewat `.env`:
 
@@ -143,7 +144,7 @@ Windows PowerShell: simpan SQL di atas ke `seed.sql`, lalu
 
 **b. Daftarkan semuanya lewat UI (login sebagai `admin`):**
 
-1. **Admin → Koneksi Database → Tambah Koneksi**: Nama `target-demo`,
+1. **Admin → Koneksi Database → Tambah Koneksi**: Nama tampilan `target-demo`,
    Host `127.0.0.1`, Port `5433`, Database `sample`, Username `target`,
    Password `target` → **Simpan** → **Tes Koneksi** (harus berhasil).
 2. **Admin → Pengguna → Tambah User**: username `peserta`, password
@@ -159,9 +160,10 @@ Windows PowerShell: simpan SQL di atas ke `seed.sql`, lalu
 **c. Coba seluruh alur (logout, lalu login sebagai `peserta`):**
 
 `/databases` → schema → detail tabel (kolom/constraints/index) → data
-berpaginasi → **Migration Baru** → simpan draft → **Preview** →
-**Jalankan EXPLAIN** (opsional centang ANALYZE, hasilnya di-rollback) →
-**Eksekusi Sekarang** → riwayat ter-update.
+berpaginasi → **Migration Baru** → **Simpan Draft** → **Preview & Eksekusi** →
+**Jalankan EXPLAIN** (opsional centang ANALYZE, hasilnya di-rollback) → di kartu
+**Konfirmasi eksekusi**, ketik nama database tujuan (`sample`), centang
+persetujuan, lalu **Jalankan Migration** → riwayat ter-update.
 
 **d. (Opsional) Schema diff antar dua koneksi:**
 
@@ -186,7 +188,8 @@ Kredensial database target berasal dari container: user `target`, password
 
 `docker-compose.yml` juga menyediakan container `mysql-db` (port **5435**,
 database `sample`, user `target`, password `target`, sudah berisi tabel contoh
-`customers`). Nyalakan bersama container lain:
+`customers`). Container ini sudah ikut start dengan `docker compose up -d`.
+Untuk menyalakannya sendiri:
 
 ```bash
 docker compose up -d mysql-db
@@ -214,7 +217,7 @@ docker compose down -v
 docker compose up -d
 ```
 
-`-v` menghapus volume, jadi semua data development hilang (termasuk akun admin, yang dibuat ulang saat start berikutnya). Wajib dilakukan setelah skema di `migrations/0001_init.sql` diubah, karena runner tidak mengulang file yang sudah tercatat.
+`-v` menghapus volume, jadi semua data development hilang (termasuk akun admin, yang dibuat ulang saat start berikutnya). Reset wajib dilakukan setelah file migration yang **sudah pernah dijalankan** diubah, karena runner tidak mengulang file yang sudah tercatat. Menambah file migration baru tidak perlu reset: file itu dijalankan otomatis saat start berikutnya.
 
 ### Masalah yang sering muncul
 
@@ -244,26 +247,18 @@ docker compose up -d
 
 Nilai session di atas adalah keputusan tim untuk bagian auth dan session (lihat tabel Keputusan Desain).
 
+Kenaikan privilege (grant baru atau naik level, anggota baru pada grup yang sudah punya grant, promosi Platform Admin) menandai `sessions.force_rotate`. Request terautentikasi berikutnya merotasi token dan memperbarui cookie; absolute expiration tidak diperpanjang. Penurunan akses (downgrade/remove grant, hapus grup/koneksi, demosi admin) mencabut session terkait.
+
 ## Test
 
 ```bash
-make test               # unit test (go test ./... -short)
-make test-integration   # semua test, butuh test-db (docker compose up -d)
-make lint               # golangci-lint
+make test          # unit test (go test ./... -short)
+go test ./... -count=1
+go vet ./...
 ```
-
-Tanpa `make`: `go test ./... -short` dan `go test ./... -count=1`.
 
 Aturan test:
 - Setiap fitur backend minimal punya tiga kasus: **berhasil, gagal, dan akses ditolak**.
-- Integration test memakai `TEST_DB_URL` dan harus dilewati saat `-short`:
-
-```go
-if testing.Short() {
-	t.Skip("integration test")
-}
-```
-
 - Waktu pada test session diinjeksi lewat `clock`, jangan memakai `time.Now()` langsung.
 
 ## Struktur Proyek
@@ -314,7 +309,8 @@ Kontrak yang dipakai bersama:
 | `auth.UserFromContext(ctx)` | Arin | user yang sedang login |
 | `auth.AuthMiddleware`, `auth.RequireAdmin`, `auth.CSRFProtect` | Arin | pelindung route |
 | `session.CSRFToken(ctx)` | Arin | token CSRF untuk hidden field form POST |
-| `session.Revoker.RevokeSessionsByUser` | Arin | mencabut session saat akses berubah |
+| `session.Revoker.RevokeSessionsByUser` | Arin | mencabut session saat akses turun atau dicabut |
+| `session.Revoker.ForceRotateSessionsByUser` | Arin | memaksa rotasi token saat privilege naik |
 | `access.Policy.Can(ctx, userID, connID, action)` | Vincent | pengecekan izin per database |
 
 
@@ -326,7 +322,7 @@ Kontrak yang dipakai bersama:
 | `groups`, `memberships` | group dan anggotanya |
 | `db_connections` | koneksi ke database target |
 | `grants` | akses **group** ke database dengan level `view` (View Only) atau `edit` (View + Edit) |
-| `sessions` | session di backend: hash token, idle dan absolute expiration, rotasi, grace period, CSRF, `revoked_at` |
+| `sessions` | session di backend: hash token, idle dan absolute expiration, rotasi, `force_rotate`, grace period, CSRF, `revoked_at` |
 | `migration_history` | riwayat migration per database: versi, SQL, pelaksana, waktu, status |
 | `schema_migrations` | pencatat file migrasi skema internal yang sudah dijalankan |
 
@@ -357,7 +353,7 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 - [x] Kontrak auth, session, dan access
 - [x] Autentikasi: repository user, validasi, seed admin
 - [x] Autentikasi: login dan logout
-- [x] Session: pembuatan, validasi, rotasi berkala + grace period, revoke, CSRF
+- [x] Session: pembuatan, validasi, rotasi berkala + rotasi paksa saat privilege naik + grace period, revoke, CSRF
 - [x] Platform Admin: kelola user, group, koneksi, pemberian akses (grants)
 - [x] Database viewer: `/databases`, schema, table (columns/constraints/indexes), data berpaginasi
 - [x] Migration: draft, editor, preview + konfirmasi, eksekusi transaksional (commit/rollback), riwayat + filter status
