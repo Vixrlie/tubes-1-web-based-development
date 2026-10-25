@@ -1,8 +1,9 @@
 {{/*
-Halaman Preview Migration: tinjauan SQL sebelum eksekusi (POST Execute utk draft).
+Halaman Preview Migration: tinjauan SQL sebelum eksekusi (POST Execute utk draft)
++ analisa rencana eksekusi EXPLAIN/ANALYZE (BON-04/05, POST Explain).
 Data: dbm.migrationPreviewPage (lihat dbm/migration_pages.go):
-.Shell, .Title, .Crumbs, .SQL, .Warning, .Detail (web.DetailCard),
-.ExecuteAction, .Actions
+.Shell, .Title, .Crumbs, .SQL, .Warning, .Detail, .ExecuteAction, .Actions,
+.ExplainAction, .ExplainTable, .Plans, .ExplainErr, .Analyze
 CSRF: .User.CSRFToken (dari Shell).
 */}}
 {{define "content"}}
@@ -17,6 +18,35 @@ CSRF: .User.CSRFToken (dari Shell).
             <pre>{{.SQL}}</pre>
         </section>
     </form>
+
+    <section class="card">
+        {{template `card-head` (dict `Title` `Analisa Rencana Eksekusi`)}}
+        <p class="card__note">EXPLAIN berjalan tanpa mengeksekusi statement. EXPLAIN ANALYZE
+            mengeksekusi di dalam transaksi yang selalu di-ROLLBACK, jadi tidak ada perubahan permanen.</p>
+        <form method="post" action="{{.ExplainAction}}">
+            <input type="hidden" name="csrf_token" value="{{.User.CSRFToken}}">
+            <p>
+                <label>
+                    <input type="checkbox" name="analyze" {{if .Analyze}}checked{{end}}>
+                    Dengan EXPLAIN ANALYZE (dieksekusi lalu di-rollback)
+                </label>
+            </p>
+            {{template `button` (dict `Label` `Jalankan EXPLAIN` `Type` `submit`)}}
+        </form>
+        {{- with .ExplainErr}}
+        <p role="alert">{{.}}</p>
+        {{- end}}
+    </section>
+
+    {{- if .ExplainTable.Columns}}
+    {{template `table` .ExplainTable}}
+    {{- end}}
+    {{- range .Plans}}
+    <section class="card">
+        {{template `card-head` (dict `Title` .Title)}}
+        <pre>{{.Tree}}</pre>
+    </section>
+    {{- end}}
 
     {{template `detail-card` .Detail}}
 </div>

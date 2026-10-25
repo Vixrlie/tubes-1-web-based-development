@@ -80,6 +80,7 @@ func (h *Handlers) Routes(r chi.Router) {
 		r.Get("/{connID}/migrations/new", h.migrationEditor)
 		r.Get("/{connID}/migrations/{mID}", h.migrationDetail)
 		r.Get("/{connID}/migrations/{mID}/preview", h.migrationPreview)
+		r.Post("/{connID}/migrations/{mID}/explain", h.migrationExplain)
 		r.Post("/{connID}/migrations/{mID}/execute", h.migrationExecute)
 	})
 }

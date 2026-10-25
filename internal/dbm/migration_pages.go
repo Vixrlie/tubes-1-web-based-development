@@ -333,21 +333,23 @@ type migrationPreviewPage struct {
 	ExecuteAction string
 	CanExecute    bool
 	Actions       []web.Button
+
+	// Analisa rencana eksekusi (BON-04/05).
+	ExplainAction string
+	ExplainErr    string           // kegagalan global (mis. target tak terjangkau)
+	ExplainTable  web.Table        // ringkasan per statement; kosong = belum dianalisa
+	Plans         []ExplainPlanCard // teks plan per statement
+	Analyze       bool             // nilai checkbox terakhir
 }
 
-func (h *Handlers) migrationPreview(w http.ResponseWriter, r *http.Request) {
-	connID, ok := h.authorize(w, r)
-	if !ok {
-		return
-	}
-	m, ok := h.loadMigration(w, r, connID)
-	if !ok {
-		return
-	}
-	name, ok := h.loadConnName(w, r, connID)
-	if !ok {
-		return
-	}
+// ExplainPlanCard = satu blok teks plan statement di halaman preview.
+type ExplainPlanCard struct {
+	Title string
+	Tree  string
+}
+
+// previewData membangun data halaman preview (dipakai GET preview & hasil EXPLAIN).
+func (h *Handlers) previewData(r *http.Request, connID int64, m Migration, name string) migrationPreviewPage {
 	base := migrationsHref(connID)
 	detailHref := base + "/" + strconv.FormatInt(m.ID, 10)
 
@@ -369,7 +371,7 @@ func (h *Handlers) migrationPreview(w http.ResponseWriter, r *http.Request) {
 		actions = append(actions, web.Button{Label: "Eksekusi Sekarang", Type: "submit"})
 	}
 
-	h.render(w, http.StatusOK, "migration_preview.html", migrationPreviewPage{
+	return migrationPreviewPage{
 		Shell: h.migrationShell(r.Context(), connID, name),
 		Title: "Preview Migration",
 		Crumbs: []web.Crumb{
@@ -388,9 +390,110 @@ func (h *Handlers) migrationPreview(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 		ExecuteAction: detailHref + "/execute",
+		ExplainAction: detailHref + "/explain",
 		CanExecute:    canExecute,
 		Actions:       actions,
-	})
+	}
+}
+
+func (h *Handlers) migrationPreview(w http.ResponseWriter, r *http.Request) {
+	connID, ok := h.authorize(w, r)
+	if !ok {
+		return
+	}
+	m, ok := h.loadMigration(w, r, connID)
+	if !ok {
+		return
+	}
+	name, ok := h.loadConnName(w, r, connID)
+	if !ok {
+		return
+	}
+	h.render(w, http.StatusOK, "migration_preview.html", h.previewData(r, connID, m, name))
+}
+
+// migrationExplain menjalankan EXPLAIN (BON-04) pada seluruh statement migration
+// dan merender ulang halaman preview beserta ringkasannya (BON-05). EXPLAIN
+// ANALYZE butuh izin edit; eksekusinya di-rollback di dalam explain.go.
+func (h *Handlers) migrationExplain(w http.ResponseWriter, r *http.Request) {
+	analyze := r.PostFormValue("analyze") != ""
+	action := access.ActionView
+	if analyze {
+		action = access.ActionEdit
+	}
+	connID, ok := h.authorizeAction(w, r, action)
+	if !ok {
+		return
+	}
+	m, ok := h.loadMigration(w, r, connID)
+	if !ok {
+		return
+	}
+	name, _ := h.connectionName(r.Context(), connID)
+
+	page := h.previewData(r, connID, m, name)
+	page.Analyze = analyze
+
+	pool, err := h.registry.Get(r.Context(), connID)
+	if err != nil || pool == nil {
+		page.ExplainErr = "Database tidak dapat dihubungi; analisa tidak dijalankan."
+		h.render(w, http.StatusOK, "migration_preview.html", page)
+		return
+	}
+
+	items := ExplainAll(r.Context(), pool, m.SQL, analyze)
+	mode := "tanpa ANALYZE"
+	if analyze {
+		mode = "dengan ANALYZE (di-rollback)"
+	}
+	page.ExplainTable = web.Table{
+		Title: "Ringkasan rencana eksekusi",
+		Tag:   web.TableCell{Text: mode, Variant: "neutral"},
+		Columns: []web.TableColumn{
+			{Key: "no", Label: "#"},
+			{Key: "stmt", Label: "Statement"},
+			{Key: "plan", Label: "Scan / Join"},
+			{Key: "idx", Label: "Index"},
+			{Key: "cost", Label: "Est. Cost"},
+			{Key: "time", Label: "Aktual (ms)"},
+			{Key: "rows", Label: "Rows"},
+			{Key: "ket", Label: "Keterangan"},
+		},
+		Empty: "Tidak ada statement untuk dianalisa.",
+	}
+	for _, it := range items {
+		scanJoin := it.Summary.Scan
+		if it.Summary.Join != "-" {
+			if scanJoin == "-" {
+				scanJoin = it.Summary.Join
+			} else {
+				scanJoin += " · " + it.Summary.Join
+			}
+		}
+		cost, timeStr, rows, ket := "-", "-", "-", it.Note
+		if it.Tree != "" {
+			cost = it.Summary.Cost
+			rows = it.Summary.Rows
+			if it.Analyze {
+				timeStr = it.Summary.ActualTime
+			}
+			page.Plans = append(page.Plans, ExplainPlanCard{
+				Title: fmt.Sprintf("Statement %d — %s", it.N, it.Stmt),
+				Tree:  it.Tree,
+			})
+		}
+		page.ExplainTable.Rows = append(page.ExplainTable.Rows, web.TableRow{
+			"no":   {Text: strconv.Itoa(it.N)},
+			"stmt": {Text: it.Stmt},
+			"plan": {Text: scanJoin},
+			"idx":  {Text: it.Summary.Index},
+			"cost": {Text: cost},
+			"time": {Text: timeStr},
+			"rows": {Text: rows},
+			"ket":  {Text: ket},
+		})
+	}
+	h.render(w, http.StatusOK, "migration_preview.html", page)
 }
 
 // migrationExecute menjalankan draft via MigrationRunner (transaksional).
