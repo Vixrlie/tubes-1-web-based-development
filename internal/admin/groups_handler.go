@@ -235,8 +235,14 @@ func (g *groupHandlers) renderDetail(w http.ResponseWriter, r *http.Request, sta
 }
 
 // revokeUsers mencabut session semua user terdampak perubahan akses.
+// User yang sedang melakukan aksi dilewati supaya admin tidak ikut ter-logout
+// saat mengubah grup yang di dalamnya ia sendiri menjadi anggota.
 func (g *groupHandlers) revokeUsers(ctx context.Context, ids []int64) error {
+	me, _ := auth.UserFromContext(ctx)
 	for _, id := range ids {
+		if me.ID != 0 && id == me.ID {
+			continue
+		}
 		if err := g.revoker.RevokeSessionsByUser(ctx, id); err != nil {
 			return err
 		}
