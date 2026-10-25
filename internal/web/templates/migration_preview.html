@@ -1,7 +1,7 @@
 {{/*
 Halaman Preview Migration: tinjauan SQL + KONFIRMASI EKSEKUSI (scr08: ketik nama
 database tujuan + centang persetujuan sebelum tombol aktif; submit nonaktifkan
-diri saat proses untuk mencegah kirim ganda) + analisa EXPLAIN (BON-04/05).
+diri saat proses untuk mencegah kirim ganda) + analisa EXPLAIN.
 Data: dbm.migrationPreviewPage (lihat dbm/migration_pages.go):
 .Shell, .Title, .Crumbs, .SQL, .Warning, .Detail, .ExecuteAction, .Actions,
 .ConnName, .ExplainAction, .ExplainTable, .Plans, .ExplainErr, .Analyze
@@ -44,19 +44,23 @@ CSRF: .User.CSRFToken (dari Shell).
         {{end}}
     </form>
 
-    {{/* --- Analisa rencana eksekusi (BON-04/05) --- */}}
+    {{/* --- Analisa rencana eksekusi --- */}}
     <section class="card">
         {{template `card-head` (dict `Title` `Analisa Rencana Eksekusi`)}}
         <p class="card__note">EXPLAIN berjalan tanpa mengeksekusi statement. EXPLAIN ANALYZE
             mengeksekusi di dalam transaksi yang selalu di-ROLLBACK, jadi tidak ada perubahan permanen.</p>
         <form method="post" action="{{.ExplainAction}}">
             <input type="hidden" name="csrf_token" value="{{.User.CSRFToken}}">
+            {{if .CanAnalyze}}
             <p>
                 <label>
                     <input type="checkbox" name="analyze" {{if .Analyze}}checked{{end}}>
                     Dengan EXPLAIN ANALYZE (dieksekusi lalu di-rollback)
                 </label>
             </p>
+            {{else}}
+            <p class="card__note">EXPLAIN ANALYZE membutuhkan akses View + Edit.</p>
+            {{end}}
             {{template `button` (dict `Label` `Jalankan EXPLAIN` `Type` `submit`)}}
         </form>
         {{- with .ExplainErr}}

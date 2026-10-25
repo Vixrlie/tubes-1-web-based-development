@@ -40,8 +40,8 @@ func UserFromContext(ctx context.Context) (User, bool) {
 type SessionInfo struct {
 	User      User
 	CSRFToken string
-	// NewToken terisi kalau session baru saja dirotasi (rotasi berkala).
-	// Middleware akan menulis ulang cookie dengan nilai ini.
+	// NewToken terisi kalau session baru saja dirotasi (berkala atau karena
+	// privilege naik). Middleware akan menulis ulang cookie dengan nilai ini.
 	NewToken string
 }
 

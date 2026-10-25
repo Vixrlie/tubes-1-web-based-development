@@ -1,6 +1,6 @@
 package dbm
 
-// Schema diff & generator kandidat SQL migration (BON-02/03).
+// Schema diff & generator kandidat SQL migration.
 // Sisi A = kondisi saat ini (koneksi yang dibuka), sisi B = referensi
 // (koneksi pembanding). Kandidat SQL selalu ditinjau/diubah pengguna
 // lewat halaman editor sebelum dijalankan.

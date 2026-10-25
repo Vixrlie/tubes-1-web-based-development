@@ -1,6 +1,6 @@
 package dbm
 
-// Halaman Schema Diff (BON-02/03): GET memilih koneksi pembanding, POST
+// Schema Diff: GET memilih koneksi pembanding, POST
 // menampilkan selisih + kandidat SQL yang bisa disimpan sebagai draft lalu
 // diedit di halaman editor sebelum dieksekusi.
 

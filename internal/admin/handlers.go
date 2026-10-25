@@ -8,8 +8,8 @@ import (
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 )
 
-// Option mengaktifkan satu bagian halaman admin. Tiap pemilik bagian membuat
-// Option sendiri di file-nya, jadi NewHandlers tidak perlu diubah lagi.
+// Option mengaktifkan satu bagian halaman admin. Tiap pemilik bagian buat
+// Option sendiri di file-nya, jadi NewHandlers tidak perlu diubah lagi
 type Option func(*Handlers)
 
 // Handle layar administrasi
@@ -36,8 +36,6 @@ func (h *Handlers) Routes(r chi.Router) {
 		h.usersRoutes(r)       // Arin
 		h.groupsRoutes(r)      // Vincent
 		h.connectionsRoutes(r) // Majiid
-		// userflow lama menyebut /admin/access; FE final mengaturnya di
-		// halaman group (access-editor), jadi alihkan agar tidak 404.
 		r.Get("/access", func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/admin/groups", http.StatusSeeOther)
 		})

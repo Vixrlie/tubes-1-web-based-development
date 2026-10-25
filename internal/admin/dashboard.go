@@ -28,8 +28,7 @@ type dashboardHandlers struct {
 	view   auth.Renderer
 }
 
-// WithDashboard mengaktifkan halaman ringkasan /admin. Tiap sumber boleh nil
-// (angka tampil "-" bila tidak tersedia).
+// WithDashboard mengaktifkan halaman ringkasan /admin
 func WithDashboard(users UserLister, groups GroupLister, conns ConnectionLister, view auth.Renderer) Option {
 	return func(h *Handlers) {
 		h.dashboard = &dashboardHandlers{users: users, groups: groups, conns: conns, view: view}

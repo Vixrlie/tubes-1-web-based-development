@@ -7,7 +7,7 @@ import (
 )
 
 // constraintOf mengembalikan nama constraint dari error PostgreSQL, atau ""
-// bila error bukan pelanggaran constraint.
+// bila error bukan kesalahan constraint.
 func constraintOf(err error) string {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {

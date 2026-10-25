@@ -91,8 +91,6 @@ func (h *Handlers) Routes(r chi.Router) {
 }
 
 // authorize memeriksa izin view user pada {connID} DI DALAM handler
-// (param route pasti terisi pada titik ini). false = respons sudah dikirim
-// (404 untuk id tak valid, 403 untuk izin ditolak/gagal dimuat; fail closed).
 func (h *Handlers) authorize(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	return h.authorizeAction(w, r, access.ActionView)
 }
@@ -159,8 +157,7 @@ func (h *Handlers) connectionName(ctx context.Context, connID int64) (string, er
 	return name, err
 }
 
-// databaseShell membangun shell FE halaman database (Nav "database" + sidebar
-// tree schema/tabel dari database target; aktif = "schema.tabel" yang dibuka).
+// databaseShell membangun shell FE halaman database
 func (h *Handlers) databaseShell(ctx context.Context, connID int64, connName, active string) web.Shell {
 	sh := web.Shell{Nav: "database", User: shellUser(ctx)}
 	pool, err := h.registry.Get(ctx, connID)

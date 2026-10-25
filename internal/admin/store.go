@@ -30,16 +30,14 @@ type UserUpdate struct {
 }
 
 var (
-	// ErrLastAdmin menolak penghapusan admin aktif terakhir (mencegah
-	// platform kehilangan semua administrator).
+	// ErrLastAdmin tolak penghapusan active admin terakhir
 	ErrLastAdmin = errors.New("admin aktif terakhir tidak dapat dihapus")
 	// ErrUserHasHistory menolak penghapusan user yang tercatat sebagai
-	// pelaku migration; cukup dinonaktifkan supaya riwayat tetap utuh.
+	// pelaku migration, cukup dinonaktifkan.
 	ErrUserHasHistory = errors.New("user memiliki riwayat migration dan hanya dapat dinonaktifkan")
 )
 
-// UserStore menanam auth.Store supaya auth.CreateUser (satu-satunya pintu
-// membuat akun: normalisasi, validasi, hash) bisa dipakai langsung.
+// UserStore menanam auth.Store supaya auth.CreateUser bisa dipakai langsung.
 type UserStore interface {
 	auth.Store
 	List(ctx context.Context) ([]UserRow, error)

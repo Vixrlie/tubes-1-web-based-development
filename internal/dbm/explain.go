@@ -16,25 +16,23 @@ import (
 
 // ExplainItem = hasil analisa satu statement.
 type ExplainItem struct {
-	N       int         // nomor statement (1-based)
-	Stmt    string      // statement untuk tampilan (dipotong)
-	Kind    string      // "query" | "ddl" | "lainnya"
-	Note    string      // pesan bila statement tidak menghasilkan plan
-	Summary PlanSummary // ringkasan plan (BON-05); kosong bila tanpa plan
-	Tree    string      // rencana eksekusi terformat
-	Analyze bool        // dianalisa dengan EXPLAIN ANALYZE
+	N       int        
+	Stmt    string     
+	Kind    string     
+	Note    string     
+	Summary PlanSummary
+	Tree    string     
+	Analyze bool       
 }
 
-// PlanSummary = ringkasan execution plan sesuai spesifikasi BON-05:
-// jenis scan, penggunaan index, join strategy, estimated cost,
-// actual execution time, dan jumlah row.
+// PlanSummary = ringkasan execution plan
 type PlanSummary struct {
-	Scan       string // jenis scan, "-" bila tidak ada
-	Index      string // index yang dipakai, "-" bila tidak ada
-	Join       string // strategi join, "-" bila tidak ada
-	Cost       string // estimated cost dari root plan
-	ActualTime string // actual execution time dalam ms (hanya ANALYZE)
-	Rows       string // jumlah row (estimasi, atau estimasi/aktual)
+	Scan       string
+	Index      string
+	Join       string
+	Cost       string
+	ActualTime string
+	Rows       string
 }
 
 const ddlNoPlanNote = "Statement DDL/utility tidak memiliki execution plan."
@@ -50,7 +48,7 @@ func ExplainAll(ctx context.Context, pool *Target, sqlText string, analyze bool)
 }
 
 // Explain menganalisa satu statement. DDL dilewati tanpa query (memang tidak
-// punya plan); statement lain dijelaskan lewat EXPLAIN [ANALYZE] FORMAT JSON.
+// punya plan), statement lain dijelaskan lewat EXPLAIN [ANALYZE] FORMAT JSON.
 func Explain(ctx context.Context, pool *Target, n int, stmt string, analyze bool) ExplainItem {
 	item := ExplainItem{N: n, Stmt: shortStmt(stmt), Kind: stmtKind(stmt), Analyze: analyze}
 	if item.Kind == "ddl" {
@@ -63,7 +61,7 @@ func Explain(ctx context.Context, pool *Target, n int, stmt string, analyze bool
 	var raw []byte
 	var err error
 	if analyze {
-		// ANALYZE benar-benar mengeksekusi statement: transaksi dibuka hanya
+		// ANALYZE benar-benar eksekusi statement dmn transaksi dibuka hanya
 		// untuk ini lalu selalu di-ROLLBACK (defer), termasuk bila gagal.
 		tx, txErr := pool.DB.BeginTx(ctx, nil)
 		if txErr != nil {
@@ -86,8 +84,8 @@ func Explain(ctx context.Context, pool *Target, n int, stmt string, analyze bool
 	if !pool.Dialect.ExplainIsJSON(analyze) ||
 		json.Unmarshal(raw, &payload) != nil ||
 		len(payload) == 0 || payload[0].Plan == nil {
-		// Bentuk keluaran tidak dikenali (mis. EXPLAIN ANALYZE MySQL yang
-		// berupa pohon teks): tampilkan apa adanya, jangan mengarang ringkasan.
+		// Output tidak dikenali (mis. EXPLAIN ANALYZE MySQL yang
+		// berupa pohon teks), tampilkan apa adanya, jangan mengarang ringkasan.
 		item.Tree = strings.TrimSpace(string(raw)) + "\n"
 		item.Note = "Ringkasan otomatis tidak tersedia untuk DBMS ini; ditampilkan keluaran mentah EXPLAIN."
 		return item
@@ -291,7 +289,7 @@ func shortStmt(stmt string) string {
 	return flat
 }
 
-// extractSummary mengambil ringkasan BON-05 dari akar plan + satu kali telusur.
+// extractSummary mengambil info dari akar plan + satu kali telusur.
 func extractSummary(root map[string]any, analyze bool) PlanSummary {
 	s := PlanSummary{
 		Scan:  "-",

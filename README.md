@@ -231,11 +231,11 @@ docker compose up -d
 | Variabel | Fungsi | Default |
 |----------|--------|---------|
 | `APP_ADDR` | alamat server | `:8080` |
-| `APP_ENV` | environment | `development` |
+| `APP_ENV` | environment; `production` mewajibkan `COOKIE_SECURE=true` dan gagal start bila tidak | `development` |
 | `PLATFORM_DB_URL` | koneksi ke database platform (wajib) | tidak ada |
 | `PLATFORM_DB_PORT` | port `platform-db` di laptop (hanya dibaca Docker Compose) | `5432` |
 | `TEST_DB_URL` | koneksi database test | lihat `.env.example` |
-| `COOKIE_SECURE` | `true` bila diakses lewat HTTPS | `false` |
+| `COOKIE_SECURE` | `true` bila diakses lewat HTTPS; wajib `true` saat `APP_ENV=production` | `false` |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | akun Platform Admin awal, dibaca saat seed. Harus diisi bersamaan; kosong keduanya berarti seed dilewati | kosong |
 | `SESSION_IDLE_TIMEOUT` | idle timeout session | `30m` |
 | `SESSION_ABSOLUTE_TIMEOUT` | umur maksimum session | `8h` |
@@ -317,7 +317,6 @@ Kontrak yang dipakai bersama:
 | `session.Revoker.RevokeSessionsByUser` | Arin | mencabut session saat akses berubah |
 | `access.Policy.Can(ctx, userID, connID, action)` | Vincent | pengecekan izin per database |
 
-Kalau perlu mengubah kontrak, kabari pemilik dan anggota lain sebelum merge.
 
 ## Skema Database Platform
 
@@ -343,11 +342,11 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 | Panjang dan penyimpanan session ID | 32 byte dari `crypto/rand`, dikodekan base64url. Di DB hanya hash SHA-256, token asli hanya di cookie | Token tidak bisa ditebak, dan kalau tabel `sessions` bocor, token yang masih berlaku tidak ikut bocor. |
 | Idle timeout | 30 menit | Cukup untuk pemakaian normal dan membatasi risiko session yang ditinggalkan. |
 | Absolute expiration | 8 jam | Setara satu hari kerja. Memaksa login ulang walau user aktif terus, dan rotasi tidak memperpanjangnya. |
-| Interval rotasi session | 15 menit | Memperkecil jendela pemakaian token yang dicuri. |
+| Interval rotasi session | 15 menit | Memperkecil jendela pemakaian token yang dicuri. Kenaikan privilege (grant/role) menandai `force_rotate`; token dirotasi pada request berikutnya tanpa logout. |
 | Grace period ID lama | 30 detik | Request paralel atau response yang terlambat tidak membuat user terlempar saat cookie baru belum sampai. |
-| Atribut cookie | `HttpOnly`, `SameSite=Lax`, `Secure` saat `COOKIE_SECURE=true`. Nama cookie tetap `pathgres_session`, hanya nilainya yang berganti saat rotasi | `HttpOnly` mencegah JavaScript membaca cookie. `Lax` tetap mengizinkan navigasi biasa ke aplikasi. `Secure` hanya aktif di HTTPS agar development di HTTP tetap jalan. |
+| Atribut cookie | `HttpOnly`, `SameSite=Lax`, `Secure` saat `COOKIE_SECURE=true`. Nama cookie tetap `pathgres_session`, hanya nilainya yang berganti saat rotasi. `APP_ENV=production` tanpa cookie secure membuat startup gagal | `HttpOnly` mencegah JavaScript membaca cookie. `Lax` tetap mengizinkan navigasi biasa ke aplikasi. `Secure` hanya aktif di HTTPS agar development di HTTP tetap jalan; production dipaksa fail-fast agar tidak salah konfigurasi. |
 | Mekanisme CSRF | Request terautentikasi: synchronizer token per session (`csrf_secret`), dikirim lewat field form `csrf_token` atau header `X-CSRF-Token` dan dibandingkan dengan `subtle.ConstantTimeCompare`. `POST /login`: pengecekan `Origin` dan `Sec-Fetch-Site` lewat `http.CrossOriginProtection`. `SameSite=Lax` sebagai lapisan tambahan | Login belum punya session sehingga belum ada token. Cek Origin menutup login CSRF tanpa state tambahan. |
-| Akses efektif jika user di banyak group | level tertinggi (asumsi sementara, diputuskan Vincent) | |
+| Akses efektif jika user di banyak group | level tertinggi di antara grant group yang aktif | Konsisten dengan `access.Effective`; user tanpa grant ditolak. |
 | Pembuatan Platform Admin pertama | Seed dari `ADMIN_USERNAME` dan `ADMIN_PASSWORD` saat start, hanya jika username belum ada | Tidak ada pendaftaran publik dan tidak ada password di repo. Seed yang idempotent aman dijalankan di setiap restart. |
 | Aturan username dan password | Username dinormalisasi ke huruf kecil lalu harus 3-32 karakter dari `a-z`, `0-9`, `_`, `.`. Password minimal 8 karakter dan maksimal 72 byte | bcrypt hanya memakai 72 byte pertama, jadi password yang lebih panjang ditolak agar tidak terpotong diam-diam. Normalisasi mencegah `Admin` dan `admin` menjadi dua akun. |
 
@@ -363,7 +362,7 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 - [x] Database viewer: `/databases`, schema, table (columns/constraints/indexes), data berpaginasi
 - [x] Migration: draft, editor, preview + konfirmasi, eksekusi transaksional (commit/rollback), riwayat + filter status
 - [x] Halaman 403 (akses ditolak) dan koneksi gagal yang aman tanpa kredensial
-- [x] Unit dan integration test (akses, admin, auth, session, config, db, dbm, web)
+- [x] Unit test session/auth/config: idle timeout, absolute expiration, grace period, rotasi berkala/paksa, login/logout, CSRF, atribut cookie, dan aturan production
 - [x] Bonus (BON-02/03): schema diff antar dua koneksi + generator kandidat SQL migration
 - [x] Bonus (BON-04/05): `EXPLAIN` / `EXPLAIN ANALYZE` sebelum eksekusi + ringkasan execution plan
 - [x] Bonus (BON-01): dukungan DBMS tambahan (MySQL/MariaDB): koneksi, viewer, migration,

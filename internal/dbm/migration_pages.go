@@ -169,7 +169,7 @@ func (h *Handlers) migrationsList(w http.ResponseWriter, r *http.Request) {
 			{Label: "Migrasi"},
 		},
 		Actions: actions,
-		Table: t,
+		Table:   t,
 	})
 }
 
@@ -346,12 +346,13 @@ type migrationPreviewPage struct {
 	Actions       []web.Button
 	ConnName      string // nama database tujuan, untuk konfirmasi ketik-nama
 
-	// Analisa rencana eksekusi (BON-04/05).
+	// Analisa rencana eksekusi.
 	ExplainAction string
-	ExplainErr    string           // kegagalan global (mis. target tak terjangkau)
-	ExplainTable  web.Table        // ringkasan per statement; kosong = belum dianalisa
+	ExplainErr    string            // kegagalan global (mis. target tak terjangkau)
+	ExplainTable  web.Table         // ringkasan per statement; kosong = belum dianalisa
 	Plans         []ExplainPlanCard // teks plan per statement
-	Analyze       bool             // nilai checkbox terakhir
+	Analyze       bool              // nilai checkbox terakhir
+	CanAnalyze    bool              // EXPLAIN ANALYZE butuh izin edit
 }
 
 // ExplainPlanCard = satu blok teks plan statement di halaman preview.
@@ -365,8 +366,14 @@ func (h *Handlers) previewData(r *http.Request, connID int64, m Migration, name 
 	base := migrationsHref(connID)
 	detailHref := base + "/" + strconv.FormatInt(m.ID, 10)
 
+	canEdit := false
+	if user, ok := auth.UserFromContext(r.Context()); ok {
+		allowed, err := h.policy.Can(r.Context(), user.ID, connID, access.ActionEdit)
+		canEdit = err == nil && allowed
+	}
+
 	var warning string
-	canExecute := m.Status == StatusDraft && h.runner != nil
+	canExecute := m.Status == StatusDraft && h.runner != nil && canEdit
 	switch m.Status {
 	case StatusDraft:
 		warning = "Draft ini belum pernah dieksekusi. Eksekusi berjalan dalam satu transaksi; gagal berarti rollback penuh."
@@ -376,8 +383,7 @@ func (h *Handlers) previewData(r *http.Request, connID int64, m Migration, name 
 		warning = "Percobaan sebelumnya gagal dan sudah di-rollback. Perbaiki SQL sebelum mencoba lagi."
 	}
 
-	// Tombol eksekusi berada di kartu "Konfirmasi eksekusi" (butuh ketik-nama
-	// + persetujuan); Actions di sini hanya kembali ke detail.
+	// Tombol eksekusi di kartu "Konfirmasi eksekusi"
 	actions := []web.Button{
 		{Label: "Batal", Variant: "secondary", Href: detailHref},
 	}
@@ -403,6 +409,7 @@ func (h *Handlers) previewData(r *http.Request, connID int64, m Migration, name 
 		ExecuteAction: detailHref + "/execute",
 		ExplainAction: detailHref + "/explain",
 		CanExecute:    canExecute,
+		CanAnalyze:    canEdit,
 		Actions:       actions,
 		ConnName:      name,
 	}
@@ -424,9 +431,7 @@ func (h *Handlers) migrationPreview(w http.ResponseWriter, r *http.Request) {
 	h.render(w, http.StatusOK, "migration_preview.html", h.previewData(r, connID, m, name))
 }
 
-// migrationExplain menjalankan EXPLAIN (BON-04) pada seluruh statement migration
-// dan merender ulang halaman preview beserta ringkasannya (BON-05). EXPLAIN
-// ANALYZE butuh izin edit; eksekusinya di-rollback di dalam explain.go.
+// migrationExplain jalanin EXPLAIN di seluruh statement migration & render ulang preview
 func (h *Handlers) migrationExplain(w http.ResponseWriter, r *http.Request) {
 	analyze := r.PostFormValue("analyze") != ""
 	action := access.ActionView

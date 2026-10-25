@@ -62,13 +62,11 @@ type GroupStore interface {
 	SetGrant(ctx context.Context, groupID, connID int64, level access.Action) error
 	RevokeGrant(ctx context.Context, groupID, connID int64) error
 
-	// AccessSummaries mengembalikan ringkasan akses per group untuk daftar
-	// group: "nama-koneksi: View Only" / "nama-koneksi: View + Edit".
+	// AccessSummaries return info akses per group untuk list
 	AccessSummaries(ctx context.Context) (map[int64][]string, error)
-	// AllGrants mengembalikan level per (group, connection) untuk matriks akses.
+	// AllGrants return level per (group, connection)
 	AllGrants(ctx context.Context) (map[int64]map[int64]access.Action, error)
-	// GroupAccesses mengembalikan akses per group dalam bentuk asli
-	// (database + level) untuk tabel kelola group fe-components.
+	// GroupAccesses return akses per group dalam bentuk asli
 	GroupAccesses(ctx context.Context) (map[int64][]web.GroupAccess, error)
 }
 

@@ -37,7 +37,7 @@ const connectTimeout = 5 * time.Second
 
 // URLRegistry menyimpan koneksi database target per connID. Koneksi dibuka
 // sekali (lazy) sesuai skema URL di db_connections (postgres:// atau mysql://)
-// lalu dipakai ulang; Evict menutup saat koneksi diubah/dihapus, dan Close
+// lalu dipakai ulang, lalu Evict menutup saat koneksi diubah/dihapus, dan Close
 // menutup semua saat aplikasi berhenti.
 type URLRegistry struct {
 	mu       sync.Mutex
