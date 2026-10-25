@@ -1,7 +1,7 @@
 package admin
 
 // Form koneksi database: tambah (/admin/connections/new) dan ubah
-// (/admin/connections/{id}/edit). Password bersifat write-only — saat ubah,
+// (/admin/connections/{id}/edit). Password bersifat write-only; saat ubah,
 // kolom kosong berarti mempertahankan password tersimpan.
 
 import (

@@ -29,7 +29,7 @@ type dashboardHandlers struct {
 }
 
 // WithDashboard mengaktifkan halaman ringkasan /admin. Tiap sumber boleh nil
-// (angka tampil "—" bila tidak tersedia).
+// (angka tampil "-" bila tidak tersedia).
 func WithDashboard(users UserLister, groups GroupLister, conns ConnectionLister, view auth.Renderer) Option {
 	return func(h *Handlers) {
 		h.dashboard = &dashboardHandlers{users: users, groups: groups, conns: conns, view: view}
@@ -52,11 +52,11 @@ type dashboardPage struct {
 	Note   string
 }
 
-// statField mengubah hasil hitung menjadi baris ringkasan; galat -> "—".
+// statField mengubah hasil hitung menjadi baris ringkasan; galat -> "-".
 func statField(label string, n int, note string, err error) web.DetailField {
 	if err != nil {
 		log.Printf("admin dashboard: hitung %s: %v", label, err)
-		return web.DetailField{Label: label, Value: "—", Note: "gagal memuat"}
+		return web.DetailField{Label: label, Value: "-", Note: "gagal memuat"}
 	}
 	return web.DetailField{Label: label, Value: strconv.Itoa(n), Note: note}
 }

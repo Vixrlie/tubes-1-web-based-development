@@ -224,7 +224,7 @@ func (h *Handlers) diffRun(w http.ResponseWriter, r *http.Request) {
 			{Key: "detail", Label: "Detail"},
 			{Key: "sql", Label: "SQL"},
 		},
-		Empty: "Tidak ada perbedaan — kedua schema sudah identik.",
+		Empty: "Tidak ada perbedaan: kedua schema sudah identik.",
 	}
 	for _, it := range items {
 		shortSQL := strings.Join(strings.Fields(it.SQL), " ")
@@ -232,7 +232,7 @@ func (h *Handlers) diffRun(w http.ResponseWriter, r *http.Request) {
 			shortSQL = shortSQL[:60] + "…"
 		}
 		if shortSQL == "" {
-			shortSQL = "—"
+			shortSQL = "-"
 		}
 		page.Table.Rows = append(page.Table.Rows, web.TableRow{
 			"tabel":  {Text: it.Qualified()},

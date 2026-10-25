@@ -131,9 +131,9 @@ func (h *Handlers) migrationsList(w http.ResponseWriter, r *http.Request) {
 	for _, m := range items {
 		creator := m.CreatedByName
 		if creator == "" {
-			creator = "—"
+			creator = "-"
 		}
-		executed := "—"
+		executed := "-"
 		if m.ExecutedAt != nil {
 			executed = m.ExecutedAtLabel()
 			if m.ExecutedByName != "" {
@@ -195,7 +195,7 @@ func (h *Handlers) migrationEditor(w http.ResponseWriter, r *http.Request) {
 			{Label: "Baru"},
 		},
 		FormAction: base,
-		Note:       "Draft belum menyentuh database target — simpan dulu, lalu periksa lewat Preview.",
+		Note:       "Draft belum menyentuh database target; simpan dulu, lalu periksa lewat Preview.",
 		Actions: []web.Button{
 			{Label: "Simpan Draft", Type: "submit"},
 			{Label: "Batal", Variant: "secondary", Href: base},
@@ -267,7 +267,7 @@ func (h *Handlers) migrationDetail(w http.ResponseWriter, r *http.Request) {
 	var statusText, statusNote string
 	switch m.Status {
 	case StatusDraft:
-		statusText = "Draft — belum dieksekusi"
+		statusText = "Draft: belum dieksekusi"
 		statusNote = "Database target belum tersentuh. Periksa SQL lewat Preview sebelum dieksekusi."
 	case StatusApplied:
 		statusText = "Berhasil dieksekusi"
@@ -277,7 +277,7 @@ func (h *Handlers) migrationDetail(w http.ResponseWriter, r *http.Request) {
 		}
 		statusNote += "."
 	case StatusFailed:
-		statusText = "Gagal — di-rollback"
+		statusText = "Gagal: di-rollback"
 		statusNote = "Seluruh perubahan dibatalkan; database tidak berubah."
 		if m.Error != "" {
 			statusNote += " Galat: " + m.Error
@@ -358,7 +358,7 @@ func (h *Handlers) previewData(r *http.Request, connID int64, m Migration, name 
 	canExecute := m.Status == StatusDraft && h.runner != nil
 	switch m.Status {
 	case StatusDraft:
-		warning = "Draft ini belum pernah dieksekusi. Eksekusi berjalan dalam satu transaksi — gagal berarti rollback penuh."
+		warning = "Draft ini belum pernah dieksekusi. Eksekusi berjalan dalam satu transaksi; gagal berarti rollback penuh."
 	case StatusApplied:
 		warning = "Migration ini sudah dieksekusi pada " + m.ExecutedAtLabel() + "; tidak bisa dijalankan ulang."
 	case StatusFailed:
@@ -479,7 +479,7 @@ func (h *Handlers) migrationExplain(w http.ResponseWriter, r *http.Request) {
 				timeStr = it.Summary.ActualTime
 			}
 			page.Plans = append(page.Plans, ExplainPlanCard{
-				Title: fmt.Sprintf("Statement %d — %s", it.N, it.Stmt),
+				Title: fmt.Sprintf("Statement %d: %s", it.N, it.Stmt),
 				Tree:  it.Tree,
 			})
 		}

@@ -34,7 +34,7 @@ go run .                  # server + migrasi skema + seed admin; atau: make run
 
 Buka **http://localhost:8080**, login dengan `admin` / password dari `.env`.
 
-Dari sini database platform masih kosong (belum ada koneksi, grup, tabel) —
+Dari sini database platform masih kosong (belum ada koneksi, grup, tabel),
 lanjut ke langkah **"Siapkan data awal"** di bawah supaya semua fitur
 (viewer, migration, EXPLAIN, schema diff) benar-benar bisa dicoba.
 
@@ -143,14 +143,14 @@ Windows PowerShell: simpan SQL di atas ke `seed.sql`, lalu
 
 **b. Daftarkan semuanya lewat UI (login sebagai `admin`):**
 
-1. **Admin → Koneksi Database → Tambah Koneksi** — Nama `target-demo`,
+1. **Admin → Koneksi Database → Tambah Koneksi**: Nama `target-demo`,
    Host `127.0.0.1`, Port `5433`, Database `sample`, Username `target`,
    Password `target` → **Simpan** → **Tes Koneksi** (harus berhasil).
-2. **Admin → Pengguna → Tambah User** — username `peserta`, password
+2. **Admin → Pengguna → Tambah User**: username `peserta`, password
    minimal 8 karakter → **Simpan**.
-3. **Admin → Grup → Grup Baru** — nama `peserta-grup` → **Simpan**. Di
+3. **Admin → Grup → Grup Baru**: nama `peserta-grup` → **Simpan**. Di
    halaman detail grup: **Tambah Anggota** → pilih `peserta` **dan `admin`**
-   → **Tambahkan**. (Platform Admin tidak otomatis punya akses database —
+   → **Tambahkan**. (Platform Admin tidak otomatis punya akses database,
    makanya `admin` ikut dimasukkan grup.)
 4. Di kartu **Akses Database** klik **Kelola Database** → **Tambah Database**
    → pilih `target-demo`, level **View + Edit** → **Tambahkan** →
@@ -341,7 +341,7 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 - [x] Unit dan integration test (akses, admin, auth, session, config, db, dbm, web)
 - [x] Bonus (BON-02/03): schema diff antar dua koneksi + generator kandidat SQL migration
 - [x] Bonus (BON-04/05): `EXPLAIN` / `EXPLAIN ANALYZE` sebelum eksekusi + ringkasan execution plan
-- [ ] Bonus (BON-01): dukungan DBMS tambahan (MySQL/MariaDB) — belum diimplementasi
+- [ ] Bonus (BON-01): dukungan DBMS tambahan (MySQL/MariaDB): belum diimplementasi
 
 Alur minimum (GEN-07) berjalan end-to-end: Login → Access Control → Pilih Database → Lihat Schema/Data → Buat Migration → Execute → Commit/Rollback → Riwayat Migration ter-update.
 

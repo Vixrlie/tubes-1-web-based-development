@@ -29,7 +29,7 @@ type Config struct {
 }
 
 // Handlers melayani userflow database (daftar, schema, detail tabel). Semua route
-// memeriksa izin via access.Policy; penolakan 403 polos — FE belum punya halaman error.
+// memeriksa izin via access.Policy; penolakan 403 polos, karena FE belum punya halaman error.
 type Handlers struct {
 	platform   *pgxpool.Pool
 	policy     access.Policy
@@ -92,7 +92,7 @@ func (h *Handlers) Routes(r chi.Router) {
 
 // authorize memeriksa izin view user pada {connID} DI DALAM handler
 // (param route pasti terisi pada titik ini). false = respons sudah dikirim
-// (404 untuk id tak valid, 403 untuk izin ditolak/gagal dimuat — fail closed).
+// (404 untuk id tak valid, 403 untuk izin ditolak/gagal dimuat; fail closed).
 func (h *Handlers) authorize(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	return h.authorizeAction(w, r, access.ActionView)
 }
@@ -135,7 +135,7 @@ func shellUser(ctx context.Context) *web.ShellUser {
 // formatRows memformat angka dengan pemisah titik gaya Indonesia (1.240).
 func formatRows(n int64) string {
 	if n < 0 {
-		return "—"
+		return "-"
 	}
 	s := strconv.FormatInt(n, 10)
 	var b strings.Builder

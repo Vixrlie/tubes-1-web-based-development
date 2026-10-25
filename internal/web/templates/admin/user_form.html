@@ -78,7 +78,7 @@ jadi nilai kondisional dihitung dulu ke variabel $.
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         {{template `card-head` (dict `Title` `Status akun` `Actions` (list
             (dict `Label` `Nonaktifkan` `Variant` `soft-danger` `Type` `submit` `State` $state)))}}
-        <p>Akun <strong>Aktif</strong> — user bisa masuk dan sesi berjalan normal.
+        <p>Akun <strong>Aktif</strong>: user bisa masuk dan sesi berjalan normal.
             Menonaktifkan mengakhiri seluruh session user tersebut.</p>
         {{if .IsSelf}}<p class="card__note">Anda tidak bisa menonaktifkan akun sendiri.</p>{{end}}
     </form>
@@ -87,7 +87,7 @@ jadi nilai kondisional dihitung dulu ke variabel $.
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         {{template `card-head` (dict `Title` `Status akun` `Actions` (list
             (dict `Label` `Aktifkan kembali` `Type` `submit`)))}}
-        <p>Akun <strong>Nonaktif</strong> — user tidak bisa masuk dan sesi lamanya sudah
+        <p>Akun <strong>Nonaktif</strong>: user tidak bisa masuk dan sesi lamanya sudah
             dicabut saat dinonaktifkan.</p>
     </form>
     {{end}}

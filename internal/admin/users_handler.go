@@ -194,7 +194,7 @@ func (u *userHandlers) list(w http.ResponseWriter, r *http.Request) {
 		}
 		groupList := strings.Join(groups[usr.ID], ", ")
 		if groupList == "" {
-			groupList = "—"
+			groupList = "-"
 		}
 		table.Rows = append(table.Rows, web.TableRow{
 			"username": {Text: usr.Username},

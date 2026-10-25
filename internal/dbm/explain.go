@@ -97,8 +97,8 @@ func Explain(ctx context.Context, pool *pgxpool.Pool, n int, stmt string, analyz
 	return item
 }
 
-// SplitStatements memecah SQL per ';' — sadar string tunggal, dollar-quoting,
-// dan komentar supaya ';' di dalam literal tidak ikut membelah statement.
+// SplitStatements memecah SQL per ';' yang sadar string tunggal,
+// dollar-quoting, dan komentar supaya ';' di dalam literal tidak ikut membelah statement.
 func SplitStatements(sqlText string) []string {
 	var out []string
 	var b strings.Builder
@@ -265,7 +265,7 @@ func leadingKeyword(stmt string) string {
 }
 
 // stmtKind mengelompokkan statement: "query" (boleh di-EXPLAIN), "ddl"
-// (utility, tanpa plan — dilewati), "lainnya" (dicoba, galat ditampilkan jujur).
+// (utility, tanpa plan, dilewati), "lainnya" (dicoba, galat ditampilkan jujur).
 func stmtKind(stmt string) string {
 	switch leadingKeyword(stmt) {
 	case "SELECT", "INSERT", "UPDATE", "DELETE", "WITH", "VALUES", "TABLE", "MERGE":
