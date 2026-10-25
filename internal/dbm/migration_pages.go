@@ -344,6 +344,7 @@ type migrationPreviewPage struct {
 	ExecuteAction string
 	CanExecute    bool
 	Actions       []web.Button
+	ConnName      string // nama database tujuan, untuk konfirmasi ketik-nama
 
 	// Analisa rencana eksekusi (BON-04/05).
 	ExplainAction string
@@ -375,11 +376,10 @@ func (h *Handlers) previewData(r *http.Request, connID int64, m Migration, name 
 		warning = "Percobaan sebelumnya gagal dan sudah di-rollback. Perbaiki SQL sebelum mencoba lagi."
 	}
 
+	// Tombol eksekusi berada di kartu "Konfirmasi eksekusi" (butuh ketik-nama
+	// + persetujuan); Actions di sini hanya kembali ke detail.
 	actions := []web.Button{
 		{Label: "Batal", Variant: "secondary", Href: detailHref},
-	}
-	if canExecute {
-		actions = append(actions, web.Button{Label: "Eksekusi Sekarang", Type: "submit"})
 	}
 
 	return migrationPreviewPage{
@@ -404,6 +404,7 @@ func (h *Handlers) previewData(r *http.Request, connID int64, m Migration, name 
 		ExplainAction: detailHref + "/explain",
 		CanExecute:    canExecute,
 		Actions:       actions,
+		ConnName:      name,
 	}
 }
 
