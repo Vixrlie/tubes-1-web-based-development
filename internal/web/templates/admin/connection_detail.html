@@ -13,10 +13,40 @@ Data: web.ConnectionDetailPage (lihat connections.go)
 {{- end}}
 
 {{- with .DeleteAction}}
-<form id="delete-connection-form" method="post" action="{{.}}"
-    onsubmit="return confirm('Hapus koneksi ini? Tindakan ini tidak dapat dibatalkan.')" hidden>
-    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-</form>
+<dialog class="modal confirm-delete-modal" id="delete-connection-modal" aria-labelledby="delete-connection-modal-title">
+    <div class="modal__panel">
+        {{template `modal-head` (dict `ID` `delete-connection-modal` `Title` (or $.DeleteTitle `Hapus Koneksi`) )}}
+        <form class="modal__form" method="post" action="{{.}}">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <div class="modal__body">
+                <p class="confirm-delete-modal__text">Yakin ingin menghapus koneksi ini? Semua pemberian akses group ke database ini dicabut dan session terkait dinonaktifkan. Riwayat migration tetap tersimpan.</p>
+                <dl class="confirm-delete-modal__meta" role="list">
+                    <div class="confirm-delete-modal__meta-row">
+                        <dt>Host:</dt>
+                        <dd>{{or $.DeleteHost `-`}}</dd>
+                    </div>
+                    <div class="confirm-delete-modal__meta-row">
+                        <dt>Group terdampak:</dt>
+                        <dd>
+                            {{- if $.DeleteGroups}}
+                            <ul class="confirm-delete-modal__groups" role="list">
+                                {{- range $.DeleteGroups}}
+                                <li>{{.}}</li>
+                                {{- end}}
+                            </ul>
+                            {{- else}}-
+                            {{- end}}
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+            <div class="modal__foot">
+                {{template `button` (dict `Label` `Batal` `Variant` `secondary` `Attrs` (attr `data-modal-close`))}}
+                {{template `button` (dict `Label` `Ya, Hapus Koneksi` `Fill` `var(--color-danger)` `Color` `var(--color-on-danger)` `Stroke` `var(--color-danger)` `Type` `submit`)}}
+            </div>
+        </form>
+    </div>
+</dialog>
 {{- end}}
 
 <div class="split split--lead split--start">

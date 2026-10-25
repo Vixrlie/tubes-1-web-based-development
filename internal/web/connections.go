@@ -109,6 +109,9 @@ type ConnectionDetailPage struct {
 	// Kosong -> form-nya tidak dirender (pasangan tombol: lihat ConnectionDetailHeader).
 	TestAction   string
 	DeleteAction string
+	DeleteTitle  string
+	DeleteHost   string
+	DeleteGroups []string
 	Params       DetailCard
 	Groups       ListCard
 }
@@ -116,7 +119,7 @@ type ConnectionDetailPage struct {
 // ID form tersembunyi; dirujuk tombol di kepala halaman lewat atribut form=.
 const (
 	testConnectionFormID   = "test-connection-form"
-	deleteConnectionFormID = "delete-connection-form"
+	deleteConnectionModalID = "delete-connection-modal"
 )
 
 // DangerOutlineButton = tombol outline merah dengan latar putih (mis. "Hapus"),
@@ -129,8 +132,8 @@ func DangerOutlineButton(label string) Button {
 }
 
 // ConnectionDetailHeader = judul (nama koneksi), breadcrumb "Admin > Kelola Koneksi > <nama>",
-// dan tombol Tes Koneksi / Edit Koneksi / Hapus. Tes dan Hapus men-submit form tersembunyi
-// milik halaman (TestAction, DeleteAction).
+// dan tombol Tes Koneksi / Edit Koneksi / Hapus. Tes men-submit form tersembunyi,
+// sementara Hapus membuka pop up konfirmasi.
 func ConnectionDetailHeader(name, listHref, editHref string) PageHeader {
 	// Tes & Edit: latar putih; saat hover latar mengikuti warna tulisan, tulisan jadi putih
 	// (lihat .btn--hover-fill di button.css)
@@ -139,8 +142,8 @@ func ConnectionDetailHeader(name, listHref, editHref string) PageHeader {
 	edit := OutlineButton("Edit Koneksi", editHref).WithIcon("edit")
 	edit.Class = "btn--hover-fill"
 	del := DangerOutlineButton("Hapus").WithIcon("trash")
-	del.Type = "submit"
-	del.Attrs = `form="` + deleteConnectionFormID + `"`
+	del.Type = "button"
+	del.Attrs = `data-modal-open="` + deleteConnectionModalID + `" aria-controls="` + deleteConnectionModalID + `"`
 	return PageHeader{
 		Title: name,
 		Crumbs: []Crumb{

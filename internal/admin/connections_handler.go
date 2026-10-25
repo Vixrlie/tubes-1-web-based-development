@@ -159,11 +159,18 @@ func (c *connectionHandlers) detail(w http.ResponseWriter, r *http.Request) {
 		port = 5432
 	}
 	id := strconv.FormatInt(row.ID, 10)
+	groupNames := make([]string, 0, len(all[row.ID]))
+	for _, g := range all[row.ID] {
+		groupNames = append(groupNames, g.Name)
+	}
 	page := web.ConnectionDetailPage{
 		Shell:        c.shell(r),
 		PageHeader:   web.ConnectionDetailHeader(row.Name, "/admin/connections", "/admin/connections/"+id+"/edit"),
 		TestAction:   "/admin/connections/" + id + "/test",
 		DeleteAction: "/admin/connections/" + id + "/delete",
+		DeleteTitle:  "Hapus koneksi " + row.Database,
+		DeleteHost:   fmt.Sprintf("%s:%d", row.Host, port),
+		DeleteGroups: groupNames,
 		Params: web.NewConnectionParamsCard(web.ConnectionParams{
 			DisplayName: row.Name,
 			Database:    row.Database,

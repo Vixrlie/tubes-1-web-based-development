@@ -107,6 +107,55 @@
     gap: var(--space-3);
 }
 
+.confirm-delete-modal__text {
+    margin: 0;
+    font-size: var(--font-size-p3);
+    color: var(--color-text);
+}
+
+.confirm-delete-modal__meta {
+    margin: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-soft);
+}
+
+.confirm-delete-modal__meta-row {
+    display: grid;
+    grid-template-columns: minmax(9rem, auto) 1fr;
+    gap: var(--space-2);
+    align-items: start;
+}
+
+.confirm-delete-modal__meta-row + .confirm-delete-modal__meta-row {
+    margin-top: var(--space-2);
+}
+
+.confirm-delete-modal__meta dt,
+.confirm-delete-modal__meta dd {
+    margin: 0;
+    font-size: var(--font-size-p4);
+}
+
+.confirm-delete-modal__meta dt {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+}
+
+.confirm-delete-modal__meta dd {
+    color: var(--color-text-muted);
+}
+
+.confirm-delete-modal__groups {
+    margin: 0;
+    padding-left: 1rem;
+}
+
+.confirm-delete-modal__groups li + li {
+    margin-top: 0.125rem;
+}
+
 @keyframes modal-in {
     from {
         opacity: 0;
