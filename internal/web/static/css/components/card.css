@@ -9,6 +9,7 @@
 
 .card__head {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-3);
@@ -25,7 +26,9 @@
 
 .card__actions {
     display: flex;
+    flex-wrap: wrap;
     flex: none;
+    max-width: 100%;
     align-items: center;
     gap: var(--space-3);
 }

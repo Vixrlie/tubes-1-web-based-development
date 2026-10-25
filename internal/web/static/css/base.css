@@ -84,6 +84,11 @@ samp {
     font-size: 0.9em;
 }
 
+pre {
+    /* SQL/plan panjang di-scroll horizontal, bukan melebarkan halaman. */
+    overflow-x: auto;
+}
+
 code {
     background: var(--color-surface-muted);
     padding: 0.1em 0.35em;
