@@ -92,7 +92,7 @@
             field.disabled = !removed; // hanya dikirim kalau dicabut
         }
 
-        // ---------- pop up Tambah Database ----------
+        // Pop up Tambah Database
         function openModal() {
             if (!modal || (addBtn && addBtn.disabled)) return;
             syncChoices();
