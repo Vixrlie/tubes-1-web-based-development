@@ -2,6 +2,7 @@ package activity
 
 import (
 	"context"
+	"io"
 	"log/slog"
 	"os"
 	"time"
@@ -29,7 +30,13 @@ type Logger struct {
 }
 
 func New() *Logger {
-	h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	return NewWithWriter(os.Stdout)
+}
+
+// NewWithWriter sama seperti New, tapi tujuan output-nya bisa diatur.
+// Dipakai unit test untuk menangkap log tanpa menulis ke stdout.
+func NewWithWriter(w io.Writer) *Logger {
+	h := slog.NewJSONHandler(w, &slog.HandlerOptions{
 		Level:     slog.LevelInfo,
 		AddSource: true,
 	})
@@ -37,6 +44,9 @@ func New() *Logger {
 }
 
 func (l *Logger) Log(ctx context.Context, e Event) {
+	if l == nil || l.sl == nil {
+		return
+	}
 	if e.Time.IsZero() {
 		e.Time = time.Now()
 	}
