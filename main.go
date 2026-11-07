@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/access"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/activity"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/admin"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/config"
@@ -72,6 +73,8 @@ func run() error {
 	}
 
 	authHandlers := auth.NewHandlers(userStore, sessions, renderer, cfg.CookieSecure)
+	activityLogger := activity.New()
+	authHandlers.SetLogger(activityLogger)
 
 	adminUsers := admin.NewPGUserStore(pool)
 
