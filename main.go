@@ -33,12 +33,10 @@ func run() error {
 	if err := config.LoadDotEnv(".env"); err != nil {
 		return err
 	}
-
 	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -47,7 +45,6 @@ func run() error {
 		return err
 	}
 	defer pool.Close()
-
 	if err := db.Migrate(ctx, pool, migrations.FS); err != nil {
 		return err
 	}
@@ -77,8 +74,6 @@ func run() error {
 	authHandlers.SetLogger(activityLogger)
 
 	adminUsers := admin.NewPGUserStore(pool)
-
-	// Akses database per group + registry pool target untuk route /databases/*.
 	accessPolicy := access.NewPolicy(access.NewPGLevelSource(pool))
 	registry := dbm.NewURLRegistry(pool)
 	defer registry.Close()
@@ -94,32 +89,26 @@ func run() error {
 		Migrations: migrationStore,
 	})
 
-	// Mode developing
 	devMode := os.Getenv("DEV_COMPONENTS") == "1"
 	r := web.NewRouter()
-
 	authHandlers.PublicRoutes(r)
-
 	if devMode {
 		web.DevRoutes{R: renderer}.Routes(r)
 	}
-
-	// Rute protected
 	r.Group(func(r chi.Router) {
 		r.Use(auth.AuthMiddleware(auth.NewSessionValidator(sessions), cfg.CookieSecure))
 		r.Use(auth.CSRFProtect)
-
 		authHandlers.ProtectedRoutes(r)
 		dbmHandlers.Routes(r)
 
 		adminOpts := []admin.Option{
+			admin.WithActivityLogger(activityLogger),
 			admin.WithUserAdmin(adminUsers, sessions, renderer),
 			admin.WithGroupAdmin(groupStore, adminUsers, connLister, sessions, renderer),
 			admin.WithDashboard(adminUsers, groupStore, connLister, renderer),
 		}
 		if !devMode {
-			adminOpts = append(adminOpts,
-				admin.WithConnectionAdmin(connStore, renderer, registry, sessions))
+			adminOpts = append(adminOpts, admin.WithConnectionAdmin(connStore, renderer, registry, sessions))
 		}
 		admin.NewHandlers(adminOpts...).Routes(r)
 	})
@@ -129,16 +118,13 @@ func run() error {
 		Handler:           r,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
-
 	select {
 	case err := <-errCh:
 		return err
 	case <-ctx.Done():
 	}
-
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	return srv.Shutdown(shutdownCtx)
