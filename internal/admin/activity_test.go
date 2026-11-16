@@ -72,6 +72,40 @@ func TestAdminActivitySkipsGET(t *testing.T) {
 	}
 }
 
+func TestAdminActivityLogsFailedConnectionTestWithSuccessfulHTTPResponse(t *testing.T) {
+	for _, tc := range []struct {
+		pattern string
+		path    string
+		status  int
+	}{
+		{"/admin/connections/test", "/admin/connections/test", http.StatusOK},
+		{"/admin/connections/{id}/test", "/admin/connections/42/test", http.StatusSeeOther},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			var output bytes.Buffer
+			r := chi.NewRouter()
+			r.Use(AdminActivityMiddleware(activity.NewWithWriter(&output)))
+			r.Post(tc.pattern, func(w http.ResponseWriter, r *http.Request) {
+				markActivityFailed(r)
+				w.WriteHeader(tc.status)
+			})
+
+			res := httptest.NewRecorder()
+			r.ServeHTTP(res, httptest.NewRequest(http.MethodPost, tc.path, nil))
+			if res.Code != tc.status {
+				t.Fatalf("status = %d, want %d", res.Code, tc.status)
+			}
+			var entry map[string]any
+			if err := json.Unmarshal(output.Bytes(), &entry); err != nil {
+				t.Fatalf("invalid JSON log: %v", err)
+			}
+			if entry["action"] != "admin.connection.test" || entry["status"] != activity.StatusFailed {
+				t.Errorf("unexpected activity event: %+v", entry)
+			}
+		})
+	}
+}
+
 func TestAdminActivityDoesNotLogBody(t *testing.T) {
 	var output bytes.Buffer
 	r := chi.NewRouter()

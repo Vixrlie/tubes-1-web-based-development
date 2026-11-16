@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -12,8 +13,14 @@ import (
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 )
 
-// Only explicitly listed admin mutations are recorded. Route templates avoid
-// logging raw URLs, query strings, or sensitive request bodies.
+type activityOutcomeKey struct{}
+
+func markActivityFailed(r *http.Request) {
+	if failed, ok := r.Context().Value(activityOutcomeKey{}).(*bool); ok {
+		*failed = true
+	}
+}
+
 var adminActions = map[string]string{
 	"POST /admin/users":                               "admin.user.create",
 	"POST /admin/users/{id}":                          "admin.user.update",
@@ -33,9 +40,6 @@ var adminActions = map[string]string{
 	"POST /admin/connections/{id}/test":               "admin.connection.test",
 }
 
-// AdminActivityMiddleware logs the HTTP outcome of administrative mutations.
-// A successful HTTP response is not proof that a multi-step database operation
-// committed atomically; that requires service-level logging as well.
 func AdminActivityMiddleware(logger *activity.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -45,6 +49,8 @@ func AdminActivityMiddleware(logger *activity.Logger) func(http.Handler) http.Ha
 			}
 
 			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			var failed bool
+			r = r.WithContext(context.WithValue(r.Context(), activityOutcomeKey{}, &failed))
 			next.ServeHTTP(ww, r)
 
 			routeCtx := chi.RouteContext(r.Context())
@@ -68,7 +74,7 @@ func AdminActivityMiddleware(logger *activity.Logger) func(http.Handler) http.Ha
 			}
 			result := activity.StatusSuccess
 			var eventErr error
-			if statusCode >= http.StatusBadRequest {
+			if failed || statusCode >= http.StatusBadRequest {
 				result = activity.StatusFailed
 				eventErr = errors.New("admin request failed")
 			}
