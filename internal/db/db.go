@@ -6,11 +6,17 @@ import (
 	"io/fs"
 	"strings"
 
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/activity"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func NewPool(ctx context.Context, url string) (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(ctx, url)
+	cfg, err := pgxpool.ParseConfig(url)
+	if err != nil {
+		return nil, err
+	}
+	cfg.ConnConfig.Tracer = activity.PostgresTracer{Logger: activity.New(), Database: cfg.ConnConfig.Database}
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -21,8 +27,6 @@ func NewPool(ctx context.Context, url string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-// Migrate menjalankan file .sql di fsys secara berurutan (urut nama file),
-// masing-masing dalam satu transaksi, dan mencatatnya di schema_migrations.
 func Migrate(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS) error {
 	_, err := pool.Exec(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (
 		version    TEXT        PRIMARY KEY,
@@ -68,7 +72,7 @@ func apply(ctx context.Context, pool *pgxpool.Pool, name, body string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck
+	defer tx.Rollback(ctx)
 
 	if _, err := tx.Exec(ctx, body); err != nil {
 		return err

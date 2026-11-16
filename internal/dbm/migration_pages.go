@@ -1,8 +1,5 @@
 package dbm
 
-// Halaman migration (riwayat, editor draft, detail, preview + eksekusi) di atas
-// MigrationStore; izin: baca cukup ActionView, buat draft & eksekusi wajib ActionEdit.
-
 import (
 	"context"
 	"errors"
@@ -19,15 +16,10 @@ import (
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 )
 
-// Helpers bersama
-
-// migrationsHref = URL daftar riwayat migration sebuah koneksi.
 func migrationsHref(connID int64) string {
 	return "/databases/" + strconv.FormatInt(connID, 10) + "/migrations"
 }
 
-// loadConnName mengambil nama koneksi untuk breadcrumb. false = respons sudah
-// dikirim (404 bila tak ada, 500 bila gagal).
 func (h *Handlers) loadConnName(w http.ResponseWriter, r *http.Request, connID int64) (string, bool) {
 	name, err := h.connectionName(r.Context(), connID)
 	if errors.Is(err, ErrConnNotFound) {
@@ -41,8 +33,6 @@ func (h *Handlers) loadConnName(w http.ResponseWriter, r *http.Request, connID i
 	return name, true
 }
 
-// migrationShell membangun shell FE (sidebar database) dengan item "Migrasi"
-// ditandai aktif.
 func (h *Handlers) migrationShell(ctx context.Context, connID int64, name string) web.Shell {
 	sh := h.databaseShell(ctx, connID, name, "")
 	if sh.Sidebar != nil {
@@ -51,8 +41,6 @@ func (h *Handlers) migrationShell(ctx context.Context, connID int64, name string
 	return sh
 }
 
-// loadMigration memuat migration {mID} dan memastikan milik {connID} di URL.
-// false = respons sudah dikirim (404/500).
 func (h *Handlers) loadMigration(w http.ResponseWriter, r *http.Request, connID int64) (Migration, bool) {
 	mID, err := strconv.ParseInt(chi.URLParam(r, "mID"), 10, 64)
 	if err != nil || mID <= 0 {
@@ -71,7 +59,6 @@ func (h *Handlers) loadMigration(w http.ResponseWriter, r *http.Request, connID 
 	return m, true
 }
 
-// statusCell memetakan status migration ke sel tabel berlabel warna.
 func statusCell(status string) web.TableCell {
 	variant := "neutral"
 	switch status {
@@ -83,7 +70,6 @@ func statusCell(status string) web.TableCell {
 	return web.TableCell{Text: status, Variant: variant}
 }
 
-// shortChecksum memotong checksum tampilan (cukup 12 karakter di UI).
 func shortChecksum(sum string) string {
 	if len(sum) > 12 {
 		return sum[:12] + "…"
@@ -91,9 +77,6 @@ func shortChecksum(sum string) string {
 	return sum
 }
 
-// Riwayat (daftar)
-
-// migrationsPage = data halaman templates/migrations.html fe-components.
 type migrationsPage struct {
 	web.Shell
 	Crumbs  []web.Crumb
@@ -245,9 +228,6 @@ func (h *Handlers) migrationsCreate(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, migrationsHref(connID)+"/"+strconv.FormatInt(m.ID, 10), http.StatusSeeOther)
 }
 
-// Detail
-
-// migrationDetailPage = data templates/migration_detail.html fe-components.
 type migrationDetailPage struct {
 	web.Shell
 	Title      string
@@ -331,9 +311,6 @@ func (h *Handlers) migrationDetail(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Preview & eksekusi
-
-// migrationPreviewPage = data templates/migration_preview.html fe-components.
 type migrationPreviewPage struct {
 	web.Shell
 	Title         string
@@ -344,24 +321,20 @@ type migrationPreviewPage struct {
 	ExecuteAction string
 	CanExecute    bool
 	Actions       []web.Button
-	ConnName      string // nama database tujuan, untuk konfirmasi ketik-nama
-
-	// Analisa rencana eksekusi.
+	ConnName      string
 	ExplainAction string
-	ExplainErr    string            // kegagalan global (mis. target tak terjangkau)
-	ExplainTable  web.Table         // ringkasan per statement; kosong = belum dianalisa
-	Plans         []ExplainPlanCard // teks plan per statement
-	Analyze       bool              // nilai checkbox terakhir
-	CanAnalyze    bool              // EXPLAIN ANALYZE butuh izin edit
+	ExplainErr    string
+	ExplainTable  web.Table
+	Plans         []ExplainPlanCard
+	Analyze       bool
+	CanAnalyze    bool
 }
 
-// ExplainPlanCard = satu blok teks plan statement di halaman preview.
 type ExplainPlanCard struct {
 	Title string
 	Tree  string
 }
 
-// previewData membangun data halaman preview (dipakai GET preview & hasil EXPLAIN).
 func (h *Handlers) previewData(r *http.Request, connID int64, m Migration, name string) migrationPreviewPage {
 	base := migrationsHref(connID)
 	detailHref := base + "/" + strconv.FormatInt(m.ID, 10)
@@ -383,7 +356,6 @@ func (h *Handlers) previewData(r *http.Request, connID int64, m Migration, name 
 		warning = "Percobaan sebelumnya gagal dan sudah di-rollback. Perbaiki SQL sebelum mencoba lagi."
 	}
 
-	// Tombol eksekusi di kartu "Konfirmasi eksekusi"
 	actions := []web.Button{
 		{Label: "Batal", Variant: "secondary", Href: detailHref},
 	}
@@ -431,7 +403,6 @@ func (h *Handlers) migrationPreview(w http.ResponseWriter, r *http.Request) {
 	h.render(w, http.StatusOK, "migration_preview.html", h.previewData(r, connID, m, name))
 }
 
-// migrationExplain jalanin EXPLAIN di seluruh statement migration & render ulang preview
 func (h *Handlers) migrationExplain(w http.ResponseWriter, r *http.Request) {
 	analyze := r.PostFormValue("analyze") != ""
 	action := access.ActionView
@@ -513,9 +484,6 @@ func (h *Handlers) migrationExplain(w http.ResponseWriter, r *http.Request) {
 	h.render(w, http.StatusOK, "migration_preview.html", page)
 }
 
-// migrationExecute menjalankan draft via MigrationRunner (transaksional).
-// Galat SQL dicatat store sebagai status failed; kegagalan operasional
-// di-log server dan user kembali ke detail.
 func (h *Handlers) migrationExecute(w http.ResponseWriter, r *http.Request) {
 	connID, ok := h.authorizeAction(w, r, access.ActionEdit)
 	if !ok {
@@ -536,7 +504,7 @@ func (h *Handlers) migrationExecute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := h.runner.Execute(r.Context(), connID, m.ID, user.ID); err != nil {
-		log.Printf("dbm: eksekusi migration %d (conn %d): %v", m.ID, connID, err)
+		log.Printf("dbm: eksekusi migration %d (conn %d): %T", m.ID, connID, err)
 	}
 	http.Redirect(w, r, detailHref, http.StatusSeeOther)
 }

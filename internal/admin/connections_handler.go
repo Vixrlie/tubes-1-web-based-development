@@ -75,7 +75,7 @@ func (c *connectionHandlers) render(w http.ResponseWriter, status int, name stri
 }
 
 func (c *connectionHandlers) serverError(w http.ResponseWriter, what string, err error) {
-	log.Printf("admin connections: %s: %v", what, err)
+	log.Printf("admin connections: %s: %T", what, err)
 	http.Error(w, "terjadi kesalahan", http.StatusInternalServerError)
 }
 
@@ -188,7 +188,7 @@ func (c *connectionHandlers) test(w http.ResponseWriter, r *http.Request) {
 	code := "test_ok"
 	if err := c.store.Test(r.Context(), row.ID); err != nil {
 		markActivityFailed(r)
-		log.Printf("admin connections: uji koneksi %d gagal: %v", row.ID, err)
+		log.Printf("admin connections: uji koneksi %d gagal: %T", row.ID, err)
 		code = "test_failed"
 	}
 	http.Redirect(w, r, "/admin/connections/"+strconv.FormatInt(row.ID, 10)+"?status="+code, http.StatusSeeOther)
@@ -215,7 +215,7 @@ func (c *connectionHandlers) testForm(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	if err := c.store.TestInput(r.Context(), id, in); err != nil {
 		markActivityFailed(r)
-		log.Printf("admin connections: uji koneksi dari form: %v", err)
+		log.Printf("admin connections: uji koneksi dari form: %T", err)
 		result := &web.ConnectionTestResult{
 			Title: "Koneksi gagal diuji.",
 			Detail: "Tidak dapat terhubung ke " + net.JoinHostPort(in.Host, in.Port) +

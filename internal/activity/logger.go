@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -15,16 +16,14 @@ const (
 )
 
 type Event struct {
-	Time   time.Time         // diisi otomatis kalau kosong
-	UserID string            // actor yang melakukan aktivitas
-	Action string            // mis. "user.login", "db.update", "form.submit"
-	Status string            // gunakan konstanta Status* di atas
-	Detail map[string]string // info tambahan (JANGAN isi data sensitif)
-	Err    error             // wajib kalau Status = StatusFailed
+	Time   time.Time
+	UserID string
+	Action string
+	Status string
+	Detail map[string]string
+	Err    error
 }
 
-// Logger mencatat aktivitas sebagai JSON terstruktur ke stdout
-// agar mudah dipantau (observability) dan ditelusuri per request.
 type Logger struct {
 	sl *slog.Logger
 }
@@ -33,8 +32,6 @@ func New() *Logger {
 	return NewWithWriter(os.Stdout)
 }
 
-// NewWithWriter sama seperti New, tapi tujuan output-nya bisa diatur.
-// Dipakai unit test untuk menangkap log tanpa menulis ke stdout.
 func NewWithWriter(w io.Writer) *Logger {
 	h := slog.NewJSONHandler(w, &slog.HandlerOptions{
 		Level:     slog.LevelInfo,
@@ -67,7 +64,10 @@ func (l *Logger) Log(ctx context.Context, e Event) {
 
 	switch e.Status {
 	case StatusFailed:
-		l.sl.Error("activity", append(attrs, "error", e.Err)...)
+		if e.Err != nil {
+			attrs = append(attrs, "error", "operation failed")
+		}
+		l.sl.Error("activity", attrs...)
 	case StatusWarning:
 		l.sl.Warn("activity", attrs...)
 	default:
@@ -90,8 +90,8 @@ func RequestIDFromContext(ctx context.Context) string {
 }
 
 func isSensitive(key string) bool {
-	switch key {
-	case "password", "token", "secret", "authorization", "cookie":
+	switch strings.ToLower(key) {
+	case "password", "token", "secret", "authorization", "cookie", "session_id", "session_token", "connection_url", "dsn":
 		return true
 	}
 	return false
