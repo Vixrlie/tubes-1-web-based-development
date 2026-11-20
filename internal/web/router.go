@@ -33,6 +33,7 @@ func NewRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID) // generate ID unik per request
 	r.Use(RequestID)            // simpan ID ke context + header respons
+	r.Use(activity.TraceHTTP)
 	r.Use(middleware.Recoverer)
 	r.Handle("/static/*", http.FileServer(http.FS(StaticFS)))
 	return r

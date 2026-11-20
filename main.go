@@ -39,6 +39,19 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"); endpoint != "" {
+		shutdown, err := activity.StartTracing(ctx, endpoint)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			flushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := shutdown(flushCtx); err != nil {
+				log.Printf("flush traces: %v", err)
+			}
+		}()
+	}
 
 	pool, err := db.NewPool(ctx, cfg.PlatformDBURL)
 	if err != nil {
@@ -81,16 +94,21 @@ func run() error {
 	groupStore := admin.NewPGGroupStore(pool)
 	connLister := admin.NewPGConnectionLister(pool)
 	migrationStore := dbm.NewPGMigrationStore(pool)
+	metrics := &activity.Metrics{}
 	dbmHandlers := dbm.NewHandlers(dbm.Config{
 		Platform:   pool,
 		Policy:     accessPolicy,
 		Registry:   registry,
 		Renderer:   renderer,
 		Migrations: migrationStore,
+		Metrics:    metrics,
 	})
 
 	devMode := os.Getenv("DEV_COMPONENTS") == "1"
 	r := web.NewRouter()
+	if os.Getenv("OBSERVABILITY_METRICS") == "1" {
+		r.Get("/metrics", metrics.Handler(pool, registry.PoolStats))
+	}
 	authHandlers.PublicRoutes(r)
 	if devMode {
 		web.DevRoutes{R: renderer}.Routes(r)

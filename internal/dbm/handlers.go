@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/access"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/activity"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
@@ -26,6 +27,7 @@ type Config struct {
 	// Migrations menyimpan & membaca riwayat migration (opsional; default
 	// PGMigrationStore di atas Platform).
 	Migrations MigrationStore
+	Metrics    *activity.Metrics
 }
 
 // Handlers melayani userflow database (daftar, schema, detail tabel). Semua route
@@ -61,6 +63,7 @@ func NewHandlers(cfg Config) *Handlers {
 	}
 	if cfg.Platform != nil {
 		h.runner = NewMigrationRunner(cfg.Platform, registry)
+		h.runner.metrics = cfg.Metrics
 	}
 	return h
 }

@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -53,6 +55,9 @@ func (l *Logger) Log(ctx context.Context, e Event) {
 		"status", e.Status,
 		"user_id", e.UserID,
 		"request_id", RequestIDFromContext(ctx),
+	}
+	if span := trace.SpanContextFromContext(ctx); span.IsValid() {
+		attrs = append(attrs, "trace_id", span.TraceID().String(), "span_id", span.SpanID().String())
 	}
 
 	for k, v := range e.Detail {

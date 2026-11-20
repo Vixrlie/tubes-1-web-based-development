@@ -11,6 +11,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type sqlActorKey struct{}
@@ -90,11 +92,14 @@ func (t PostgresTracer) finish(ctx context.Context, execution sqlExecution, acti
 
 func (t PostgresTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
 	execution := t.execution(ctx, data.SQL, len(data.Args))
+	ctx, span := StartSpan(ctx, "db."+execution.detail["query"])
+	span.SetAttributes(attribute.String("db.namespace", t.Database), attribute.String("db.operation.name", execution.detail["query"]))
 	t.log(ctx, "sql.start", "started", execution.detail, nil)
 	return context.WithValue(ctx, sqlExecutionKey{}, execution)
 }
 
 func (t PostgresTracer) TraceQueryEnd(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryEndData) {
+	defer EndSpan(trace.SpanFromContext(ctx), data.Err != nil)
 	execution := ctx.Value(sqlExecutionKey{}).(sqlExecution)
 	action := "sql.result"
 	switch execution.detail["query"] {
@@ -113,6 +118,8 @@ type sqlBatch struct {
 }
 
 func (t PostgresTracer) TraceBatchStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceBatchStartData) context.Context {
+	ctx, span := StartSpan(ctx, "db.batch")
+	span.SetAttributes(attribute.String("db.namespace", t.Database))
 	start := time.Now()
 	for index, query := range data.Batch.QueuedQueries {
 		execution := t.execution(ctx, query.SQL, len(query.Arguments))
@@ -132,6 +139,7 @@ func (t PostgresTracer) TraceBatchQuery(ctx context.Context, _ *pgx.Conn, data p
 }
 
 func (t PostgresTracer) TraceBatchEnd(ctx context.Context, _ *pgx.Conn, data pgx.TraceBatchEndData) {
+	defer EndSpan(trace.SpanFromContext(ctx), data.Err != nil)
 	batch := ctx.Value(sqlBatchKey{}).(*sqlBatch)
 	execution := sqlExecution{start: batch.start, detail: map[string]string{
 		"database":         t.Database,

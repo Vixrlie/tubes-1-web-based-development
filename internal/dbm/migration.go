@@ -261,6 +261,7 @@ func (s *PGMigrationStore) UpdateDraft(ctx context.Context, id int64, sqlText st
 type MigrationRunner struct {
 	platform *pgxpool.Pool
 	registry Registry
+	metrics  *activity.Metrics
 }
 
 func NewMigrationRunner(platform *pgxpool.Pool, registry Registry) *MigrationRunner {
@@ -278,7 +279,11 @@ func sanitizePGError(err error) string {
 	return message
 }
 
-func (r *MigrationRunner) Execute(ctx context.Context, connID, migrationID, userID int64) (string, error) {
+func (r *MigrationRunner) Execute(ctx context.Context, connID, migrationID, userID int64) (status string, err error) {
+	ctx, span := activity.StartSpan(ctx, "migration.execute")
+	defer func() { activity.EndSpan(span, err != nil || status != StatusApplied) }()
+	finish := r.metrics.StartMigration()
+	defer func() { finish(err == nil && status == StatusApplied) }()
 	ctx = activity.WithMigrationID(activity.WithActor(ctx, userID), migrationID)
 	platformTx, err := r.platform.Begin(ctx)
 	if err != nil {
@@ -314,7 +319,7 @@ func (r *MigrationRunner) Execute(ctx context.Context, connID, migrationID, user
 		return "", err
 	}
 
-	if targetErr := runOnTarget(ctx, pool, connID, m.SQL); targetErr != nil {
+	if targetErr := runOnTarget(ctx, pool, connID, m.SQL, r.metrics); targetErr != nil {
 		message := sanitizePGError(targetErr)
 		if _, err := platformTx.Exec(ctx,
 			`UPDATE migration_history
@@ -339,7 +344,7 @@ func (r *MigrationRunner) Execute(ctx context.Context, connID, migrationID, user
 	}
 	return StatusApplied, nil
 }
-func runOnTarget(ctx context.Context, pool *Target, connID int64, sqlText string) error {
+func runOnTarget(ctx context.Context, pool *Target, connID int64, sqlText string, metrics *activity.Metrics) error {
 	conn, err := pool.DB.Conn(ctx)
 	if err != nil {
 		return err
@@ -353,7 +358,12 @@ func runOnTarget(ctx context.Context, pool *Target, connID int64, sqlText string
 	defer tx.Rollback()
 
 	if lock := pool.Dialect.LockSQL(connID); lock != "" {
-		if _, err := tx.ExecContext(ctx, lock); err != nil {
+		lockCtx, span := activity.StartSpan(ctx, "migration.lock")
+		start := time.Now()
+		_, err := tx.ExecContext(lockCtx, lock)
+		activity.EndSpan(span, err != nil)
+		metrics.ObserveLock(time.Since(start))
+		if err != nil {
 			return err
 		}
 	}
