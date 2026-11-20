@@ -274,7 +274,9 @@ internal/
   session/               session manager, cookie, rotasi, CSRF
   access/                policy akses (siapa boleh apa), terpisah dari auth
   admin/                 halaman Platform Admin (users, groups, connections)
-  dbm/                   koneksi database target, schema viewer, migration user
+  dbm/                   koneksi database target, schema viewer, workflow migration
+                         (definisi, approval, executor, JSON API)
+  queue/                 antrian job eksekusi migration (tabel migration_jobs) + worker
   web/                   router, renderer template, templates/, static/
 ```
 
@@ -323,7 +325,11 @@ Kontrak yang dipakai bersama:
 | `db_connections` | koneksi ke database target |
 | `grants` | akses **group** ke database dengan level `view` (View Only) atau `edit` (View + Edit) |
 | `sessions` | session di backend: hash token, idle dan absolute expiration, rotasi, `force_rotate`, grace period, CSRF, `revoked_at` |
-| `migration_history` | riwayat migration per database: versi, SQL, pelaksana, waktu, status |
+| `migrations` | definisi migration per database: versi, SQL up, SQL down atau alasan irreversible, revisi, checksum, hasil validasi. Terkunci (`locked_at`) setelah dieksekusi; trigger menolak perubahan SQL |
+| `migration_requests` | pengajuan up/rollback/forward beserta status workflow (`pending_review` → `queued` → `running` → `success`/`failed`, atau `rejected`/`cancelled`) |
+| `migration_request_reviews` | keputusan leader per group untuk setiap pengajuan |
+| `migration_executions` | setiap attempt eksekusi, termasuk yang gagal: SQL yang dijalankan, pelaksana, durasi, SQLSTATE, `target_txid`. Append-only setelah final |
+| `migration_jobs` | antrian job untuk worker (lease, heartbeat, attempt, trace context) |
 | `schema_migrations` | pencatat file migrasi skema internal yang sudah dijalankan |
 
 Akses database hanya diberikan lewat group, tidak langsung ke user. Platform Admin bukan tingkat akses ke database.
@@ -344,6 +350,14 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 | Mekanisme CSRF | Request terautentikasi: synchronizer token per session (`csrf_secret`), dikirim lewat field form `csrf_token` atau header `X-CSRF-Token` dan dibandingkan dengan `subtle.ConstantTimeCompare`. `POST /login`: pengecekan `Origin` dan `Sec-Fetch-Site` lewat `http.CrossOriginProtection`. `SameSite=Lax` sebagai lapisan tambahan | Login belum punya session sehingga belum ada token. Cek Origin menutup login CSRF tanpa state tambahan. |
 | Akses efektif jika user di banyak group | level tertinggi di antara grant group yang aktif | Konsisten dengan `access.Effective`; user tanpa grant ditolak. |
 | Pembuatan Platform Admin pertama | Seed dari `ADMIN_USERNAME` dan `ADMIN_PASSWORD` saat start, hanya jika username belum ada | Tidak ada pendaftaran publik dan tidak ada password di repo. Seed yang idempotent aman dijalankan di setiap restart. |
+| Model migration | Satu definisi (`migrations`) memiliki banyak pengajuan dan eksekusi. "Draft" = definisi tanpa pengajuan terbuka; definisi bisa direvisi (revisi +1, validasi ulang) sampai eksekusi pertama, lalu immutable | Riwayat tetap utuh: SQL yang dieksekusi disalin ke `migration_executions`, dan trigger DB menolak perubahan SQL setelah terkunci. |
+| SQL down | Wajib untuk migration reversible. Migration tanpa down wajib ditandai irreversible dengan alasan dan tidak dapat di-rollback | Rollback hanya aman bila pembatalannya ditulis eksplisit. Migration M1 (tanpa down) dimigrasikan sebagai irreversible. |
+| Urutan rollback dan forward | Rollback hanya untuk eksekusi aktif dengan ID terbesar pada database tersebut. Forward hanya untuk migration yang terakhir di-rollback (LIFO) | Menjaga riwayat linear: state target selalu sama dengan menjalankan riwayat dari awal. |
+| Approval | Reviewer dihitung dari grant saat ini: leader setiap group yang punya akses (view atau edit) ke database wajib menyetujui; satu penolakan langsung menolak pengajuan. Berlaku juga untuk rollback dan forward | Setiap tim yang terdampak perubahan ikut memutuskan. Group tanpa leader membuat pengajuan tertahan sampai admin menetapkan leader. |
+| Eksekusi | Asynchronous. Approval terakhir memasukkan job ke `migration_jobs` dalam transaksi yang sama, API langsung mengembalikan `job_id` (202). Worker mengeksekusi SQL dalam satu transaksi target, satu job per database pada satu waktu (advisory lock) | Request HTTP tidak menunggu SQL panjang, dan dua migration tidak pernah berjalan bersamaan pada database yang sama. |
+| Bukti commit & pemulihan | `txid_current()` transaksi target dicatat sebelum SQL jalan. Saat worker mati, `txid_status()` menentukan attempt tersebut committed (ditandai sukses), aborted (diantrikan ulang), atau masih berjalan | Mencegah double commit saat job di-retry. |
+| Validasi | Dry-run di database target dalam transaksi yang selalu di-ROLLBACK, dengan `statement_timeout` 15 detik. Up pertama wajib lolos validasi untuk checksum terbaru. Worker memeriksa ulang checksum, approval, dan urutan sebelum eksekusi | Kesalahan SQL ketahuan sebelum review, dan definisi yang berubah setelah approval tidak ikut dieksekusi. |
+| Versi migration | `YYYYMMDDHHMM` saat dibuat, tetapi selalu lebih besar dari versi terakhir database tersebut | Beberapa migration dalam menit yang sama tetap unik dan berurutan (ditemukan lewat stress test k6). |
 | Aturan username dan password | Username dinormalisasi ke huruf kecil lalu harus 3-32 karakter dari `a-z`, `0-9`, `_`, `.`. Password minimal 8 karakter dan maksimal 72 byte | bcrypt hanya memakai 72 byte pertama, jadi password yang lebih panjang ditolak agar tidak terpotong diam-diam. Normalisasi mencegah `Admin` dan `admin` menjadi dua akun. |
 
 ## Status Implementasi
@@ -363,6 +377,13 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 - [x] Bonus (BON-04/05): `EXPLAIN` / `EXPLAIN ANALYZE` sebelum eksekusi + ringkasan execution plan
 - [x] Bonus (BON-01): dukungan DBMS tambahan (MySQL/MariaDB): koneksi, viewer, migration,
   EXPLAIN, dan diff bekerja lewat abstraksi dialect per DBMS
+- [x] M2: SQL up/down atau irreversible + alasan, definisi immutable setelah dieksekusi
+- [x] M2: rollback hanya migration aktif terakhir, forward linear, semua attempt (termasuk gagal) tercatat di DB dan log
+- [x] M2: checkbox Hide rollback (pasangan execution ID), detail per eksekusi
+- [x] M2: workflow Draft → Pending Review → Approved → Queue → Running → Success/Failed, approval leader setiap group
+- [x] M2: queue + worker asynchronous dengan retry, lease, dan pemulihan crash
+- [x] M2: JSON API untuk SPA (`/api/...`, kontrak di `docs/api-migration-workflow.md`)
+- [x] M2 bonus: stress test k6 (`k6/`), hasil di bagian [Stress Test k6](#stress-test-k6)
 
 Alur minimum (GEN-07) berjalan end-to-end: Login → Access Control → Pilih Database → Lihat Schema/Data → Buat Migration → Execute → Commit/Rollback → Riwayat Migration ter-update.
 
@@ -375,13 +396,19 @@ Route database management:
 | `/databases/{id}/schema` | Pohon schema/tabel + daftar relasi foreign key |
 | `/databases/{id}/tables/{schema.nama}` | Detail tabel: `?tab=columns\|constraints` (kolom / constraint+index) |
 | `/databases/{id}/tables/{schema.nama}/data` | Data tabel dengan paginasi |
-| `/databases/{id}/migrations` | Riwayat migration + tombol **Migration Baru** dan **Schema Diff** |
-| POST `/databases/{id}/migrations` | Simpan SQL sebagai draft (View + Edit) |
-| `/databases/{id}/migrations/new` | Editor draft (View + Edit) |
-| `/databases/{id}/migrations/{mid}` | Detail migration (status, SQL, pelaksana) |
-| `/databases/{id}/migrations/{mid}/preview` | Pratinjau + tombol analisa EXPLAIN (baca) |
-| POST `/databases/{id}/migrations/{mid}/explain` | `EXPLAIN` / `EXPLAIN ANALYZE` sebelum eksekusi; ANALYZE dijalankan dalam transaksi lalu di-ROLLBACK (View + Edit) |
-| POST `/databases/{id}/migrations/{mid}/execute` | Eksekusi transaksional, commit/rollback (View + Edit) |
+| `/databases/{id}/migrations` | Riwayat eksekusi (checkbox **Hide rollback**), pengajuan berjalan, daftar migration |
+| POST `/databases/{id}/migrations` | Simpan definisi baru: SQL up + SQL down, atau irreversible + alasan (View + Edit) |
+| `/databases/{id}/migrations/new` | Editor migration (View + Edit) |
+| `/databases/{id}/migrations/{mid}` | Detail: posisi, SQL up/down, validasi, aksi yang sah, pengajuan, eksekusi |
+| `/databases/{id}/migrations/{mid}/edit`, POST `/databases/{id}/migrations/{mid}` | Revisi definisi selama belum dieksekusi dan tidak sedang diajukan |
+| POST `/databases/{id}/migrations/{mid}/validate` | Dry-run di target, selalu di-ROLLBACK (View + Edit) |
+| POST `/databases/{id}/migrations/{mid}/requests` | Ajukan `up`, `rollback`, atau `forward` (View + Edit) |
+| `/databases/{id}/migrations/{mid}/preview` | Analisa EXPLAIN SQL up (baca) |
+| POST `/databases/{id}/migrations/{mid}/explain` | `EXPLAIN` / `EXPLAIN ANALYZE`; ANALYZE dijalankan dalam transaksi lalu di-ROLLBACK (View + Edit) |
+| `/databases/{id}/requests/{rid}` | Halaman review: SQL, status approval per group, attempt eksekusi |
+| POST `/databases/{id}/requests/{rid}/approve`, `/reject`, `/cancel` | Keputusan leader; batal oleh pengaju |
+| `/databases/{id}/executions/{eid}` | Detail satu eksekusi |
+| `/approvals` | Inbox pengajuan yang menunggu keputusan user sebagai leader |
 | `/databases/{id}/migrations/diff` (alias `/databases/{id}/diff`) | Schema diff vs koneksi lain + kandidat SQL yang bisa dijadikan draft (baca; draft butuh View + Edit) |
 
 Setiap route memeriksa `access.Policy` di backend; penolakan dirender sebagai halaman 403 dengan level akses efektif. Kegagalan koneksi ke database target menampilkan halaman "koneksi gagal" tanpa kredensial. Pool database target di-cache per koneksi (`PGRegistry`) dan ditutup saat koneksi diubah/dihapus atau aplikasi berhenti.
@@ -394,10 +421,48 @@ Halaman Platform Admin (route utama: `/` untuk beranda, `/admin` untuk dashboard
 | `/admin/users` | Daftar user: status/peran, group, aksi Kelola |
 | `/admin/users/new`, `/admin/users/{id}` | Form buat/ubah user: data akun, peran, status akun, reset password, hapus |
 | POST `/admin/users/{id}/delete` | Hapus user; ditolak untuk diri sendiri, admin aktif terakhir, dan user dengan riwayat migration |
-| `/admin/groups`, `/admin/groups/{id}` | Daftar group; detail: anggota + akses database (mode ubah lewat `?edit=1`) |
+| `/admin/groups`, `/admin/groups/{id}` | Daftar group; detail: anggota + akses database (mode ubah lewat `?edit=1`) + leader |
+| POST `/admin/groups/{id}/leader` | Tetapkan atau kosongkan leader (harus anggota aktif; otomatis dilepas saat dikeluarkan) |
 | `/admin/groups/new` | Form group baru |
 | `/admin/connections`, `/admin/connections/new`, `/admin/connections/{id}`, `/admin/connections/{id}/edit` | Daftar koneksi, form tambah/ubah, uji koneksi, hapus |
 | `/admin/access` | Dialihkan ke `/admin/groups` (editor akses berada di detail group) |
+
+## Stress Test k6
+
+Skrip: `k6/migration-workflow.js`. Dua skenario berjalan bersamaan:
+
+- `reads`: 100 request/detik ke riwayat (`hide_rollback=1`), daftar migration, dan inbox approval.
+- `workflow`: 10 VU yang masing-masing menjalankan alur penuh secara berulang: create → validate (dry-run) → submit → approve → polling sampai worker selesai.
+
+Menjalankan (user harus punya akses View + Edit dan menjadi leader satu-satunya group yang punya akses ke `DB_ID`, supaya satu approval cukup):
+
+```bash
+docker run --rm --network host -v "$PWD/k6:/scripts:ro" \
+  -e BASE_URL=http://localhost:8080 -e USERNAME=admin -e PASSWORD=... -e DB_ID=1 \
+  -e DURATION=1m -e READ_RATE=100 -e WORKFLOW_VUS=10 \
+  grafana/k6:0.54.0 run /scripts/migration-workflow.js
+```
+
+Hasil pada satu mesin lokal (aplikasi, PostgreSQL Docker, dan k6 di host yang sama), durasi 1 menit:
+
+| Metrik | Run pertama | Setelah perbaikan |
+|--------|-------------|-------------------|
+| Request total | 9.928 (160/detik) | 11.407 (176/detik) |
+| HTTP error | 0% | 0% |
+| p95 request baca | 895 ms | 34 ms |
+| p95 approve | 114 ms | 25 ms |
+| Workflow gagal | 89 dari 559 (validasi "database sibuk") | 0 dari 630 |
+| Approve → selesai (median / p95 / maks) | 525 ms / 2,36 s / 12,3 s | 541 ms / 1,57 s / 4,9 s |
+
+Setelah run kedua, isi database konsisten: 630 pengajuan sukses, 630 eksekusi sukses, 630 job selesai, 630 tabel di target, tanpa eksekusi ganda dan tanpa versi duplikat.
+
+Temuan dan perbaikannya:
+
+1. **Versi migration bentrok.** Run awal (sebelum dua run di atas) gagal membuat migration setelah 20 create dalam satu menit, karena versi `YYYYMMDDHHMM` beresolusi menit dan hanya dicoba naik 20 kali. Versi kini dihitung atomik: `GREATEST(waktu sekarang, versi tertinggi + 1)`. Regresi diuji di `TestCreateManyMigrationsInSameMinute`.
+2. **Validasi langsung menolak saat database sibuk.** Dry-run memakai `pg_try_advisory_xact_lock`, sehingga validasi yang bertepatan dengan eksekusi lain langsung gagal. Kini dry-run menunggu lock maksimal 5 detik (`lock_timeout`) sebelum menyatakan database sibuk.
+3. **Respons daftar terlalu besar.** Daftar migration dan riwayat mengirim isi SQL setiap baris (rata-rata 160 KB per respons saat data bertambah). Isi SQL kini hanya ada di endpoint detail; p95 baca turun dari 895 ms ke 34 ms.
+
+Batas yang masih terlihat: eksekusi pada satu database diserialisasi (by design), sehingga 10 workflow paralel pada database yang sama mengantre. Waktu tunggu maksimum 4,9 detik berasal dari antrean ini, ditambah interval polling worker 500 ms. Database berbeda tetap diproses paralel (4 slot worker per proses).
 
 ## Alur Kerja Git
 
