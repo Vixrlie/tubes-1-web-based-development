@@ -1,5 +1,8 @@
 package dbm
 
+// Definisi migration bisa direvisi sampai eksekusi pertama, lalu terkunci
+// (dijaga juga oleh trigger database).
+
 import (
 	"context"
 	"crypto/sha256"
@@ -11,95 +14,148 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Vixrlie/tubes-1-web-based-development/internal/activity"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
-	ErrMigrationNotFound = errors.New("migration tidak ditemukan")
-	ErrMigrationNotDraft = errors.New("migration sudah tidak berstatus draft")
-	ErrChecksumMismatch  = errors.New("checksum SQL tidak cocok")
-	ErrVersionConflict   = errors.New("versi migration bentrok")
-	ErrEmptySQL          = errors.New("SQL migration kosong")
-)
-
-const (
-	StatusDraft   = "draft"
-	StatusApplied = "applied"
-	StatusFailed  = "failed"
+	ErrMigrationNotFound  = errors.New("migration tidak ditemukan")
+	ErrMigrationLocked    = errors.New("migration sudah pernah dieksekusi; SQL up/down immutable, buat migration baru untuk perbaikan")
+	ErrMigrationInReview  = errors.New("migration sedang diajukan; batalkan pengajuan sebelum mengubah SQL")
+	ErrChecksumMismatch   = errors.New("checksum SQL tidak cocok dengan revisi yang diajukan")
+	ErrVersionConflict    = errors.New("versi migration bentrok")
+	ErrEmptySQL           = errors.New("SQL up migration kosong")
+	ErrMissingDown        = errors.New("SQL down wajib diisi, atau tandai migration sebagai irreversible beserta alasannya")
+	ErrMissingReason      = errors.New("alasan irreversible wajib diisi")
+	ErrIrreversibleDown   = errors.New("migration irreversible tidak boleh memiliki SQL down")
+	ErrDownSameAsUp       = errors.New("SQL down tidak boleh sama dengan SQL up")
+	ErrNameTooLong        = errors.New("nama migration maksimal 80 karakter")
+	ErrValidationRequired = errors.New("migration harus lolos validasi untuk revisi terbaru sebelum diajukan")
 )
 
 const maxNameLength = 80
 
 const maxErrorLength = 2000
 
-type Migration struct {
-	ID           int64
-	ConnectionID int64
-	Version      int64
-	SQL          string
-	Checksum     string
-	Status       string
-	Error        string
-	CreatedBy    *int64
-	CreatedAt    time.Time
-	ExecutedBy   *int64
-	ExecutedAt   *time.Time
-
-	CreatedByName  string
-	ExecutedByName string
+// MigrationInput = isian form/API saat membuat atau mengubah draft.
+type MigrationInput struct {
+	Name               string `json:"name"`
+	UpSQL              string `json:"up_sql"`
+	DownSQL            string `json:"down_sql"`
+	Irreversible       bool   `json:"irreversible"`
+	IrreversibleReason string `json:"irreversible_reason"`
 }
 
-func (m Migration) Name() string {
-	return DeriveName(m.SQL)
+// Normalize merapikan spasi lalu memeriksa aturan statis definisi.
+func (in MigrationInput) Normalize() (MigrationInput, error) {
+	in.Name = strings.Join(strings.Fields(in.Name), " ")
+	in.UpSQL = strings.TrimSpace(in.UpSQL)
+	in.DownSQL = strings.TrimSpace(in.DownSQL)
+	in.IrreversibleReason = strings.TrimSpace(in.IrreversibleReason)
+
+	if in.UpSQL == "" {
+		return in, ErrEmptySQL
+	}
+	if len([]rune(in.Name)) > maxNameLength {
+		return in, ErrNameTooLong
+	}
+	if in.Name == "" {
+		in.Name = DeriveName(in.UpSQL)
+	}
+	if in.Irreversible {
+		if in.IrreversibleReason == "" {
+			return in, ErrMissingReason
+		}
+		if in.DownSQL != "" {
+			return in, ErrIrreversibleDown
+		}
+		return in, nil
+	}
+	in.IrreversibleReason = ""
+	if in.DownSQL == "" {
+		return in, ErrMissingDown
+	}
+	if in.DownSQL == in.UpSQL {
+		return in, ErrDownSameAsUp
+	}
+	return in, nil
+}
+
+// Migration = definisi migration beserta posisi turunannya.
+type Migration struct {
+	ID                 int64      `json:"id"`
+	ConnectionID       int64      `json:"connection_id"`
+	Version            int64      `json:"version"`
+	Name               string     `json:"name"`
+	UpSQL              string     `json:"up_sql,omitempty"`
+	DownSQL            string     `json:"down_sql,omitempty"`
+	IrreversibleReason string     `json:"irreversible_reason,omitempty"`
+	Revision           int        `json:"revision"`
+	Checksum           string     `json:"checksum"`
+	LockedAt           *time.Time `json:"locked_at,omitempty"`
+	Validation         Validation `json:"validation"`
+	CreatedBy          *int64     `json:"created_by,omitempty"`
+	CreatedByName      string     `json:"created_by_name,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+
+	// Diisi dari riwayat eksekusi dan pengajuan.
+	State             string      `json:"state"`
+	ActiveExecutionID int64       `json:"active_execution_id,omitempty"`
+	OpenRequest       *RequestRef `json:"open_request,omitempty"`
+}
+
+// Validation = hasil validasi terakhir; berlaku hanya untuk checksum yang sama.
+type Validation struct {
+	Checked   bool       `json:"checked"`
+	OK        bool       `json:"ok"`
+	Message   string     `json:"message,omitempty"`
+	Checksum  string     `json:"-"`
+	CheckedAt *time.Time `json:"checked_at,omitempty"`
+	Current   bool       `json:"current"`
+}
+
+// RequestRef = ringkasan pengajuan yang masih berjalan pada sebuah migration.
+type RequestRef struct {
+	ID     int64  `json:"id"`
+	Action string `json:"action"`
+	Status string `json:"status"`
+}
+
+// Reversible true bila migration punya SQL down.
+func (m Migration) Reversible() bool { return m.IrreversibleReason == "" }
+
+// Locked true bila definisi sudah pernah dieksekusi.
+func (m Migration) Locked() bool { return m.LockedAt != nil }
+
+// Editable true bila SQL masih boleh diubah: belum pernah dieksekusi dan tidak
+// sedang diajukan.
+func (m Migration) Editable() bool { return !m.Locked() && m.OpenRequest == nil }
+
+// ValidatedForCurrent true bila validasi terakhir lolos untuk revisi terbaru.
+func (m Migration) ValidatedForCurrent() bool {
+	return m.Validation.OK && m.Validation.Checksum == m.Checksum
 }
 
 func (m Migration) CreatedAtLabel() string {
 	return m.CreatedAt.Format("02 Jan 2006 15:04")
 }
 
-func (m Migration) ExecutedAtLabel() string {
-	if m.ExecutedAt == nil {
-		return "belum dijalankan"
-	}
-	return m.ExecutedAt.Format("02 Jan 2006 15:04")
-}
-
-func Checksum(sqlText string) string {
-	sum := sha256.Sum256([]byte(sqlText))
+// DefinitionChecksum mengikat SQL up, SQL down, dan alasan irreversible.
+// Pemisah RS (0x1E) sama dengan yang dipakai migrasi data 0004.
+func DefinitionChecksum(up, down, reason string) string {
+	sum := sha256.Sum256([]byte(up + "\x1e" + down + "\x1e" + reason))
 	return hex.EncodeToString(sum[:])
 }
 
+// VersionNow menghasilkan versi migration berbentuk YYYYMMDDHHMM.
 func VersionNow(now time.Time) int64 {
 	version, _ := strconv.ParseInt(now.Format("200601021504"), 10, 64)
 	return version
 }
 
-func InjectName(sqlText, name string) string {
-	if strings.TrimSpace(name) == "" {
-		return sqlText
-	}
-	lines := strings.Split(sqlText, "\n")
-	var body []string
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			body = append(body, line)
-			continue
-		}
-		if strings.HasPrefix(trimmed, "--") {
-			if i == 0 || (i > 0 && strings.TrimSpace(lines[i-1]) == "") {
-				body = append(body, "-- "+name)
-				body = append(body, lines[i+1:]...)
-				return strings.Join(body, "\n")
-			}
-		}
-		break
-	}
-	return "-- " + name + "\n" + sqlText
-}
-
+// DeriveName mengambil nama dari komentar pertama SQL, atau statement pertama.
 func DeriveName(sqlText string) string {
 	var comment string
 	for _, line := range strings.Split(sqlText, "\n") {
@@ -136,11 +192,27 @@ func truncateName(name string) string {
 	return name[:maxNameLength] + "…"
 }
 
+// credentialPattern menangkap password di dalam connection string.
+var credentialPattern = regexp.MustCompile(`(?i)((?:postgres(?:ql)?|mysql)://[^:\s/@]+:)[^@\s]+(@)`)
+
+// sanitizePGError membersihkan pesan error dari kredensial sebelum disimpan
+// di riwayat, dan memotongnya agar tidak membanjiri tampilan.
+func sanitizePGError(err error) string {
+	message := credentialPattern.ReplaceAllString(err.Error(), "${1}***${2}")
+	message = strings.Join(strings.Fields(message), " ")
+	if len(message) > maxErrorLength {
+		message = message[:maxErrorLength] + "…"
+	}
+	return message
+}
+
+// MigrationStore = penyimpanan definisi migration.
 type MigrationStore interface {
 	List(ctx context.Context, connID int64) ([]Migration, error)
 	Get(ctx context.Context, id int64) (Migration, error)
-	CreateDraft(ctx context.Context, connID int64, sqlText string, userID int64) (Migration, error)
-	UpdateDraft(ctx context.Context, id int64, sqlText string) error
+	Create(ctx context.Context, connID int64, in MigrationInput, userID int64) (Migration, error)
+	Update(ctx context.Context, id int64, in MigrationInput) (Migration, error)
+	SaveValidation(ctx context.Context, id int64, checksum string, ok bool, message string) error
 }
 
 type PGMigrationStore struct {
@@ -153,37 +225,72 @@ func NewPGMigrationStore(platform *pgxpool.Pool) *PGMigrationStore {
 
 var _ MigrationStore = (*PGMigrationStore)(nil)
 
+// migrationColumns memuat definisi, posisi dari eksekusi sukses terakhir,
+// dan pengajuan yang masih berjalan dalam satu kueri.
 const migrationColumns = `
-       m.id, m.connection_id, m.version, m.sql, m.checksum, m.status,
-       COALESCE(m.error, ''), m.created_by, m.created_at, m.executed_by, m.executed_at,
-       COALESCE(u_creator.username, ''), COALESCE(u_executor.username, '')`
+       m.id, m.connection_id, m.version, m.name, m.up_sql, COALESCE(m.down_sql, ''),
+       COALESCE(m.irreversible_reason, ''), m.revision, m.checksum, m.locked_at,
+       m.validation_ok, COALESCE(m.validation_message, ''), COALESCE(m.validated_checksum, ''),
+       m.validated_at, m.created_by, COALESCE(u.username, ''), m.created_at, m.updated_at,
+       EXISTS (SELECT 1 FROM migration_executions e WHERE e.migration_id = m.id),
+       COALESCE(last_ok.id, 0), COALESCE(last_ok.action, ''),
+       COALESCE(open_req.id, 0), COALESCE(open_req.action, ''), COALESCE(open_req.status, '')`
 
 const migrationJoins = `
-      FROM migration_history m
-      LEFT JOIN users u_creator ON u_creator.id = m.created_by
-      LEFT JOIN users u_executor ON u_executor.id = m.executed_by`
+      FROM migrations m
+      LEFT JOIN users u ON u.id = m.created_by
+      LEFT JOIN LATERAL (
+            SELECT e.id, e.action FROM migration_executions e
+             WHERE e.migration_id = m.id AND e.status = 'success'
+             ORDER BY e.id DESC LIMIT 1) last_ok ON TRUE
+      LEFT JOIN LATERAL (
+            SELECT r.id, r.action, r.status FROM migration_requests r
+             WHERE r.migration_id = m.id
+               AND r.status IN ('pending_review', 'approved', 'queued', 'running')
+             ORDER BY r.id DESC LIMIT 1) open_req ON TRUE`
 
 func scanMigration(row pgx.Row) (Migration, error) {
 	var m Migration
+	var lockedAt, validatedAt sql.NullTime
+	var validationOK sql.NullBool
 	var createdBy sql.NullInt64
-	var executedBy sql.NullInt64
-	var executedAt sql.NullTime
+	var hasAttempts bool
+	var lastOKID, openID int64
+	var lastOKAction, openAction, openStatus string
 	err := row.Scan(
-		&m.ID, &m.ConnectionID, &m.Version, &m.SQL, &m.Checksum, &m.Status,
-		&m.Error, &createdBy, &m.CreatedAt, &executedBy, &executedAt,
-		&m.CreatedByName, &m.ExecutedByName,
+		&m.ID, &m.ConnectionID, &m.Version, &m.Name, &m.UpSQL, &m.DownSQL,
+		&m.IrreversibleReason, &m.Revision, &m.Checksum, &lockedAt,
+		&validationOK, &m.Validation.Message, &m.Validation.Checksum,
+		&validatedAt, &createdBy, &m.CreatedByName, &m.CreatedAt, &m.UpdatedAt,
+		&hasAttempts, &lastOKID, &lastOKAction, &openID, &openAction, &openStatus,
 	)
 	if err != nil {
 		return Migration{}, err
 	}
+	if lockedAt.Valid {
+		m.LockedAt = &lockedAt.Time
+	}
 	if createdBy.Valid {
 		m.CreatedBy = &createdBy.Int64
 	}
-	if executedBy.Valid {
-		m.ExecutedBy = &executedBy.Int64
+	if validatedAt.Valid {
+		m.Validation.CheckedAt = &validatedAt.Time
 	}
-	if executedAt.Valid {
-		m.ExecutedAt = &executedAt.Time
+	m.Validation.Checked = validationOK.Valid
+	m.Validation.OK = validationOK.Valid && validationOK.Bool
+	m.Validation.Current = m.Validation.Checked && m.Validation.Checksum == m.Checksum
+
+	state := MigrationState{
+		MigrationID:       m.ID,
+		Reversible:        m.Reversible(),
+		HasAttempts:       hasAttempts,
+		LastSuccessID:     lastOKID,
+		LastSuccessAction: lastOKAction,
+	}
+	m.State = state.State()
+	m.ActiveExecutionID = state.ActiveExecutionID()
+	if openID != 0 {
+		m.OpenRequest = &RequestRef{ID: openID, Action: openAction, Status: openStatus}
 	}
 	return m, nil
 }
@@ -192,7 +299,7 @@ func (s *PGMigrationStore) List(ctx context.Context, connID int64) ([]Migration,
 	rows, err := s.platform.Query(ctx,
 		`SELECT `+migrationColumns+migrationJoins+`
 		  WHERE m.connection_id = $1
-		  ORDER BY m.version DESC`, connID)
+		  ORDER BY m.version DESC, m.id DESC`, connID)
 	if err != nil {
 		return nil, err
 	}
@@ -211,8 +318,7 @@ func (s *PGMigrationStore) List(ctx context.Context, connID int64) ([]Migration,
 
 func (s *PGMigrationStore) Get(ctx context.Context, id int64) (Migration, error) {
 	m, err := scanMigration(s.platform.QueryRow(ctx,
-		`SELECT `+migrationColumns+migrationJoins+`
-		  WHERE m.id = $1`, id))
+		`SELECT `+migrationColumns+migrationJoins+` WHERE m.id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Migration{}, ErrMigrationNotFound
 	}
@@ -222,159 +328,138 @@ func (s *PGMigrationStore) Get(ctx context.Context, id int64) (Migration, error)
 	return m, nil
 }
 
-func (s *PGMigrationStore) CreateDraft(ctx context.Context, connID int64, sqlText string, userID int64) (Migration, error) {
-	checksum := Checksum(sqlText)
-	version := VersionNow(time.Now())
+func nullable(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+// Create menyimpan draft baru dengan versi YYYYMMDDHHMM. Bila versi sudah
+// dipakai koneksi yang sama, versi naik satu langkah.
+func (s *PGMigrationStore) Create(ctx context.Context, connID int64, in MigrationInput, userID int64) (Migration, error) {
+	in, err := in.Normalize()
+	if err != nil {
+		return Migration{}, err
+	}
+	checksum := DefinitionChecksum(in.UpSQL, in.DownSQL, in.IrreversibleReason)
+	// Versi minimal versi terakhir + 1, agar banyak create dalam satu menit tetap unik.
 	for attempt := 0; attempt < 5; attempt++ {
-		m, err := scanMigration(s.platform.QueryRow(ctx,
-			`INSERT INTO migration_history (connection_id, version, sql, checksum, status, created_by)
-			      VALUES ($1, $2, $3, $4, 'draft', $5)
+		var id int64
+		err := s.platform.QueryRow(ctx,
+			`INSERT INTO migrations (connection_id, version, name, up_sql, down_sql,
+			                         irreversible_reason, checksum, created_by)
+			 SELECT $1, GREATEST($2::bigint, COALESCE(max(version), 0) + 1), $3, $4, $5, $6, $7, $8
+			   FROM migrations WHERE connection_id = $1
 			 ON CONFLICT (connection_id, version) DO NOTHING
-			 RETURNING id, connection_id, version, sql, checksum, status,
-			           COALESCE(error, ''), created_by, created_at, executed_by, executed_at, '', ''`,
-			connID, version, sqlText, checksum, userID))
+			 RETURNING id`,
+			connID, VersionNow(time.Now()), in.Name, in.UpSQL, nullable(in.DownSQL),
+			nullable(in.IrreversibleReason), checksum, userID).Scan(&id)
 		if err == nil {
-			return m, nil
+			return s.Get(ctx, id)
 		}
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return Migration{}, err
 		}
-		version++
 	}
 	return Migration{}, ErrVersionConflict
 }
 
-func (s *PGMigrationStore) UpdateDraft(ctx context.Context, id int64, sqlText string) error {
+// Update mengganti SQL draft, menaikkan revisi, dan menghapus hasil validasi
+// lama. Ditolak bila migration sudah pernah dieksekusi atau sedang diajukan.
+func (s *PGMigrationStore) Update(ctx context.Context, id int64, in MigrationInput) (Migration, error) {
+	in, err := in.Normalize()
+	if err != nil {
+		return Migration{}, err
+	}
+	current, err := s.Get(ctx, id)
+	if err != nil {
+		return Migration{}, err
+	}
+	if current.Locked() {
+		return Migration{}, ErrMigrationLocked
+	}
+	if current.OpenRequest != nil {
+		return Migration{}, ErrMigrationInReview
+	}
+	checksum := DefinitionChecksum(in.UpSQL, in.DownSQL, in.IrreversibleReason)
+	if checksum == current.Checksum && in.Name == current.Name {
+		return current, nil
+	}
+	revision := current.Revision
+	if checksum != current.Checksum {
+		revision++
+	}
 	tag, err := s.platform.Exec(ctx,
-		`UPDATE migration_history
-		    SET sql = $2, checksum = $3
-		  WHERE id = $1 AND status = 'draft'`, id, sqlText, Checksum(sqlText))
+		`UPDATE migrations
+		    SET name = $2, up_sql = $3, down_sql = $4, irreversible_reason = $5,
+		        checksum = $6, revision = $7, updated_at = now(),
+		        validation_ok = CASE WHEN $6 = checksum THEN validation_ok END,
+		        validation_message = CASE WHEN $6 = checksum THEN validation_message END,
+		        validated_checksum = CASE WHEN $6 = checksum THEN validated_checksum END,
+		        validated_at = CASE WHEN $6 = checksum THEN validated_at END
+		  WHERE id = $1 AND locked_at IS NULL
+		    AND NOT EXISTS (SELECT 1 FROM migration_requests r
+		                     WHERE r.migration_id = $1
+		                       AND r.status IN ('pending_review', 'approved', 'queued', 'running'))`,
+		id, in.Name, in.UpSQL, nullable(in.DownSQL), nullable(in.IrreversibleReason),
+		checksum, revision)
+	if err != nil {
+		return Migration{}, err
+	}
+	if tag.RowsAffected() == 0 {
+		return Migration{}, ErrMigrationInReview
+	}
+	return s.Get(ctx, id)
+}
+
+// SaveValidation menyimpan hasil validasi untuk checksum tertentu.
+func (s *PGMigrationStore) SaveValidation(ctx context.Context, id int64, checksum string, ok bool, message string) error {
+	tag, err := s.platform.Exec(ctx,
+		`UPDATE migrations
+		    SET validation_ok = $3, validation_message = $4,
+		        validated_checksum = $2, validated_at = now()
+		  WHERE id = $1 AND checksum = $2`, id, checksum, ok, message)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return ErrMigrationNotDraft
+		return ErrChecksumMismatch
 	}
 	return nil
 }
 
-type MigrationRunner struct {
-	platform *pgxpool.Pool
-	registry Registry
-	metrics  *activity.Metrics
-}
-
-func NewMigrationRunner(platform *pgxpool.Pool, registry Registry) *MigrationRunner {
-	return &MigrationRunner{platform: platform, registry: registry}
-}
-
-var credentialPattern = regexp.MustCompile(`(?i)(postgres(?:ql)?://[^:\s/@]+:)[^@\s]+(@)`)
-
-func sanitizePGError(err error) string {
-	message := credentialPattern.ReplaceAllString(err.Error(), "${1}***${2}")
-	message = strings.Join(strings.Fields(message), " ")
-	if len(message) > maxErrorLength {
-		message = message[:maxErrorLength] + "…"
-	}
-	return message
-}
-
-func (r *MigrationRunner) Execute(ctx context.Context, connID, migrationID, userID int64) (status string, err error) {
-	ctx, span := activity.StartSpan(ctx, "migration.execute")
-	defer func() { activity.EndSpan(span, err != nil || status != StatusApplied) }()
-	finish := r.metrics.StartMigration()
-	defer func() { finish(err == nil && status == StatusApplied) }()
-	ctx = activity.WithMigrationID(activity.WithActor(ctx, userID), migrationID)
-	platformTx, err := r.platform.Begin(ctx)
+// loadStates memuat posisi seluruh migration pada sebuah koneksi untuk
+// pemeriksaan linear (PlanAction).
+func loadStates(ctx context.Context, q pgxQuerier, connID int64) ([]MigrationState, error) {
+	rows, err := q.Query(ctx,
+		`SELECT m.id, m.down_sql IS NOT NULL,
+		        EXISTS (SELECT 1 FROM migration_executions e WHERE e.migration_id = m.id),
+		        COALESCE(last_ok.id, 0), COALESCE(last_ok.action, '')
+		   FROM migrations m
+		   LEFT JOIN LATERAL (
+		         SELECT e.id, e.action FROM migration_executions e
+		          WHERE e.migration_id = m.id AND e.status = 'success'
+		          ORDER BY e.id DESC LIMIT 1) last_ok ON TRUE
+		  WHERE m.connection_id = $1`, connID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	defer platformTx.Rollback(ctx)
-
-	var m Migration
-	err = platformTx.QueryRow(ctx,
-		`SELECT id, connection_id, version, sql, checksum, status
-		   FROM migration_history
-		  WHERE id = $1
-		  FOR UPDATE`, migrationID).
-		Scan(&m.ID, &m.ConnectionID, &m.Version, &m.SQL, &m.Checksum, &m.Status)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", ErrMigrationNotFound
-	}
-	if err != nil {
-		return "", err
-	}
-	if m.ConnectionID != connID {
-		return "", ErrMigrationNotFound
-	}
-	if m.Status != StatusDraft {
-		return "", ErrMigrationNotDraft
-	}
-	if m.Checksum != Checksum(m.SQL) {
-		return "", ErrChecksumMismatch
-	}
-
-	pool, err := r.registry.Get(ctx, connID)
-	if err != nil {
-		return "", err
-	}
-
-	if targetErr := runOnTarget(ctx, pool, connID, m.SQL, r.metrics); targetErr != nil {
-		message := sanitizePGError(targetErr)
-		if _, err := platformTx.Exec(ctx,
-			`UPDATE migration_history
-			    SET status = 'failed', error = $2, executed_by = $3, executed_at = now()
-			  WHERE id = $1`, m.ID, message, userID); err != nil {
-			return "", err
+	defer rows.Close()
+	var out []MigrationState
+	for rows.Next() {
+		var s MigrationState
+		if err := rows.Scan(&s.MigrationID, &s.Reversible, &s.HasAttempts, &s.LastSuccessID, &s.LastSuccessAction); err != nil {
+			return nil, err
 		}
-		if err := platformTx.Commit(ctx); err != nil {
-			return "", err
-		}
-		return StatusFailed, nil
+		out = append(out, s)
 	}
-
-	if _, err := platformTx.Exec(ctx,
-		`UPDATE migration_history
-		    SET status = 'applied', error = NULL, executed_by = $2, executed_at = now()
-		  WHERE id = $1`, m.ID, userID); err != nil {
-		return "", err
-	}
-	if err := platformTx.Commit(ctx); err != nil {
-		return "", err
-	}
-	return StatusApplied, nil
+	return out, rows.Err()
 }
-func runOnTarget(ctx context.Context, pool *Target, connID int64, sqlText string, metrics *activity.Metrics) error {
-	conn, err := pool.DB.Conn(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
 
-	tx, err := conn.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	if lock := pool.Dialect.LockSQL(connID); lock != "" {
-		lockCtx, span := activity.StartSpan(ctx, "migration.lock")
-		start := time.Now()
-		_, err := tx.ExecContext(lockCtx, lock)
-		activity.EndSpan(span, err != nil)
-		metrics.ObserveLock(time.Since(start))
-		if err != nil {
-			return err
-		}
-	}
-	if _, err := tx.ExecContext(ctx, sqlText); err != nil {
-		return err
-	}
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-	if unlock := pool.Dialect.UnlockSQL(connID); unlock != "" {
-		_, _ = conn.ExecContext(ctx, unlock)
-	}
-	return nil
+// pgxQuerier dipenuhi *pgxpool.Pool maupun pgx.Tx.
+type pgxQuerier interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }

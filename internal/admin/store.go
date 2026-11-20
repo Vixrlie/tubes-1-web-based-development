@@ -207,8 +207,10 @@ func (s *PGUserStore) Delete(ctx context.Context, id int64) error {
 
 	var history int64
 	if err := s.pool.QueryRow(ctx,
-		`SELECT (SELECT COUNT(*) FROM migration_history WHERE created_by = $1)
-		      + (SELECT COUNT(*) FROM migration_history WHERE executed_by = $1)`, id).
+		`SELECT (SELECT COUNT(*) FROM migrations WHERE created_by = $1)
+		      + (SELECT COUNT(*) FROM migration_requests WHERE requested_by = $1)
+		      + (SELECT COUNT(*) FROM migration_request_reviews WHERE decided_by = $1)
+		      + (SELECT COUNT(*) FROM migration_executions WHERE executed_by = $1)`, id).
 		Scan(&history); err != nil {
 		return err
 	}

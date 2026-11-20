@@ -18,6 +18,7 @@ import (
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/config"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/db"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/dbm"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/queue"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 	"github.com/Vixrlie/tubes-1-web-based-development/migrations"
@@ -95,14 +96,48 @@ func run() error {
 	connLister := admin.NewPGConnectionLister(pool)
 	migrationStore := dbm.NewPGMigrationStore(pool)
 	metrics := &activity.Metrics{}
+	jobs := queue.New(pool)
+	workflow := dbm.NewWorkflow(dbm.WorkflowConfig{
+		Pool:     pool,
+		Policy:   accessPolicy,
+		Store:    migrationStore,
+		Registry: registry,
+		Queue:    jobs,
+		Logger:   activityLogger,
+	})
 	dbmHandlers := dbm.NewHandlers(dbm.Config{
 		Platform:   pool,
 		Policy:     accessPolicy,
 		Registry:   registry,
 		Renderer:   renderer,
 		Migrations: migrationStore,
-		Metrics:    metrics,
+		Workflow:   workflow,
 	})
+
+	// Worker eksekusi migration berjalan di proses yang sama, terpisah dari
+	// request HTTP. Ganti dengan worker eksternal cukup lewat tabel migration_jobs.
+	executor := dbm.NewExecutor(pool, registry, activityLogger, metrics)
+	runJob := executor.QueueHandler(queue.Busy, queue.Retry)
+	worker := queue.NewWorker(pool, func(ctx context.Context, job queue.Job) error {
+		return runJob(ctx, dbm.ExecJob{
+			JobID: job.ID, RequestID: job.RequestID,
+			Attempt: job.Attempts, MaxAttempts: job.MaxAttempts,
+		})
+	}, activityLogger)
+	worker.OnGiveUp = func(ctx context.Context, job queue.Job, err error) {
+		if abandonErr := executor.Abandon(ctx, job.RequestID, err); abandonErr != nil {
+			log.Printf("abandon request %d: %v", job.RequestID, abandonErr)
+		}
+	}
+	workerDone := make(chan struct{})
+	go func() {
+		defer close(workerDone)
+		worker.Run(ctx)
+	}()
+	defer func() {
+		stop()
+		<-workerDone
+	}()
 
 	devMode := os.Getenv("DEV_COMPONENTS") == "1"
 	r := web.NewRouter()
@@ -118,6 +153,8 @@ func run() error {
 		r.Use(auth.CSRFProtect)
 		authHandlers.ProtectedRoutes(r)
 		dbmHandlers.Routes(r)
+		dbmHandlers.ApprovalRoutes(r)
+		dbmHandlers.APIRoutes(r)
 
 		adminOpts := []admin.Option{
 			admin.WithActivityLogger(activityLogger),

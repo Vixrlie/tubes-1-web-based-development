@@ -1,24 +1,70 @@
 {{/*
-Halaman Editor Migration: tulis SQL draft lalu simpan (POST CreateDraft).
-Data: dbm.migrationEditorPage (lihat dbm/migration_pages.go):
-.Shell, .Title, .Crumbs, .SQL, .Note, .FormAction, .Actions
-CSRF: .User.CSRFToken (dari Shell).
+Halaman Create/Edit Migration: SQL up dan SQL down, atau tandai irreversible
+beserta alasannya.
+Data: dbm.migrationEditorPage (lihat dbm/migration_pages.go).
 */}}
 {{define "content"}}
 {{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs)}}
 
 <form class="stack" method="post" action="{{.FormAction}}">
     <input type="hidden" name="csrf_token" value="{{.User.CSRFToken}}">
+    {{template `flash` .}}
 
     <section class="card">
-        {{template `card-head` (dict `Title` `SQL Migration` `Actions` .Actions)}}
-        <p class="card__note">{{.Note}}</p>
+        {{template `card-head` (dict `Title` `Definisi Migration` `Actions` .Actions)}}
+        {{if .Revision}}<p class="card__note">Menyimpan perubahan membuat revisi {{.Revision}} menjadi revisi
+            baru dan menghapus hasil validasi lama.</p>{{end}}
         <div class="input">
+            <label class="input__label" for="mig-name">Nama (opsional)</label>
             <div class="input__box">
-                <textarea class="input__control" name="sql" rows="14" spellcheck="false"
-                    placeholder="CREATE TABLE ...">{{.SQL}}</textarea>
+                <input class="input__control" id="mig-name" name="name" maxlength="80"
+                    value="{{.Input.Name}}" placeholder="Diambil dari komentar pertama SQL up bila kosong">
+            </div>
+        </div>
+        <div class="input">
+            <label class="input__label" for="mig-up">SQL Up</label>
+            <div class="input__box">
+                <textarea class="input__control" id="mig-up" name="up_sql" rows="10" spellcheck="false"
+                    required placeholder="ALTER TABLE products ADD COLUMN status TEXT;">{{.Input.UpSQL}}</textarea>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        {{template `card-head` (dict `Title` `Pembatalan (SQL Down)`)}}
+        <p class="card__note">SQL down dijalankan saat rollback. SQL down tidak menjamin data yang terhapus
+            kembali; untuk perubahan seperti itu tandai migration sebagai irreversible.</p>
+        <p><label class="toggle"><input type="checkbox" id="mig-irrev" name="irreversible" value="1"
+            {{if .Input.Irreversible}}checked{{end}}> Irreversible (tidak dapat di-rollback)</label></p>
+        <div class="input" id="mig-down-box">
+            <label class="input__label" for="mig-down">SQL Down</label>
+            <div class="input__box">
+                <textarea class="input__control" id="mig-down" name="down_sql" rows="8" spellcheck="false"
+                    placeholder="ALTER TABLE products DROP COLUMN status;">{{.Input.DownSQL}}</textarea>
+            </div>
+        </div>
+        <div class="input" id="mig-reason-box">
+            <label class="input__label" for="mig-reason">Alasan irreversible</label>
+            <div class="input__box">
+                <input class="input__control" id="mig-reason" name="irreversible_reason"
+                    value="{{.Input.IrreversibleReason}}" placeholder="Menghapus kolom beserta datanya">
             </div>
         </div>
     </section>
 </form>
+
+<script>
+    (function () {
+        var irrev = document.getElementById('mig-irrev'),
+            down = document.getElementById('mig-down-box'),
+            reason = document.getElementById('mig-reason-box');
+        if (!irrev) return;
+        var sync = function () {
+            down.hidden = irrev.checked;
+            reason.hidden = !irrev.checked;
+        };
+        irrev.addEventListener('change', sync);
+        sync();
+    })();
+</script>
 {{end}}
