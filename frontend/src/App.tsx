@@ -1,122 +1,46 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useCallback, useState } from 'react'
+import { BrowserRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import type { ReactNode } from 'react'
+import { Alert, ApprovalGroupRow, Badge, BatchProgress, BottomNavigation, Breadcrumb, Button, Card, Choice, ConfirmationModal, DatabaseCard, DataTable, EmptyState, Header, Icon, IconButton, Input, KpiCard, MetadataRow, MigrationJobRow, Modal, Pagination, ProfilePopup, SchemaDiffRow, Select, Sidebar, SidebarItem, Spinner, SqlEditor, SqlPreview, Tabs, Textarea, Toast } from './design-system'
+import type { ButtonVariant, Column, Tone } from './design-system'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+const sections = [{ path: 'foundations', label: 'Foundations', number: '01' }, { path: 'components', label: 'Components & Interaction', number: '02' }, { path: 'navigation', label: 'Navigation & Data', number: '03' }, { path: 'patterns', label: 'Responsive Patterns', number: '04' }]
+function Section({ title, children, description }: { title: string; children: ReactNode; description?: string }) { return <section className="catalog-section"><div className="section-heading"><h2>{title}</h2>{description && <p>{description}</p>}</div>{children}</section> }
+function Preview({ children }: { children: ReactNode }) { return <div className="catalog-preview">{children}</div> }
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+function Foundations() {
+  const palettes = [{ name: 'Primary', values: ['50', '100', '500', '600', '700', '800'].map(v => `primary-${v}`) }, { name: 'Neutral', values: ['50', '100', '200', '400', '500', '600', '700', '900'].map(v => `neutral-${v}`) }, { name: 'Semantic', values: ['success-100', 'success-500', 'warning-100', 'warning-500', 'error-100', 'error-500'] }]
+  return <><Section title="Typography" description="Poppins · Regular / Medium / SemiBold"><div className="catalog-type"><span className="type-specimen">Aa.</span><div className="ds-stack"><h1>Display · Dashboard</h1><h2>Page title · 22 px</h2><h3>Section title · 18 px</h3><p>Body · 14 px · Kelola database dengan lebih mudah.</p><small>Label · 12 px · AKSES EFEKTIF</small><span className="caption">Caption · 10 px · Metadata pendukung</span></div></div></Section><Section title="Color tokens" description="Warna mengikuti variabel pada Style Guide Figma.">{palettes.map(palette => <div className="palette" key={palette.name}><h3>{palette.name}</h3><div className="swatch-grid">{palette.values.map(token => <div key={token}><div className="swatch" style={{ background: `var(--${token})` }} /><small>{token}</small></div>)}</div></div>)}</Section><div className="catalog-grid"><Section title="Spacing"><div className="ds-row spacing-samples">{[4, 8, 12, 16, 24, 32, 48].map(size => <div key={size}><span style={{ width: size, height: size }} /><small>{size}px</small></div>)}</div></Section><Section title="Radius & shape"><div className="ds-row">{[0, 4, 6, 10, 16, 24, 999].map(radius => <div className="radius-sample" key={radius}><span style={{ borderRadius: radius }} /><small>{radius === 999 ? 'Full' : `${radius}px`}</small></div>)}</div></Section></div><Section title="Elevation"><div className="catalog-grid four">{[0, 1, 2, 3].map(level => <Card key={level} style={{ boxShadow: level ? `var(--shadow-${level})` : 'none' }}><strong>Level {level}</strong><p className="ds-muted">{['Flat', 'Soft shadow', 'Floating card', 'Overlay'][level]}</p></Card>)}</div></Section></>
 }
 
-export default App
+function Components({ notify }: { notify: (message: string) => void }) {
+  const [tab, setTab] = useState('column'); const [modal, setModal] = useState<'confirm' | 'delete' | null>(null)
+  const [email, setEmail] = useState(''); const [submitted, setSubmitted] = useState(false)
+  const emailError = submitted && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? 'Masukkan alamat email yang valid.' : undefined
+  return <><Section title="Buttons" description="Arahkan pointer atau tekan tombol untuk melihat hover, pressed, dan focus."><div className="button-matrix"><span>Variant</span><small>Default / Hover / Pressed</small><small>Disabled</small><small>Loading</small>{(['primary', 'secondary', 'tertiary', 'destructive'] as ButtonVariant[]).map(variant => <div className="button-matrix-row" key={variant}><strong>{variant}</strong><Preview><Button variant={variant} onClick={() => notify(`Tombol ${variant} dipilih`)}>Buka</Button></Preview><Preview><Button variant={variant} disabled>Buka</Button></Preview><Preview><Button variant={variant} loading>Memuat</Button></Preview></div>)}</div><div className="ds-row"><IconButton label="Tambah contoh" onClick={() => notify('Icon button dipilih')}>+</IconButton><Button size="sm">Small</Button><Button size="lg">Large</Button></div></Section><Section title="Inputs & fields" description="Label, helper, validasi, dan focus ring tersedia pada komponen yang sama."><form className="ds-stack" noValidate onSubmit={event => { event.preventDefault(); setSubmitted(true); if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) notify('Contoh form berhasil divalidasi') }}><div className="catalog-grid three"><Input label="Nama database" placeholder="Contoh: shop_db" helper="Nama yang mudah dikenali." /><Input label="Email" type="email" value={email} onChange={event => setEmail(event.target.value)} error={emailError} helper="Coba kirim form untuk melihat validasi." required /><Input label="Password" type="password" placeholder="Masukkan password" /></div><div className="catalog-grid three"><Input label="Pencarian" type="search" placeholder="Cari database…" /><Select label="Hak akses" helper="Pilih akses efektif."><option>View + Edit</option><option>View only</option></Select><Input label="Nonaktif" disabled value="Tidak dapat diubah" /></div><Textarea label="Deskripsi" placeholder="Tambahkan keterangan…" /><div className="ds-row"><Choice label="Aktifkan notifikasi" defaultChecked /><Choice label="View" type="radio" name="permission" defaultChecked /><Choice label="Edit" type="radio" name="permission" /></div><div><Button type="submit">Validasi contoh form</Button></div></form></Section><div className="catalog-grid"><Section title="Badges & status"><Preview><div className="ds-row">{(['success', 'warning', 'error', 'info', 'neutral'] as Tone[]).map((tone, i) => <Badge tone={tone} key={tone}>{['Terhubung', 'Menunggu', 'Gagal', 'View + Edit', 'Draft'][i]}</Badge>)}</div></Preview></Section><Section title="Table tabs"><Preview><Tabs label="Contoh table tabs" value={tab} onChange={setTab} items={[{ value: 'column', label: 'Column' }, { value: 'data', label: 'Data' }, { value: 'history', label: 'History' }]} /></Preview><p className="ds-muted" role="tabpanel">Tab aktif: {tab}. Gunakan tombol panah untuk berpindah.</p></Section></div><Section title="Feedback & messages"><div className="catalog-grid three"><Alert tone="info" title="Informasi">Periksa SQL sebelum menjalankan migrasi.</Alert><Alert tone="success" title="Berhasil">Perubahan berhasil disimpan.</Alert><Alert tone="error" title="Eksekusi gagal">Koneksi terputus. Coba kembali.</Alert></div><div className="ds-row"><Spinner /><span>Memuat data…</span><Button variant="secondary" onClick={() => notify('Perubahan contoh berhasil disimpan')}>Tampilkan toast</Button></div></Section><Section title="Overlays"><div className="ds-row"><Button onClick={() => setModal('confirm')}>Modal konfirmasi</Button><Button variant="destructive" onClick={() => setModal('delete')}>Modal hapus</Button></div><ConfirmationModal open={modal !== null} onClose={() => setModal(null)} onConfirm={() => { notify(modal === 'delete' ? 'Contoh penghapusan dikonfirmasi' : 'Contoh perubahan dikonfirmasi'); setModal(null) }} title={modal === 'delete' ? 'Hapus koneksi database?' : 'Simpan perubahan?'} destructive={modal === 'delete'} confirmLabel={modal === 'delete' ? 'Hapus koneksi' : 'Simpan'}><p>{modal === 'delete' ? 'Ini contoh modal destructive pada katalog. Konfirmasi akan menampilkan notifikasi.' : 'Periksa perubahan sebelum melanjutkan.'}</p></ConfirmationModal></Section></>
+}
+
+const tables = [{ name: 'products', columns: 6 }, { name: 'users', columns: 3 }, { name: 'orders', columns: 5 }, { name: 'payments', columns: 4 }, { name: 'categories', columns: 3 }]
+function NavigationData({ notify }: { notify: (message: string) => void }) {
+  const [active, setActive] = useState('products'); const [page, setPage] = useState(1); const [search, setSearch] = useState('')
+  const columns: Column<typeof tables[number]>[] = [{ key: 'name', label: 'Nama', render: row => <strong>{row.name}</strong> }, { key: 'columns', label: 'Tipe', render: row => `${row.columns} kolom` }, { key: 'key', label: 'Primary Key', render: () => 'id' }, { key: 'access', label: 'Akses', render: () => <Badge>View + Edit</Badge> }, { key: 'action', label: 'Aksi', render: row => <Button variant="tertiary" size="sm" onClick={() => notify(`Contoh tabel: ${row.name}`)}>Buka →</Button> }]
+  const filtered = tables.filter(row => row.name.includes(search.toLowerCase()))
+  return <><Section title="Navigation shell" description="Header desktop beradaptasi menjadi app bar. Sidebar aktif memakai teks biru tanpa fill."><Preview><Header navigation={<><a href="#sidebar-demo">Database</a><a href="#table-demo">Admin</a></>} profile={<ProfilePopup name="Arina Azka" email="arina@example.com" onLogout={() => notify('Contoh aksi logout')} />} /></Preview><div className="catalog-grid" id="sidebar-demo"><Card><Sidebar label="Shop database"><SidebarItem icon={<Icon name="database" />}>public</SidebarItem>{['products', 'users', 'orders'].map(name => <SidebarItem key={name} nested icon={<Icon name="table" />} active={active === name} onClick={() => setActive(name)}>{name}</SidebarItem>)}<SidebarItem icon={<Icon name="migration" />} active={active === 'migration'} onClick={() => setActive('migration')}>Migrasi</SidebarItem></Sidebar></Card><Card><Sidebar label="Admin workspace">{[{ name: 'Pengguna', icon: 'user' }, { name: 'Grup', icon: 'group' }, { name: 'Koneksi Database', icon: 'link' }].map(item => <SidebarItem key={item.name} icon={<Icon name={item.icon as 'user' | 'group' | 'link'} />} active={active === item.name} onClick={() => setActive(item.name)}>{item.name}</SidebarItem>)}</Sidebar><MetadataRow label="Pilihan aktif">{active}</MetadataRow></Card></div></Section><Section title="Cards & KPI"><div className="catalog-grid three"><DatabaseCard name="shop_db" description="PostgreSQL · 1 schema · 3 tabel" permission="View + Edit" onOpen={() => notify('Contoh database shop_db dipilih')} /><KpiCard label="Database terhubung" value={12} detail="Seluruh koneksi aktif" /><KpiCard label="Migrasi berhasil" value="98%" detail="30 hari terakhir" /></div></Section><Section title="Data table & pagination" description="Kolom dan row berasal dari props. Pada mobile, setiap row tampil sebagai kartu berlabel."><Card id="table-demo"><div className="table-search"><Input label="Cari tabel" type="search" placeholder="Cari berdasarkan nama" value={search} onChange={event => { setSearch(event.target.value); setPage(1) }} /></div><DataTable caption="Contoh tabel pada shop_db" columns={columns} rows={filtered.slice((page - 1) * 3, page * 3)} rowKey={row => row.name} /><Pagination page={page} total={filtered.length} pageSize={3} onChange={setPage} /></Card></Section><Section title="Empty state"><Preview><EmptyState title="Belum ada koneksi database" action={<Button onClick={() => notify('Contoh aksi tambah koneksi')}>Tambah koneksi</Button>}>Tambahkan koneksi untuk mulai mengelola database.</EmptyState></Preview></Section></>
+}
+
+function Patterns() {
+  const [sql, setSql] = useState('ALTER TABLE products\nADD COLUMN status TEXT;')
+  const [progress, setProgress] = useState(42)
+  return <><Section title="SQL editor & preview" description="Editor PostgreSQL dengan syntax highlighting; preview menggunakan mode read only."><div className="catalog-grid"><SqlEditor value={sql} onChange={setSql} /><SqlPreview value={sql} label="SQL PREVIEW" /></div></Section><Section title="Batch progress"><div className="catalog-grid"><BatchProgress value={progress} total={80} detail="400.000 rows committed · cursor id 410000" /><Card className="ds-stack"><label htmlFor="batch-range">Contoh progres: {progress}/80</label><input id="batch-range" type="range" min={0} max={80} value={progress} onChange={event => setProgress(Number(event.target.value))} /><small>Geser untuk melihat progres berubah.</small></Card></div></Section><Section title="Migration & approval"><Card><MigrationJobRow job="JOB-1052" migration="backfill_users · shop_db" detail="Batch 42/80 committed · 10:18 WIB" /><MigrationJobRow job="JOB-1051" migration="add_status · shop_db" detail="80/80 batches committed" tone="success" /><ApprovalGroupRow name="Database Administrators" detail="1 dari 2 persetujuan diterima" status="Menunggu" /><MetadataRow label="Database">shop_db</MetadataRow><MetadataRow label="Diajukan oleh">arina@example.com</MetadataRow><SchemaDiffRow name="products.status" before="Tidak tersedia" after="status TEXT" /></Card></Section><Section title="Responsive patterns" description="Desktop dan mobile menggunakan komponen yang sama."><div className="catalog-grid three"><Card className="ds-stack"><h3>Navigasi</h3><p>Header desktop menjadi app bar. Menu membuka drawer; navigasi utama tetap tersedia di bawah.</p></Card><Card className="ds-stack"><h3>Konten & data</h3><p>Tabel menjadi kartu berlabel. SQL tetap dapat digulir; metadata dan status tetap tersedia.</p></Card><Card className="ds-stack"><h3>Interaksi</h3><p>Target sentuh minimal 44 px. Modal mendukung Escape, focus trap, dan pengembalian fokus.</p></Card></div></Section></>
+}
+
+function Catalog() {
+  const [drawer, setDrawer] = useState(false); const [toast, setToast] = useState('')
+  const dismiss = useCallback(() => setToast(''), [])
+  const location = useLocation(); const current = sections.find(section => location.pathname.endsWith(section.path)) ?? sections[0]
+  const links = sections.map(section => <NavLink key={section.path} to={`/design-system/${section.path}`} onClick={() => setDrawer(false)}>{section.label}</NavLink>)
+  return <><a className="skip-link" href="#main">Lewati navigasi</a><Header onMenu={() => setDrawer(true)} navigation={<><NavLink to="/design-system/foundations">Design System</NavLink><NavLink to="/design-system/navigation">Workspace patterns</NavLink></>} profile={<ProfilePopup name="Arina Azka" email="arina@example.com" onLogout={() => setToast('Contoh logout dipilih. Katalog tidak menggunakan sesi login.')} />} /><div className="catalog-layout"><aside className="catalog-sidebar"><div className="catalog-sidebar-intro"><Badge>Milestone 2</Badge><h3>Design System</h3><small>Desktop & Mobile</small></div><nav className="catalog-links" aria-label="Katalog komponen">{links}</nav><div className="catalog-sidebar-footer"><span className="status-dot" /><small>Pathgres UI Library</small></div></aside><main id="main" className="catalog-main"><Breadcrumb items={[{ label: 'Pathgres' }, { label: 'Design System', href: '/design-system/foundations' }, { label: current.label }]} /><div className="catalog-hero"><p className="ds-eyebrow">PATHGRES / DESIGN SYSTEM / {current.number}</p><h1>{current.label}</h1><p>Fondasi dan komponen reusable untuk seluruh layar desktop dan mobile.</p></div><Routes><Route path="foundations" element={<Foundations />} /><Route path="components" element={<Components notify={setToast} />} /><Route path="navigation" element={<NavigationData notify={setToast} />} /><Route path="patterns" element={<Patterns />} /><Route path="*" element={<Navigate to="foundations" replace />} /></Routes><footer className="catalog-footer"><small>Pathgres · Design System · Milestone 2</small><small>React + TypeScript</small></footer></main></div><Modal open={drawer} onClose={() => setDrawer(false)} title="Design System" drawer><nav className="catalog-links" aria-label="Katalog mobile">{links}</nav></Modal><BottomNavigation><NavLink to="/design-system/foundations">Foundations</NavLink><NavLink to="/design-system/components">Components</NavLink><NavLink to="/design-system/navigation">Navigation</NavLink><NavLink to="/design-system/patterns">Patterns</NavLink></BottomNavigation>{toast && <Toast message={toast} onDismiss={dismiss} />}</>
+}
+
+export default function App() { return <BrowserRouter><Routes><Route path="/design-system/*" element={<Catalog />} /><Route path="*" element={<Navigate to="/design-system/foundations" replace />} /></Routes></BrowserRouter> }
