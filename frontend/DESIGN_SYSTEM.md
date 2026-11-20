@@ -52,7 +52,7 @@ memakai komponen ini, sehingga perubahan master berlaku di seluruh pemakaian.
 
 | Kelompok | Komponen |
 | --- | --- |
-| Primitive | Button, IconButton, Input, Select, Textarea, Choice, Badge, Tabs |
+| Primitive | Button, IconButton, Input, Select, Dropdown, Textarea, Choice, Badge, Tabs |
 | Feedback | Alert, Spinner, EmptyState, Toast |
 | Navigation | Header, Sidebar, SidebarItem, Breadcrumb, BottomNavigation, Icon |
 | Surface dan data | Card, DatabaseCard, KpiCard, DataTable, Pagination, MetadataRow, ListRow |
@@ -66,6 +66,13 @@ Choice mendukung checkbox/radio dengan atribut input HTML asli.
 
 `Input` mendukung tipe search/password/email dan lainnya; password memiliki toggle.
 `Select` memakai native select untuk dukungan keyboard dan perangkat mobile.
+`Dropdown` menyediakan overlay pilihan yang mengikuti style Pathgres. Gunakan
+`options`, `value`, dan `onChange`; opsi dapat dinonaktifkan. Mendukung panah,
+Home/End, Enter/Space, Escape, Tab, dan pencarian melalui ketikan awal label.
+Contoh Hak akses pada katalog menggunakan Dropdown.
+Password menggunakan ikon eye/eye-slash. Fokus input, textarea, select, dan
+Dropdown mengubah border menjadi primary 500 dengan ketebalan tetap 1 px;
+tanpa outline tambahan di luar field.
 `DataTable<T>` menerima `columns`, `rows`, `rowKey`, dan `caption`.
 `Tabs` dikendalikan melalui `value/onChange` dan mendukung panah, Home, serta End.
 

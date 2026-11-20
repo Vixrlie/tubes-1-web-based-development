@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
+import { EyeIcon } from './control-icons'
 
 export type Tone = 'info' | 'success' | 'warning' | 'error' | 'neutral'
 export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'destructive'
@@ -28,7 +29,7 @@ export function Input({ label, helper, error, id, type = 'text', ...props }: Inp
   return <div className={`ds-field ${error ? 'ds-field--error' : ''}`}>
     <label htmlFor={fieldId}>{label}{props.required && <span aria-hidden="true"> *</span>}</label>
     <div className="ds-input-wrap"><input {...props} id={fieldId} type={type === 'password' && visible ? 'text' : type} aria-invalid={error ? true : undefined} aria-describedby={error || helper ? `${fieldId}-help` : undefined} />
-      {type === 'password' && <IconButton label={visible ? 'Sembunyikan password' : 'Tampilkan password'} disabled={props.disabled} aria-pressed={visible} onClick={() => setVisible(!visible)}>{visible ? 'Sembunyi' : 'Lihat'}</IconButton>}
+      {type === 'password' && <IconButton label={visible ? 'Sembunyikan password' : 'Tampilkan password'} disabled={props.disabled} aria-controls={fieldId} aria-pressed={visible} onClick={() => setVisible(!visible)}><EyeIcon hidden={visible} /></IconButton>}
     </div>
     {(error || helper) && <small id={`${fieldId}-help`}>{error ?? helper}</small>}
   </div>
