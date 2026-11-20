@@ -1,0 +1,36 @@
+receivers:
+  filelog:
+    include: [/var/log/pathgres/pathgres.jsonl]
+    encoding: utf-16le
+    start_at: beginning
+    operators:
+      - type: filter
+        expr: 'not (body matches "^[{]")'
+      - type: add
+        field: resource["service.name"]
+        value: pathgres
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+processors:
+  batch: {}
+exporters:
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+service:
+  pipelines:
+    logs:
+      receivers: [filelog, otlp]
+      processors: [batch]
+      exporters: [otlphttp/loki]
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/tempo]
