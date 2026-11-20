@@ -62,6 +62,7 @@ func (h *Handlers) groupsRoutes(r chi.Router) {
 	r.Post("/groups/{id}/members", g.addMember)
 	r.Post("/groups/{id}/members/{userID}/delete", g.removeMember)
 	r.Post("/groups/{id}/access", g.saveAccess)
+	r.Post("/groups/{id}/leader", g.setLeader)
 }
 
 // shell membangun data shell FE (layout.html: header + sidebar admin).
@@ -185,6 +186,9 @@ func (g *groupHandlers) buildDetailView(r *http.Request, grp Group, editMode boo
 		DeleteAction: base + "/delete",
 		Members:      web.NewMembersCard(webMembers, base+"/members", removeAction),
 		AddMembers:   &web.AddMembersModal{FormAction: base + "/members", Candidates: candidates},
+	}
+	if page.Leader, err = g.leaderCard(r.Context(), grp.ID, members, base); err != nil {
+		return web.GroupDetailPage{}, err
 	}
 
 	if editMode {
