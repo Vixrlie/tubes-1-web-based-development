@@ -6,8 +6,16 @@ import { Icon } from './navigation'
 
 const SqlCodeMirror = lazy(() => import('./sql-editor'))
 
-export function DatabaseCard({ name, description, connected = true, permission, onOpen }: { name: string; description: string; connected?: boolean; permission: string; onOpen: () => void }) {
-  return <Card className="ds-database-card"><div className="ds-row ds-between"><Icon name="database" /><Badge tone={connected ? 'success' : 'error'}>{connected ? 'Terhubung' : 'Terputus'}</Badge></div><div><h3>{name}</h3><p className="ds-muted">{description}</p></div><div><Badge>{permission}</Badge></div><hr /><Button onClick={onOpen}>Buka</Button></Card>
+export function DatabaseCard({ name, description, connected = true, permission, onOpen, loading = false, disabled = false, onReconnect }: {
+  name: string; description: string; connected?: boolean; permission: string; onOpen: () => void
+  loading?: boolean; disabled?: boolean; onReconnect?: () => void
+}) {
+  return <Card className="ds-database-card" aria-busy={loading || undefined}>
+    <div className="ds-row ds-between"><Icon name="database" /><Badge tone={loading ? 'neutral' : connected ? 'success' : 'error'}>{loading ? 'Memeriksa koneksi' : connected ? 'Terhubung' : 'Terputus'}</Badge></div>
+    <div><h3>{name}</h3><p className="ds-muted">{description}</p></div><div><Badge>{permission}</Badge></div><hr />
+    {!connected && onReconnect ? <Button variant="secondary" disabled={disabled} loading={loading} onClick={onReconnect}>Hubungkan kembali</Button>
+      : <Button disabled={disabled || !connected} loading={loading} onClick={onOpen}>Buka</Button>}
+  </Card>
 }
 
 export function KpiCard({ label, value, detail }: { label: string; value: string | number; detail?: string }) {

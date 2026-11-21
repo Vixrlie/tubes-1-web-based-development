@@ -1,5 +1,52 @@
 # Pathgres Design System
 
+## Komponen workspace desktop
+
+Contoh interaktif ada di `/design-system/navigation`, melalui `NavigationCatalog.tsx`.
+Implementasi ini memprioritaskan desktop; adaptasi mobile lengkap masih menyusul.
+
+| Komponen | API utama dan perilaku |
+| --- | --- |
+| ProductHeader | `active`, `onNavigate`, `profile`, `showAdmin`; pilihan Database/Admin dengan state aktif |
+| DatabaseSidebar | `database`, `schemas`, `selection`, `onSelect`, `loading`; schema dapat dibuka/tutup, tabel dan Migrasi dapat dipilih |
+| AdminSidebar | `active`, `onNavigate`; Pengguna, Grup, Koneksi Database |
+| DatabaseCard | Koneksi aktif, terputus, loading; `onReconnect` opsional, tombol Buka nonaktif saat koneksi terputus |
+| TableCard | `name`, `columnCount`, `primaryKey`, `permission`, `onOpen`, `disabled`; seluruh kartu dapat diklik |
+| ListToolbar | Search terkontrol, `resultCount`, filter Dropdown dan slot `action` opsional |
+| MetadataPanel | `title`, `items` label/value, slot `action`; memakai definition list |
+| MigrationJobCard | Status queued/running/success/failed/canceled, progres batch opsional, aksi detail |
+| ApprovalGroupCard | Nama grup, threshold persetujuan, daftar approver, aksi opsional |
+| ProductBottomNavigation | Beranda/Database/Admin, state aktif dan `showAdmin`; `inline` untuk preview di desktop |
+
+Komponen menerima data dan callback; tidak memanggil API bisnis atau memberikan
+hak akses. Parent harus mengirim data/status yang benar dan menangani navigasi.
+Label status pada contoh approval menunjukkan presentasi komponen, bukan keputusan
+approval di backend.
+
+```tsx
+import { ProductHeader, TableCard, DatabaseSidebar } from './design-system'
+
+<ProductHeader active="database" onNavigate={navigateWorkspace} profile={profile} />
+<TableCard
+  name="products"
+  columnCount={6}
+  primaryKey="id"
+  permission="View + Edit"
+  onOpen={openProducts}
+/>
+<DatabaseSidebar
+  database="shop_db"
+  schemas={[{ id: 'public', name: 'public', tables: [{ id: 'products', name: 'products' }] }]}
+  selection={{ kind: 'table', schemaId: 'public', tableId: 'products' }}
+  onSelect={selectTable}
+/>
+```
+
+Pemeriksaan tambahan: build dan lint berhasil. Preview browser desktop 1440 px
+berhasil untuk switch Database/Admin, pilihan menu admin, collapse schema,
+pencarian tabel, filter hak akses, membuka detail TableCard dan menutupnya dengan
+Escape. Viewport dikembalikan ke ukuran awal setelah pemeriksaan.
+
 Implementasi React + TypeScript dari empat artboard Style Guide WBD:
 
 | Acuan Figma | Implementasi |

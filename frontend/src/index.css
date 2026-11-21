@@ -4,6 +4,7 @@
 @import '@fontsource/poppins/600.css';
 @import './design-system/tokens.css';
 @import './design-system/components.css';
+@import './design-system/workspace.css';
 
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--canvas); color: var(--text); font: 400 var(--text-body)/1.6 var(--font-sans); }
