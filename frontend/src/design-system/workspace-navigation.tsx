@@ -11,7 +11,7 @@ export function ProductHeader({ active, onNavigate, profile, onMenu, showAdmin =
   active: ProductDestination; onNavigate: (destination: Workspace) => void
   profile?: ReactNode; onMenu?: () => void; showAdmin?: boolean
 }) {
-  return <Header onMenu={onMenu} profile={profile} navigation={<>
+  return <Header homeTo="/home" onMenu={onMenu} profile={profile} navigation={<>
     <button type="button" className="ds-header-link" aria-current={active === 'database' ? 'page' : undefined} onClick={() => onNavigate('database')}>Database</button>
     {showAdmin && <button type="button" className="ds-header-link" aria-current={active === 'admin' ? 'page' : undefined} onClick={() => onNavigate('admin')}>Admin</button>}
   </>} />
@@ -54,7 +54,7 @@ const adminItems = [
   { value: 'connections', label: 'Koneksi Database', icon: 'link' },
 ] as const
 
-export function AdminSidebar({ active, onNavigate }: { active: AdminDestination; onNavigate: (destination: AdminDestination) => void }) {
+export function AdminSidebar({ active, onNavigate }: { active?: AdminDestination; onNavigate: (destination: AdminDestination) => void }) {
   return <Sidebar label="Admin workspace">{adminItems.map(item => <SidebarItem key={item.value} icon={<Icon name={item.icon} />} active={active === item.value} onClick={() => onNavigate(item.value)}>{item.label}</SidebarItem>)}</Sidebar>
 }
 

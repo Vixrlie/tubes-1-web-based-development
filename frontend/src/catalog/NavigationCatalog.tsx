@@ -4,8 +4,8 @@ import {
   AdminSidebar, ApprovalGroupCard, Badge, Button, Card, DatabaseCard, DatabaseSidebar,
   DataTable, EmptyState, KpiCard, ListToolbar, MetadataPanel, MigrationJobCard, Modal,
   Pagination, ProductBottomNavigation, ProductHeader, ProfilePopup, TableCard,
-} from './design-system'
-import type { AdminDestination, Column, DatabaseSelection, ProductDestination } from './design-system'
+} from '../design-system'
+import type { AdminDestination, Column, DatabaseSelection, ProductDestination } from '../design-system'
 
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return <section className="catalog-section"><div className="section-heading"><h2>{title}</h2>{description && <p>{description}</p>}</div>{children}</section>

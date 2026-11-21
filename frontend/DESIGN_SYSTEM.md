@@ -2,7 +2,7 @@
 
 ## Komponen workspace desktop
 
-Contoh interaktif ada di `/design-system/navigation`, melalui `NavigationCatalog.tsx`.
+Contoh interaktif ada di `/design-system/navigation`, melalui `src/catalog/NavigationCatalog.tsx`.
 Implementasi ini memprioritaskan desktop; adaptasi mobile lengkap masih menyusul.
 
 | Komponen | API utama dan perilaku |
@@ -73,7 +73,7 @@ Empat route katalog: `/design-system/foundations`, `/design-system/components`,
 `/design-system/navigation`, dan `/design-system/patterns`. Route ini adalah katalog
 komponen dengan data contoh; belum menghubungkan API bisnis atau autentikasi.
 Root `/` sementara diarahkan ke katalog. Ketika halaman produk dibuat, ubah
-redirect di `App.tsx` dan pertahankan katalog di `/design-system/*`.
+redirect di `src/app/router.tsx` dan pertahankan katalog di `/design-system/*`.
 
 ## Pemakaian
 
@@ -160,3 +160,9 @@ Keduanya berhasil pada implementasi ini. Pemeriksaan visual browser otomatis
 belum selesai karena browser preview gagal menjangkau server lokal pada percobaan
 awal. Periksa katalog pada desktop dan viewport 390 px sebelum integrasi halaman
 produk; khususnya drawer, modal, tabel mobile, tabs, dan SQL editor.
+
+## Struktur aplikasi tahap 1
+
+Katalog dipindahkan dari App.tsx ke src/catalog/; empat URL tetap tersedia.
+Router dan provider berada di src/app/. Detail ada di [ARCHITECTURE.md](ARCHITECTURE.md)
+dan [mapping API](../docs/frontend/api-mapping.md). Halaman produk masih placeholder.

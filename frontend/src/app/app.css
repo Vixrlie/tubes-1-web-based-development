@@ -1,0 +1,14 @@
+.app-shell { min-height: 100dvh; }
+.app-content { max-width: 1600px; margin: 0 auto; padding: var(--space-32); }
+.app-status-page { display: grid; justify-items: start; gap: var(--space-16); padding: var(--space-48) var(--space-24); }
+.app-status-page p { color: var(--text-muted); }
+.app-auth-layout { display: grid; place-items: center; min-height: 100dvh; }
+.app-workspace { display: grid; grid-template-columns: 256px minmax(0, 1fr); gap: var(--space-24); }
+.app-workspace > aside { background: var(--surface); border: 1px solid var(--neutral-100); border-radius: var(--radius-panel); }
+.app-section-navigation { display: flex; flex-wrap: wrap; gap: var(--space-16); border-bottom: 1px solid var(--border); padding-bottom: var(--space-16); }
+.app-section-navigation a, .app-admin-overview { display: block; color: var(--text-muted); text-decoration: none; padding: var(--space-12) var(--space-16); }
+.app-section-navigation a.active, .app-admin-overview.active { color: var(--primary-500); font-weight: 600; }
+@media (max-width: 767px) {
+  .app-content { padding: var(--space-16) var(--space-16) calc(104px + env(safe-area-inset-bottom)); }
+  .app-workspace { grid-template-columns: 1fr; }
+}

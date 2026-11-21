@@ -9,8 +9,8 @@ export function Icon({ name }: { name: keyof typeof icons }) {
   return <img className="ds-icon" src={asset + icons[name]} alt="" />
 }
 
-export function Header({ navigation, profile, onMenu }: { navigation?: ReactNode; profile?: ReactNode; onMenu?: () => void }) {
-  return <header className="ds-header"><div className="ds-brand-row">{onMenu && <span className="ds-menu-trigger"><IconButton label="Buka navigasi" onClick={onMenu}><MenuIcon /></IconButton></span>}<NavLink to="/" aria-label="Pathgres beranda"><img className="ds-logo" src={asset + 'c0d63.png'} width="191" height="44" alt="Pathgres" /></NavLink></div><nav className="ds-header-nav" aria-label="Navigasi utama">{navigation}</nav>{profile}</header>
+export function Header({ navigation, profile, onMenu, homeTo = '/' }: { navigation?: ReactNode; profile?: ReactNode; onMenu?: () => void; homeTo?: string }) {
+  return <header className="ds-header"><div className="ds-brand-row">{onMenu && <span className="ds-menu-trigger"><IconButton label="Buka navigasi" onClick={onMenu}><MenuIcon /></IconButton></span>}<NavLink to={homeTo} aria-label="Pathgres beranda"><img className="ds-logo" src={asset + 'c0d63.png'} width="191" height="44" alt="Pathgres" /></NavLink></div><nav className="ds-header-nav" aria-label="Navigasi utama">{navigation}</nav>{profile}</header>
 }
 
 export function SidebarItem({ active = false, children, icon, nested = false, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean; nested?: boolean; icon?: ReactNode }) {
