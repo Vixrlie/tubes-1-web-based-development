@@ -24,8 +24,9 @@ Sumber: `main.go`, `internal/auth/{handlers,middleware}.go`,
 
 ## Matriks layar / route / data / akses
 
-Login, Beranda, shell, Database List, Schema Explorer dan Table Detail sudah
-diimplementasikan. Data bisnis memakai fixture FE, bukan endpoint bisnis JSON. Admin masih
+Login, Beranda, shell, Database List, Schema Explorer, Table Detail dan Migration
+History/Execution Detail sudah diimplementasikan. Data bisnis memakai fixture FE,
+bukan endpoint bisnis JSON. Admin masih
 **placeholder**, dengan session guard dan admin guard aktif. Izin per database
 masih merupakan target integrasi dan harus ditegakkan server.
 
@@ -52,6 +53,13 @@ masih merupakan target integrasi dan harus ditegakkan server.
 | Queue/batch/rollback manual | Belum diregistrasikan | job/progres/cancel/retry/SQL Down | Belum ada kontrak | Route tidak ditemukan pada handler yang diaudit |
 
 `D = /databases/{connID}`, `M = D/migrations/{mID}`.
+History FE saat ini menautkan **execution ID** (E1048) pada segment
+`migrations/:migrationId`; parameter lama ini belum dihubungkan ke ID migrasi
+backend. JSON API perlu memisahkan migration ID, execution ID dan rollback target
+secara eksplisit sebelum adapter integrasi dibuat. `MigrationSource` hanya
+menyediakan list/detail read-only. Form baru, review, antrean dan diff belum
+diaktifkan di history UI. Lihat [QA history](migration-history-qa.md).
+
 `shop_db` di katalog adalah nama contoh, bukan ID koneksi server. Route SPA tabel
 memisahkan schema/table; backend lama memakai parser `schema.table` yang menolak
 titik tambahan pada nama table. Adapter JSON perlu menyepakati identifier SQL.

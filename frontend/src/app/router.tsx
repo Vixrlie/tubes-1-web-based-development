@@ -14,6 +14,8 @@ import HomePage from '../features/home/HomePage'
 import DatabaseListPage from '../features/databases/DatabaseListPage'
 import SchemaExplorerPage from '../features/databases/SchemaExplorerPage'
 import TableDetailPage from '../features/databases/TableDetailPage'
+import MigrationHistoryPage from '../features/migrations/MigrationHistoryPage'
+import MigrationDetailPage from '../features/migrations/MigrationDetailPage'
 
 const CatalogLayout = lazy(() => import('../catalog/CatalogLayout'))
 const FoundationsPage = lazy(() => import('../catalog/FoundationsPage'))
@@ -40,10 +42,10 @@ export function AppRouter() {
         <Route index element={<SchemaExplorerPage />} />
         <Route path="schema" element={<SchemaExplorerPage />} />
         <Route path="schemas/:schemaName/tables/:tableName" element={<TableDetailPage />} />
-        <Route path="migrations" element={<RoutePlaceholder title="Migrasi" />} />
+        <Route path="migrations" element={<MigrationHistoryPage />} />
         <Route path="migrations/new" element={<RoutePlaceholder title="Buat migrasi" />} />
         <Route path="migrations/diff" element={<RoutePlaceholder title="Schema Diff" />} />
-        <Route path="migrations/:migrationId" element={<RoutePlaceholder title="Detail migrasi" />} />
+        <Route path="migrations/:migrationId" element={<MigrationDetailPage />} />
         <Route path="migrations/:migrationId/preview" element={<RoutePlaceholder title="Preview migrasi" />} />
       </Route>
       <Route element={<AdminGate />}><Route path="/admin" element={<AdminLayout />}>

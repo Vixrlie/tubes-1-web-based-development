@@ -29,6 +29,11 @@
 .ds-tone--error { --tone-bg: var(--error-100); --tone-fg: var(--error-700); }
 .ds-tone--neutral { --tone-bg: var(--neutral-100); --tone-fg: var(--neutral-700); }
 .ds-badge { display: inline-flex; align-items: center; padding: var(--space-4) var(--space-12); border-radius: var(--radius-pill); background: var(--tone-bg); color: var(--tone-fg); font-size: var(--text-label); font-weight: 500; }
+.ds-badge.ds-tone--info { --tone-bg: var(--primary-100); --tone-fg: var(--primary-500); }
+.ds-badge.ds-tone--success { --tone-bg: var(--success-100); --tone-fg: var(--success-500); }
+.ds-badge.ds-tone--warning { --tone-bg: var(--warning-100); --tone-fg: var(--warning-500); }
+.ds-badge.ds-tone--error { --tone-bg: var(--error-100); --tone-fg: var(--error-500); }
+.ds-badge.ds-tone--neutral { --tone-bg: var(--neutral-100); --tone-fg: var(--neutral-500); }
 .ds-field { display: flex; flex-direction: column; gap: var(--space-8); min-width: 0; }
 .ds-field label { font-weight: 500; }
 .ds-field input, .ds-field select, .ds-field textarea { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--neutral-400); border-radius: var(--radius-control); background: var(--surface); color: var(--text); padding: var(--space-12); }

@@ -5,6 +5,7 @@ import { ChevronDownIcon } from './control-icons'
 export type DropdownOption = { value: string; label: string; disabled?: boolean }
 export type DropdownProps = {
   label: string
+  hideLabel?: boolean
   options: DropdownOption[]
   value: string
   onChange: (value: string) => void
@@ -17,7 +18,7 @@ export type DropdownProps = {
 }
 
 /** Controlled, single-select dropdown. Keyboard focus stays on the combobox. */
-export function Dropdown({ label, options, value, onChange, placeholder = 'Pilih opsi', helper, error, disabled = false, id, name }: DropdownProps) {
+export function Dropdown({ label, hideLabel = false, options, value, onChange, placeholder = 'Pilih opsi', helper, error, disabled = false, id, name }: DropdownProps) {
   const generatedId = useId()
   const fieldId = id ?? generatedId
   const listId = `${fieldId}-options`
@@ -86,7 +87,7 @@ export function Dropdown({ label, options, value, onChange, placeholder = 'Pilih
   }
 
   return <div ref={root} className={`ds-field ds-dropdown ${error ? 'ds-field--error' : ''}`} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false) }}>
-    <label id={`${fieldId}-label`} htmlFor={fieldId}>{label}</label>
+    <label className={hideLabel ? 'sr-only' : undefined} id={`${fieldId}-label`} htmlFor={fieldId}>{label}</label>
     {name && <input type="hidden" name={name} value={value} disabled={disabled} />}
     <div className="ds-dropdown-control"><button ref={trigger} id={fieldId} type="button" role="combobox" className="ds-dropdown-trigger" disabled={disabled}
       aria-haspopup="listbox" aria-expanded={expanded} aria-controls={listId} aria-labelledby={`${fieldId}-label`}
