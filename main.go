@@ -110,6 +110,7 @@ func run() error {
 		r.Get("/metrics", metrics.Handler(pool, registry.PoolStats))
 	}
 	authHandlers.PublicRoutes(r)
+	authHandlers.JSONRoutes(r, auth.NewSessionValidator(sessions))
 	if devMode {
 		web.DevRoutes{R: renderer}.Routes(r)
 	}

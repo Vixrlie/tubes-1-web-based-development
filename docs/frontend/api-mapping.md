@@ -1,15 +1,15 @@
 # Pathgres: mapping UI, API, dan akses
 
 Audit source lokal branch `feat/spa`, baseline `3d1aaf6`, 21 November 2026.
-**Endpoint yang diusulkan dalam dokumen ini belum dibuat atau disetujui BE.**
-Tidak ada perubahan backend pada tahap ini; audit bukan test live endpoint.
+**Update implementasi lokal:** tiga endpoint auth JSON sudah ditambahkan.
+Endpoint database/admin JSON di bawah masih usulan; audit source bukan test live.
 
 ## Temuan yang terverifikasi dari source
 
 - Handler bisnis saat ini melayani HTML, form, redirect 303, atau fragmen HTML.
-  Prefix `/api` belum terdaftar pada routing bisnis yang diperiksa.
+  JSON auth kini didaftarkan terpisah; routing bisnis database/admin tetap HTML.
 - Vite meneruskan `/api/...` tanpa rewrite ke port 8080. Proxy tidak berarti JSON
-  API sudah siap; fetch ke prefix tersebut belum boleh diaktifkan sebagai integrasi.
+  API bisnis sudah siap. Integrasi otomatis saat ini hanya untuk auth.
 - Cookie `pathgres_session`: HttpOnly, Path=/, SameSite=Lax, Secure sesuai config.
 - Mutasi terautentikasi memerlukan `X-CSRF-Token` atau form `csrf_token`.
   Login lama memakai pemeriksaan same-origin CrossOriginProtection.
@@ -24,13 +24,14 @@ Sumber: `main.go`, `internal/auth/{handlers,middleware}.go`,
 
 ## Matriks layar / route / data / akses
 
-Semua route produk yang diregistrasikan pada SPA tahap ini masih **placeholder**.
-Aturan akses di tabel adalah target integrasi, bukan route guard yang sudah aktif.
+Login, Beranda dan shell sudah diimplementasikan. Database/admin masih
+**placeholder** dengan session guard dan admin guard aktif. Izin per database
+masih merupakan target integrasi dan harus ditegakkan server.
 
 | Layar | Route SPA | Kebutuhan data/aksi | Akses target | BE saat ini |
 | --- | --- | --- | --- | --- |
-| Login | `/login` | username/password, sesi | Publik + same-origin | GET/POST `/login`, HTML/form |
-| Beranda | `/home` | identitas, flag admin, shortcut | Sesi aktif | GET `/`, HTML |
+| Login | `/login` | username/password, sesi | Publik + same-origin | POST `/api/auth/login`, JSON; HTML lama tetap ada |
+| Beranda | `/home` | identitas, flag admin, shortcut | Sesi aktif | GET `/api/auth/session`, JSON |
 | Database list | `/databases` | koneksi + effective access | Sesi, grant view | GET `/databases/` |
 | Ringkasan | `/databases/:connectionId` | nama, DBMS, jumlah schema/tabel | view | GET `/databases/{connID}` |
 | Schema Explorer | `/databases/:connectionId/schema` | schema dan tabel | view | GET `D/schema` |
@@ -56,12 +57,14 @@ titik tambahan pada nama table. Adapter JSON perlu menyepakati identifier SQL.
 
 ## Inventaris route BE yang benar-benar terdaftar
 
-Output di bawah **bukan JSON API**. Seluruh route database/admin membutuhkan sesi;
+Baris auth JSON tersedia melalui `internal/auth/api.go`; baris lainnya masih
+HTML/form/redirect. Seluruh route database/admin membutuhkan sesi;
 semua POST terproteksi membutuhkan CSRF, kecuali login memakai same-origin check.
 
 | Modul | Metode/path |
 | --- | --- |
 | Auth | GET/POST `/login`; GET `/`; POST `/logout` |
+| Auth JSON | POST `/api/auth/login`; GET `/api/auth/session`; POST `/api/auth/logout` |
 | Database | GET `/databases/`, `D`, `D/schema`, `D/tables/{schema.table}`, `D/tables/{schema.table}/data` |
 | Migrasi | GET/POST `D/migrations`; GET `D/migrations/new`; GET `M`; GET `M/preview`; POST `M/explain`; POST `M/execute` |
 | Diff | GET/POST `D/migrations/diff`; GET/POST alias `D/diff` |
@@ -97,16 +100,16 @@ Sumber state: `internal/dbm/migration.go`, `migration_pages.go`; izin:
 `internal/access/policy.go`. EXPLAIN ANALYZE di-rollback, bukan fitur rollback
 migrasi sukses yang bisa dipanggil pengguna.
 
-## Kontrak JSON usulan: belum tersedia
+## Kontrak JSON: auth tersedia, bisnis masih usulan
 
 Tambahkan namespace `/api` menggunakan service dan policy yang sama; pertahankan
 HTML lama saat transisi. Jangan scrape HTML atau mematikan CSRF agar SPA berjalan.
 
 | Prioritas | Endpoint usulan | Kebutuhan |
 | --- | --- | --- |
-| P0 | POST `/api/auth/login` | username/password JSON, cookie, user + CSRF terbaru |
-| P0 | GET `/api/auth/session` | identitas, isPlatformAdmin, csrfToken; 401 JSON jika tidak ada sesi |
-| P0 | POST `/api/auth/logout` | revoke, clear cookie, 204; revoke gagal bukan sukses palsu |
+| Selesai lokal | POST `/api/auth/login` | username/password JSON, cookie, user + CSRF terbaru |
+| Selesai lokal | GET `/api/auth/session` | identitas, isPlatformAdmin, csrfToken; 401 JSON jika tidak ada sesi |
+| Selesai lokal | POST `/api/auth/logout` | revoke, clear cookie, 204; revoke gagal menghasilkan 500 LOGOUT_FAILED |
 | P0 | GET `/api/databases` | koneksi yang diizinkan dan effective access |
 | P0 | GET `/api/databases/{id}` | ringkasan tanpa kredensial target |
 | P0 | GET `/api/databases/{id}/schemas` | schema dan tabel |
@@ -131,7 +134,7 @@ HTML lama saat transisi. Jangan scrape HTML atau mematikan CSRF agar SPA berjala
 - Error: 401 sesi, 403 izin/CSRF, 404 resource, 409 state/conflict,
   422 validasi, 500/503 kegagalan server/koneksi.
 
-Contoh respons sesi **usulan**:
+Respons sesi auth yang diimplementasikan (login dan session):
 
 ```json
 {
@@ -152,17 +155,23 @@ Contoh error **usulan**:
 }
 ```
 
-Cookie sesi tidak disalin ke JSON. CSRF disimpan di memori session provider kelak,
-diperbarui setelah login/bootstrap sesi. Login JSON tetap memakai same-origin
-check; pengecualian CSRF-nya perlu disetujui BE. Jangan gunakan `csrf: 'omit'`
+Cookie sesi tidak disalin ke JSON. CSRF disimpan di memori session provider,
+diperbarui setelah login/bootstrap sesi. Login JSON memakai same-origin check
+dan JSON terbatas 4 KiB; login tidak memerlukan CSRF sesi. Jangan gunakan `csrf: 'omit'`
 pada mutasi terlindungi. Tipe generik API client bukan validator runtime DTO.
 
 ## Batas tahap ini dan checkpoint berikutnya
 
-Sudah: router/layout skeleton, query provider, transport JSON, katalog terpisah,
-serta mapping ini. Belum: session provider, route guard, halaman bisnis final,
-JSON API Go. Placeholder tidak memuat data privat. Root tetap membuka katalog.
+Sudah: router/layout, query provider, transport JSON, katalog terpisah, Login,
+Beranda, cookie session provider, guards, cache cleanup, logout, tiga JSON API
+auth Go. Root menuju Beranda/Login. Halaman bisnis database/admin belum final.
 
-Checkpoint berikutnya: setujui P0 dan payload/status dengan BE; buat JSON adapter;
-implementasi Login, sesi, guard dan pembersihan cache saat logout/401; kemudian
-selesaikan satu alur database desktop menggunakan data nyata.
+Checkpoint berikutnya: JSON database list → schema → table detail/pagination,
+dengan grant view/edit serta empty/loading/error state dari data nyata.
+
+Auth error: 400 INVALID_INPUT, 401 INVALID_CREDENTIALS/UNAUTHENTICATED/
+SESSION_EXPIRED, 403 ORIGIN_REJECTED/CSRF_INVALID, 415 JSON_REQUIRED,
+503 LOGIN_UNAVAILABLE/SESSION_UNAVAILABLE, 500 LOGOUT_FAILED. Respons error
+menggunakan `{error: {code, message}}`; validasi field kosong dilakukan juga
+di FE. Logout gagal jaringan mempertahankan sesi agar bisa dicoba lagi;
+LOGOUT_FAILED berarti cookie sudah dihapus tetapi revocation server gagal.

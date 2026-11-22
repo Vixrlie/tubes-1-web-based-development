@@ -1,5 +1,8 @@
 # Pathgres Design System
 
+Standar feedback error (Alert): background `error-100`, teks `error-500`,
+font-weight 400 (tanpa bold). Berlaku pada komponen Alert di katalog dan produk.
+
 ## Komponen workspace desktop
 
 Contoh interaktif ada di `/design-system/navigation`, melalui `src/catalog/NavigationCatalog.tsx`.
@@ -165,4 +168,6 @@ produk; khususnya drawer, modal, tabel mobile, tabs, dan SQL editor.
 
 Katalog dipindahkan dari App.tsx ke src/catalog/; empat URL tetap tersedia.
 Router dan provider berada di src/app/. Detail ada di [ARCHITECTURE.md](ARCHITECTURE.md)
-dan [mapping API](../docs/frontend/api-mapping.md). Halaman produk masih placeholder.
+dan [mapping API](../docs/frontend/api-mapping.md). Login dan Beranda kini memakai
+komponen katalog dengan sesi cookie Go. Database/admin masih placeholder terlindungi.
+Aset `login-background.png` adalah background asli Figma Login, disimpan lokal.

@@ -1,32 +1,38 @@
 # Struktur SPA Pathgres
 
-Tahap 1 memisahkan aplikasi/katalog dan memetakan API. Route produk masih
-placeholder tanpa autentikasi palsu, data privat, atau request otomatis.
+SPA memiliki Login, Beranda dan application shell dengan sesi cookie Go asli.
+Halaman database/admin masih placeholder terlindungi; katalog tetap publik.
 
 | Lokasi | Tanggung jawab |
 | --- | --- |
 | `src/App.tsx` | Composition root: error boundary, providers, router |
 | `src/app/router.tsx` | Satu pohon route produk dan katalog |
 | `src/app/routes.ts` | Browser URL builders; encode identifier |
-| `src/app/providers.tsx` | BrowserRouter dan QueryClientProvider stabil per mount |
+| `src/app/providers.tsx` | BrowserRouter, QueryClientProvider dan SessionProvider |
 | `src/app/query-client.ts` | Cache/retry policy |
 | `src/app/layouts/` | Auth, app shell, database, admin |
 | `src/catalog/` | Empat halaman katalog, layout dan CSS sendiri |
 | `src/design-system/` | Komponen reusable yang sudah dibuat |
 | `src/shared/api/` | Transport JSON dan normalisasi error |
+| `src/features/auth/` | Login, parser DTO, controller sesi, provider dan guards |
+| `src/features/home/` | Beranda desktop berdasarkan Figma, shortcut sesuai role |
 | `src/pages/` | Placeholder dan 404 |
-| `tests/` | Transport dan URL tests tanpa network/database |
+| `tests/` | Transport, URL dan siklus sesi tanpa network/database |
 
-Folder fitur `features/auth`, `features/databases`, `features/migrations`, dan
-`features/admin` dibuat ketika fiturnya mulai diimplementasikan. Data contoh
+Folder `features/databases`, `features/migrations`, dan `features/admin`
+dibuat ketika fiturnya mulai diimplementasikan. Data contoh
 katalog tidak boleh menjadi sumber sesi/data produk.
 
 ## Routing
 
-- `/` tetap redirect ke `/design-system/foundations` sampai Login/sesi siap.
+- `/` menuju `/home`; tanpa sesi diarahkan ke `/login`.
 - Empat URL katalog tetap tersedia melalui nested routes, Outlet dan lazy imports.
-- `/login`, `/home`, `/databases`, `/databases/:connectionId/*`, `/admin/*`
-  diregistrasikan sebagai placeholder. Belum ada session/role guard.
+- `/login` memakai guest guard; pengguna yang sudah masuk kembali ke tujuan
+  internal sebelumnya atau `/home`.
+- `/home`, `/databases`, `/databases/:connectionId/*`, `/admin/*` memerlukan
+  sesi aktif. `/admin/*` juga memerlukan flag `isPlatformAdmin` dari server.
+- Guard menunggu pemeriksaan sesi; gangguan server menampilkan retry, bukan
+  dianggap sebagai sesi berakhir. Non-admin yang membuka Admin melihat 403 UI.
 - Header/sidebar produk memakai router navigation, bukan pergantian demo state.
 - URL tabel memisahkan schema/table; URL backend dipetakan di adapter API kelak.
 - Alamat tidak dikenal menampilkan 404.
@@ -56,12 +62,18 @@ const result = await api.request<DatabaseListDto>('/databases', {
 })
 ```
 
-Generic client bukan validasi runtime. Per fitur, tambahkan parser DTO, fungsi API,
-dan query/mutation hooks setelah kontrak final. Session provider berikutnya harus
-membersihkan cache privat saat logout/401/pergantian akun. Otorisasi tetap server.
+Generic client bukan validasi runtime. Auth memvalidasi DTO melalui `parseSession`.
+Per fitur berikutnya, tambahkan parser DTO dan query/mutation hooks. Gunakan
+`useSession().session.api` untuk request bisnis: 401 membersihkan sesi dan cache.
+Controller mengabaikan respons sesi/401 dari generasi akun sebelumnya.
+Logout, pergantian akun/role, sesi kedaluwarsa dan kegagalan pemeriksaan sesi
+membersihkan cache privat. Cookie HttpOnly tetap dikelola browser; CSRF hanya
+di memori. Pemeriksaan ulang saat fokus/visibility tidak memakai polling yang
+memperpanjang idle timeout. Otorisasi sebenarnya tetap di server.
 
 Lihat [mapping UI/API/Role](../docs/frontend/api-mapping.md). Proxy Vite tidak
-diubah: `/api` diteruskan ke Go 8080 tanpa rewrite, JSON adapter belum tersedia.
+diubah: `/api` diteruskan ke Go 8080 tanpa rewrite. Tiga endpoint auth JSON
+tersedia di `internal/auth/api.go`; adapter database/admin belum tersedia.
 
 ## Pemeriksaan
 

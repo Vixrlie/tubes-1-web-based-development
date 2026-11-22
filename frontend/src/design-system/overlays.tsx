@@ -22,14 +22,14 @@ export function ConfirmationModal({ open, onClose, onConfirm, title, children, d
   return <Modal open={open} onClose={onClose} title={title} footer={<><Button variant="secondary" onClick={onClose}>Batal</Button><Button variant={destructive ? 'destructive' : 'primary'} onClick={onConfirm}>{confirmLabel}</Button></>}>{children}</Modal>
 }
 
-export function ProfilePopup({ name, email, onLogout }: { name: string; email: string; onLogout: () => void }) {
+export function ProfilePopup({ name, email, onLogout, loading = false }: { name: string; email: string; onLogout: () => void; loading?: boolean }) {
   const ref = useRef<HTMLDetailsElement>(null)
   useEffect(() => {
     function close(event: PointerEvent) { if (!ref.current?.contains(event.target as Node)) ref.current?.removeAttribute('open') }
     document.addEventListener('pointerdown', close)
     return () => document.removeEventListener('pointerdown', close)
   }, [])
-  return <details className="ds-profile" ref={ref} onKeyDown={event => { if (event.key === 'Escape') { ref.current?.removeAttribute('open'); ref.current?.querySelector('summary')?.focus() } }}><summary aria-label={`Profil ${name}`}><span className="ds-avatar">{name.split(' ').map(part => part[0]).slice(0, 2).join('')}</span></summary><div className="ds-profile-popup"><strong>{name}</strong><small>{email}</small><hr /><Button variant="tertiary" onClick={() => { ref.current?.removeAttribute('open'); onLogout() }}>Keluar</Button></div></details>
+  return <details className="ds-profile" ref={ref} onKeyDown={event => { if (event.key === 'Escape') { ref.current?.removeAttribute('open'); ref.current?.querySelector('summary')?.focus() } }}><summary aria-label={`Profil ${name}`}><span className="ds-avatar">{name.split(' ').map(part => part[0]).slice(0, 2).join('')}</span></summary><div className="ds-profile-popup"><strong>{name}</strong><small>{email}</small><hr /><Button variant="tertiary" loading={loading} onClick={() => { ref.current?.removeAttribute('open'); onLogout() }}>Keluar</Button></div></details>
 }
 
 export function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
