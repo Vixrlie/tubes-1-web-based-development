@@ -2,6 +2,12 @@
 
 Standar feedback error (Alert): background `error-100`, teks `error-500`,
 font-weight 400 (tanpa bold). Berlaku pada komponen Alert di katalog dan produk.
+Teks Alert info memakai `primary-500`, success `success-500`, dan warning
+`warning-500`; background soft masing-masing tetap dipertahankan.
+
+Drawer navigasi produk memakai logo Pathgres lokal pada heading, bukan teks
+"Navigasi". Menu mobile tersedia juga di Admin dan Beranda. Sidebar Admin tampil
+mulai 1024px; pada layar lebih kecil menu administrasi dipindahkan ke drawer.
 
 ## Komponen workspace desktop
 
@@ -12,7 +18,7 @@ mobile-first mengikuti frame final mobile dan desktop, memakai komponen yang sam
 | Komponen | API utama dan perilaku |
 | --- | --- |
 | ProductHeader | `active`, `onNavigate`, `profile`, `showAdmin`; pilihan Database/Admin dengan state aktif |
-| DatabaseSidebar | `database`, `schemas`, `selection`, `onSelect`, `loading`; schema dapat dibuka/tutup, tabel dan Migrasi dapat dipilih |
+| DatabaseSidebar | `database`, `schemas`, `selection`, `onSelect`, `loading`; `variant="schema"`, `activeSchema`, `onSelectSchema` untuk explorer; schema dapat dibuka/tutup, tabel dan Migrasi dapat dipilih |
 | AdminSidebar | `active`, `onNavigate`; Pengguna, Grup, Koneksi Database |
 | DatabaseCard | Default katalog; `variant="workspace"` untuk tile responsif produk, `readOnly`, `connectionError`, `onReconnect`; Buka nonaktif saat terputus |
 | TableCard | `name`, `columnCount`, `primaryKey`, `permission`, `onOpen`, `disabled`; seluruh kartu dapat diklik |

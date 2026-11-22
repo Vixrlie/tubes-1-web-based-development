@@ -1,11 +1,10 @@
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { AdminSidebar } from '../../design-system'
-import { paths } from '../routes'
+import { useEffect, useRef } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
+import { AdminWorkspaceNavigation } from '../../features/admin/AdminWorkspaceNavigation'
 
 export default function AdminLayout() {
   const { pathname } = useLocation()
-  const navigate = useNavigate()
-  const active = pathname.startsWith(paths.users) ? 'users' : pathname.startsWith(paths.groups) ? 'groups' : pathname.startsWith(paths.connections) ? 'connections' : undefined
-  return <div className="app-workspace"><aside><NavLink className="app-admin-overview" to={paths.admin} end>Dashboard</NavLink>
-    <AdminSidebar active={active} onNavigate={destination => navigate(paths[destination])} /></aside><div><Outlet /></div></div>
+  const contentRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (contentRef.current) contentRef.current.scrollTop = 0 }, [pathname])
+  return <div className="app-workspace"><aside><AdminWorkspaceNavigation /></aside><div className="app-admin-content" ref={contentRef} role="region" aria-label="Konten administrasi" tabIndex={0}><Outlet /></div></div>
 }

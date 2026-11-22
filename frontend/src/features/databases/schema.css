@@ -1,0 +1,79 @@
+/* Mobile-first Schema Explorer; desktop is an enhancement of the same data. */
+.app-shell--database-workspace { background: linear-gradient(119deg, var(--primary-50) 13.366%, var(--primary-200) 75.709%); }
+.app-shell--database-workspace > .ds-header { position: sticky; top: 0; z-index: 35; }
+.app-shell--database-workspace .ds-logo { width: 128px; height: auto; }
+.app-shell--database-workspace .ds-profile summary { display: grid; place-items: center; min-width: 44px; min-height: 44px; }
+.app-shell--database-workspace .ds-avatar { width: 38px; height: 38px; }
+.app-shell--database-workspace .app-content { max-width: 1728px; padding: 22px 16px calc(96px + env(safe-area-inset-bottom)); }
+.schema-workspace, .schema-content, .schema-explorer { min-width: 0; }
+.schema-sidebar, .schema-desktop-table { display: none; }
+.schema-back { display: flex; align-items: center; gap: 9px; min-height: 44px; padding-left: 3px; margin-bottom: 16px; font-size: 13px; font-weight: 600; color: var(--neutral-700); text-decoration: none; }
+.schema-back > span { width: 26px; font-size: 22px; color: var(--primary-500); text-align: center; }
+.schema-explorer { display: grid; gap: 16px; }
+.schema-heading h1 { font-size: 23px; line-height: 1.5; overflow-wrap: anywhere; }
+.schema-heading p { margin-top: 16px; font-size: 11.5px; line-height: 1.5; color: var(--neutral-700); overflow-wrap: anywhere; }
+.schema-heading a { color: inherit; text-decoration: none; }
+.schema-heading a:hover { text-decoration: underline; }
+.schema-explorer h2 { font-size: 16px; line-height: 26px; margin-bottom: 16px; }
+.schema-mobile-rows { display: grid; gap: 16px; }
+.schema-mobile-rows .ds-table-card { min-height: 76px; padding: 14px 16px; border-radius: 12px; }
+.schema-mobile-rows .ds-table-card .ds-stack { gap: 7px; }
+.schema-mobile-rows .ds-table-card strong { font-size: 14px; line-height: 1.5; }
+.schema-mobile-rows .ds-table-card .ds-muted { font-size: 12px; line-height: 1.5; }
+.schema-relation-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 76px; padding: 14px 16px; border: 1px solid var(--neutral-100); border-radius: 12px; background: var(--surface); color: var(--text); text-decoration: none; }
+.schema-relation-card > span { display: grid; gap: 7px; min-width: 0; overflow-wrap: anywhere; }
+.schema-relation-card strong { font-size: 14px; line-height: 1.5; font-weight: 600; }
+.schema-relation-card > span > span { color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.schema-relation-card > svg { color: var(--primary-500); flex-shrink: 0; }
+.schema-relation-card:hover { border-color: var(--primary-500); }
+.schema-mobile-actions { display: grid; gap: 12px; padding-top: 8px; }
+.schema-mobile-actions h2 { margin-bottom: 0; }
+.schema-mobile-actions > p { font-size: 12px; color: var(--text-muted); }
+.schema-mobile-actions > .ds-button { width: 100%; min-height: 48px; font-size: 15px; }
+.schema-compare-link { background: var(--primary-50); border-color: var(--primary-200); }
+.schema-state, .schema-pending-page { display: grid; justify-items: start; gap: 16px; }
+.schema-pending-page h1 { font-size: 23px; overflow-wrap: anywhere; }
+.schema-drawer-tree { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
+.schema-drawer-tree .ds-sidebar { padding: 0; }
+.schema-sidebar-divider { display: block; margin: 12px 16px 16px; }
+@media (min-width: 1024px) {
+  .app-shell--database-workspace { display: flex; flex-direction: column; height: 100dvh; min-height: 0; overflow: hidden; background: linear-gradient(152deg, var(--primary-50) 13.366%, var(--primary-200) 75.709%); }
+  .app-shell--database-workspace > .ds-header { position: relative; flex-shrink: 0; }
+  .app-shell--database-workspace .ds-logo { width: 191px; height: 44px; }
+  .app-shell--database-workspace .ds-avatar { width: 48px; height: 48px; }
+  .app-shell--database-workspace .app-content { display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%; max-width: none; padding: 18px 0 18px 24px; overflow: hidden; }
+  .app-shell--database-workspace .app-content > .ds-alert { flex-shrink: 0; margin-bottom: 16px; }
+  .app-shell--database-workspace .app-content > .schema-state { min-height: 0; overflow-y: auto; }
+  .schema-workspace { display: grid; flex: 1; min-height: 0; grid-template-columns: 276px minmax(0, 1fr); gap: 32px; align-items: stretch; }
+  .schema-sidebar { display: block; background: var(--surface); border: 1px solid var(--neutral-100); border-radius: 24px; min-height: 0; padding: 17px; overflow: clip; }
+  .schema-sidebar .ds-sidebar { padding: 16px 0; }
+  .schema-sidebar .ds-eyebrow { padding: 0 16px; letter-spacing: .6px; }
+  .schema-sidebar .ds-sidebar-item { min-height: 45px; }
+  .schema-sidebar .ds-sidebar-item--nested { padding-left: 48px; }
+  .schema-content { min-height: 0; padding: 22px 32px 0 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; }
+  .schema-back, .schema-mobile-rows, .schema-mobile-actions { display: none; }
+  .schema-explorer { gap: 32px; }
+  .schema-heading h1 { font-size: 36px; color: #0a1933; }
+  .schema-heading p { font-size: 12px; color: var(--neutral-500); margin-top: 0; }
+  .schema-tables-section, .schema-relations-section { background: var(--surface); padding: 24px; border-radius: 20px; min-width: 0; }
+  .schema-relations-section { border-radius: 28px; }
+  .schema-explorer h2 { margin-bottom: 14px; line-height: 24px; }
+  .schema-relations-section h2 { font-size: 18px; }
+  .schema-desktop-table { display: block; }
+  .schema-desktop-table .ds-table { table-layout: fixed; }
+  .schema-desktop-table .ds-table th { font-size: 12px; background: transparent; padding: 10px 12px; border-color: var(--border); }
+  .schema-desktop-table .ds-table td { height: 72px; padding: 10px 12px; overflow-wrap: anywhere; border-color: var(--border); }
+  .schema-table-name, .schema-open-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--text); text-decoration: none; }
+  .schema-table-name { font-weight: 600; }
+  .schema-table-name:hover, .schema-open-link:hover { color: var(--primary-500); text-decoration: underline; }
+  .schema-desktop-table .ds-tone--info { --tone-bg: var(--primary-100); }
+  .schema-reference { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; }
+  .schema-reference:hover .ds-badge { text-decoration: underline; }
+  .schema-relations-section th:first-child { width: 45%; }
+}
+/* Keep navigation usable between mobile and full sidebar widths. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app-shell--database-workspace .ds-logo { width: 191px; height: 44px; }
+  .app-shell--database-workspace .ds-menu-trigger { display: inline-flex; }
+  .app-shell--database-workspace .schema-mobile-rows .ds-table-card { padding: 14px 16px; }
+}

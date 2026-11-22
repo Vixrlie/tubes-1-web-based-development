@@ -11,8 +11,8 @@ adalah fixture FE; tidak mengirim request `/api/databases` atau koneksi target.
 
 - `shop_db`, `inventory_db`, `analytics_db`: Terhubung, View + Edit.
 - `hr_db`: Gagal terhubung, View Only, pesan error soft red dengan teks error-500.
-- Buka berpindah lewat React Router ke `/databases/mock-…/schema`; tujuan masih
-  placeholder. Tidak ada implementasi schema/table yang diklaim selesai.
+- Buka berpindah lewat React Router ke `/databases/mock-…/schema`; Schema Explorer
+  sudah tersedia. Detail tabel masih disiapkan pada tahap berikutnya.
 - Coba lagi menjalankan loading lokal lalu kembali ke state gagal. Tidak
   memalsukan koneksi berhasil atau mengubah database target.
 - Keterangan teknis mock hanya dicatat di dokumentasi; halaman tidak menampilkan

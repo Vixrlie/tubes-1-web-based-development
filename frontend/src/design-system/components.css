@@ -64,6 +64,10 @@
 .ds-choice input { accent-color: var(--primary-500); width: 18px; height: 18px; }
 .ds-alert { border-radius: var(--radius-control); padding: var(--space-16); background: var(--tone-bg); color: var(--tone-fg); }
 .ds-alert p { margin-top: var(--space-4); }
+.ds-alert[class*="ds-tone--"] p { color: inherit; }
+.ds-alert.ds-tone--info { --tone-fg: var(--primary-500); }
+.ds-alert.ds-tone--success { --tone-fg: var(--success-500); }
+.ds-alert.ds-tone--warning { --tone-fg: var(--warning-500); }
 .ds-alert.ds-tone--error { --tone-bg: var(--error-100); --tone-fg: var(--error-500); }
 .ds-alert.ds-tone--error > strong { font-weight: 400; }
 .ds-alert.ds-tone--warning { background: var(--warning-50); }

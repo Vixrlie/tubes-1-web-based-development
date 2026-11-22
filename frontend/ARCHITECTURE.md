@@ -1,8 +1,8 @@
 # Struktur SPA Pathgres
 
 SPA memiliki Login, Beranda dan application shell dengan sesi cookie Go asli.
-Database List responsif memakai mock data terpisah; detail database/admin masih
-placeholder terlindungi. Katalog tetap publik.
+Database List dan Schema Explorer responsif memakai mock data terpisah. Detail
+tabel, migrasi dan admin masih placeholder terlindungi. Katalog tetap publik.
 
 | Lokasi | Tanggung jawab |
 | --- | --- |
@@ -17,7 +17,7 @@ placeholder terlindungi. Katalog tetap publik.
 | `src/shared/api/` | Transport JSON dan normalisasi error |
 | `src/features/auth/` | Login, parser DTO, controller sesi, provider dan guards |
 | `src/features/home/` | Beranda desktop berdasarkan Figma, shortcut sesuai role |
-| `src/features/databases/` | Database List, model dan source mock yang bisa diganti API |
+| `src/features/databases/` | Database List, Schema Explorer, sidebar, model dan source mock yang bisa diganti API |
 | `src/pages/` | Placeholder dan 404 |
 | `tests/` | Transport, URL dan siklus sesi tanpa network/database |
 
@@ -25,6 +25,11 @@ Folder `features/migrations` dan `features/admin` dibuat ketika fiturnya dimulai
 Fixture database berada di `features/databases/mock-source.ts`, terpisah dari
 katalog dan sesi. Query key memuat mode mock; fixture bukan bukti grant backend.
 Adapter `DatabaseSource` menerima AbortSignal agar request batal saat navigasi.
+`SchemaSource` memakai model workspace/schema/table/FK. `DatabaseLayout` mengambil
+query workspace dan membagikannya ke halaman anak melalui Outlet context.
+Drawer memakai query key yang sama; query dideduplikasi. Schema terpilih berasal
+dari `?schema=...`; tabel terpilih berasal dari path. Cache berbeda per connection
+ID dan skenario preview, dan ikut dibersihkan oleh pengelola sesi yang sudah ada.
 
 ## Routing
 

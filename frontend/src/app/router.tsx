@@ -12,6 +12,8 @@ import { AdminGate, SessionGate } from '../features/auth/guards'
 import LoginPage from '../features/auth/LoginPage'
 import HomePage from '../features/home/HomePage'
 import DatabaseListPage from '../features/databases/DatabaseListPage'
+import SchemaExplorerPage from '../features/databases/SchemaExplorerPage'
+import TableDetailPendingPage from '../features/databases/TableDetailPendingPage'
 
 const CatalogLayout = lazy(() => import('../catalog/CatalogLayout'))
 const FoundationsPage = lazy(() => import('../catalog/FoundationsPage'))
@@ -35,9 +37,9 @@ export function AppRouter() {
       <Route path="/home" element={<HomePage />} />
       <Route path="/databases" element={<DatabaseListPage />} />
       <Route path="/databases/:connectionId" element={<DatabaseLayout />}>
-        <Route index element={<RoutePlaceholder title="Ringkasan database" />} />
-        <Route path="schema" element={<RoutePlaceholder title="Schema Explorer" />} />
-        <Route path="schemas/:schemaName/tables/:tableName" element={<RoutePlaceholder title="Detail tabel" />} />
+        <Route index element={<SchemaExplorerPage />} />
+        <Route path="schema" element={<SchemaExplorerPage />} />
+        <Route path="schemas/:schemaName/tables/:tableName" element={<TableDetailPendingPage />} />
         <Route path="migrations" element={<RoutePlaceholder title="Migrasi" />} />
         <Route path="migrations/new" element={<RoutePlaceholder title="Buat migrasi" />} />
         <Route path="migrations/diff" element={<RoutePlaceholder title="Schema Diff" />} />

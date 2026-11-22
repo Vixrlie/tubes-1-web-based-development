@@ -1,11 +1,24 @@
-import { NavLink, Outlet, useParams } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
+import { Alert, Button, Card, Spinner } from '../../design-system'
 import { paths } from '../routes'
+import { useDatabaseWorkspaceQuery } from '../../features/databases/useDatabaseWorkspace'
+import { SchemaSourceError, withWorkspacePreview } from '../../features/databases/schema-source'
+import { WorkspaceSidebar } from '../../features/databases/WorkspaceNavigation'
+import '../../features/databases/schema.css'
 
 export default function DatabaseLayout() {
   const { connectionId = '' } = useParams()
-  return <div><nav className="app-section-navigation" aria-label="Workspace database">
-    <NavLink to={paths.database(connectionId)} end>Ringkasan</NavLink>
-    <NavLink to={paths.schema(connectionId)}>Schema</NavLink>
-    <NavLink to={paths.migrations(connectionId)}>Migrasi</NavLink>
-  </nav><Outlet /></div>
+  const { pathname, search } = useLocation()
+  const contentRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (contentRef.current) contentRef.current.scrollTop = 0 }, [pathname, search])
+  const query = useDatabaseWorkspaceQuery(connectionId)
+  if (query.isPending) return <Card className="schema-state"><Spinner label="Memuat schema database" /><p>Memuat schema…</p></Card>
+  if (query.isError || !query.data) {
+    const error = query.error
+    const retryable = !(error instanceof SchemaSourceError) || error.code === 'unavailable'
+    return <Card className="schema-state"><Alert tone="error" title={error instanceof SchemaSourceError && error.code === 'not-found' ? 'Database tidak ditemukan' : error instanceof SchemaSourceError && error.code === 'denied' ? 'Akses ditolak' : 'Schema belum dapat dimuat'}>{error?.message}</Alert>{retryable && <Button variant="secondary" loading={query.isFetching} onClick={() => { void query.refetch() }}>Coba lagi</Button>}<Link to={paths.databases}>Kembali ke daftar database</Link></Card>
+  }
+  const explorer = pathname === paths.schema(connectionId) || pathname === paths.database(connectionId)
+  return <div className="schema-workspace"><aside className="schema-sidebar"><WorkspaceSidebar workspace={query.data} preview={query.preview} /></aside><div ref={contentRef} className="schema-content" role="region" aria-label="Konten database" tabIndex={0}><Link className="schema-back" to={explorer ? paths.databases : withWorkspacePreview(paths.schema(connectionId), query.preview)}><span aria-hidden="true">←</span>Kembali</Link><Outlet context={{ workspace: query.data, preview: query.preview }} /></div></div>
 }

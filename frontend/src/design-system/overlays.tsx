@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Button, IconButton } from './primitives'
 
-export function Modal({ open, onClose, title, children, footer, drawer = false }: { open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode; drawer?: boolean }) {
+export function Modal({ open, onClose, title, children, footer, drawer = false }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; drawer?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null); const headingId = useId()
   useEffect(() => {
     const dialog = ref.current

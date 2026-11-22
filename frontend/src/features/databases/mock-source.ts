@@ -12,7 +12,7 @@ export type DatabasePreview = 'ready' | 'loading' | 'empty' | 'error'
 export function databasePreview(value: string | null): DatabasePreview {
   return value === 'loading' || value === 'empty' || value === 'error' ? value : 'ready'
 }
-function wait(signal: AbortSignal, delay: number) {
+export function waitForMock(signal: AbortSignal, delay: number) {
   return new Promise<void>((resolve, reject) => {
     if (signal.aborted) { reject(signal.reason ?? new DOMException('Dibatalkan', 'AbortError')); return }
     const abort = () => { clearTimeout(timer); reject(signal.reason ?? new DOMException('Dibatalkan', 'AbortError')) }
@@ -24,12 +24,12 @@ function wait(signal: AbortSignal, delay: number) {
 export function createMockDatabaseSource(preview: DatabasePreview = 'ready', delay = 350): DatabaseSource {
   return {
     async list(signal) {
-      await wait(signal, delay)
+      await waitForMock(signal, delay)
       if (preview === 'error') throw new Error('Daftar database belum dapat dimuat. Silakan coba lagi.')
       return preview === 'empty' ? [] : fixtures.map(database => ({ ...database }))
     },
     async reconnect(id, signal) {
-      await wait(signal, delay + 300)
+      await waitForMock(signal, delay + 300)
       const database = fixtures.find(item => item.id === id)
       if (!database) throw new Error('Database tidak ditemukan.')
       if (database.status === 'disconnected') throw new Error(connectionErrorMessage)
