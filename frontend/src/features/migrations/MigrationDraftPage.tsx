@@ -8,6 +8,7 @@ import DraftSummary from './DraftSummary'
 import { isEditable, latestJob, latestReview, workflowStates } from './workflow-model'
 import { WorkflowBadge } from './WorkflowUI'
 import { useWorkflowAction } from './useWorkflowAction'
+import OperationNotice from './OperationNotice'
 import './drafts.css'
 
 export default function MigrationDraftPage() {
@@ -30,6 +31,8 @@ export default function MigrationDraftPage() {
     <div className="draft-workspace"><DraftSummary database={database.name} version={draft.version} author={draft.author} status={draft.status} />
       <Card className="draft-detail"><div className="draft-detail-title"><h2>{draft.name}</h2><WorkflowBadge status={draft.status} /></div>
         <p className="draft-updated">Terakhir disimpan: <time dateTime={draft.updatedAt}>{new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(draft.updatedAt))}</time></p>
+        <OperationNotice intent={draft.intent} />
+        <Link className="ds-button ds-button--secondary ds-button--sm" to={withMigrationSearch(paths.previewMigration(database.id, draft.id), params)}>Preview SQL & EXPLAIN</Link>
         <SqlPreview value={draft.sqlUp} label="SQL UP" />
         {draft.irreversible ? <Alert tone="warning" title="Migrasi irreversible">Draft ini tidak menyediakan SQL Down untuk rollback.</Alert> : <SqlPreview value={draft.sqlDown} label="SQL DOWN · ROLLBACK" />}
         {draft.status === 'rejected' && <Alert tone="error" title="Pengajuan ditolak">Perbaiki draft lalu ajukan review ulang.</Alert>}

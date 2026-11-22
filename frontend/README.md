@@ -33,7 +33,10 @@ backend dapat menyiapkan admin jika belum ada, bukan mengganti password akun lam
 | /databases/:connectionId/migrations/drafts/:draftId[/edit] | detail/edit draft pada tab browser yang sama |
 | /databases/:connectionId/migrations/reviews[/:draftId] | daftar/detail review, approve/reject per grup dan alasan |
 | /databases/:connectionId/migrations/queue[/:jobId] | antrean, timeline, batch progress, retry/cancel mock |
-| /databases/:connectionId/migrations/diff, /databases/:connectionId/migrations/:id/preview, /admin | placeholder terlindungi; Admin hanya admin platform |
+| /databases/:connectionId/migrations/diff | bandingkan dua schema, pilih perubahan dan buat draft |
+| /databases/:connectionId/migrations/drafts/:draftId/preview | preview SQL dan EXPLAIN fixture |
+| /databases/:connectionId/migrations/explain | editor dan execution plan fixture |
+| /admin | placeholder terlindungi; Admin hanya admin platform |
 
 ## Pemeriksaan
 
@@ -76,3 +79,4 @@ Test backend (tanpa database, httptest):
 - [Migration History: batas mock dan QA](../docs/frontend/migration-history-qa.md)
 - [Buat Migrasi dan Draft: batas mock dan QA](../docs/frontend/migration-draft-qa.md)
 - [Review, Queue dan Progress: batas mock dan QA](../docs/frontend/migration-workflow-qa.md)
+- [Schema Diff, EXPLAIN dan Recovery: batas mock dan QA](../docs/frontend/schema-tools-recovery-qa.md)

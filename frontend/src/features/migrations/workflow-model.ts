@@ -4,7 +4,7 @@ import type { Execution } from './migration-source.ts'
 export type WorkflowStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'queued' | 'running' | 'success' | 'failed'
 export type ReviewGroup = { id: string; name: string; permission: 'view' | 'edit'; status: 'pending' | 'approved' | 'rejected'; actor?: string; reason?: string; decidedAt?: string }
 export type ReviewRound = { id: string; revision: number; submittedAt: string; groups: ReviewGroup[] }
-export type MigrationJob = { id: string; executionId: string; status: 'queued' | 'running' | 'success' | 'failed' | 'canceled'; queuedAt: string; scheduledAt: string; startedAt?: string; finishedAt?: string; actor: string; totalBatches: number; completedBatches: number; outcome: 'success' | 'failed'; attempt: number; error?: string }
+export type MigrationJob = { id: string; executionId: string; status: 'queued' | 'running' | 'success' | 'failed' | 'canceled'; queuedAt: string; scheduledAt: string; startedAt?: string; finishedAt?: string; actor: string; totalBatches: number; completedBatches: number; startBatch?: number; failAfter?: number; outcome: 'success' | 'failed'; attempt: number; error?: string }
 export type WorkflowAction = { type: 'submit' } | { type: 'decide'; reviewId: string; groupId: string; decision: 'approved' | 'rejected'; reason: string } | { type: 'enqueue' | 'retry' } | { type: 'cancel'; jobId: string }
 export const reviewGroups = [
   { id: 'backend', name: 'Backend Team', permission: 'edit' },
@@ -20,14 +20,15 @@ export const workflowStates = {
 export const batchDurationMs = 250
 export const failureBatch = 42
 export function shortJobId(id: string) { return id.slice(0, 12).toUpperCase() }
-export function jobEnd(job: MigrationJob) { return Date.parse(job.scheduledAt) + (job.outcome === 'failed' ? failureBatch + 1 : job.totalBatches) * batchDurationMs }
+export function failureCheckpoint(job: MigrationJob) { return Math.min(job.totalBatches - 1, Math.max(job.startBatch ?? 0, job.failAfter ?? failureBatch)) }
+export function jobEnd(job: MigrationJob) { return Date.parse(job.scheduledAt) + ((job.outcome === 'failed' ? failureCheckpoint(job) + 1 : job.totalBatches) - (job.startBatch ?? 0)) * batchDurationMs }
 export function advanceJob(job: MigrationJob, now: number): MigrationJob {
   if (job.status !== 'queued' && job.status !== 'running') return job
   const start = Date.parse(job.scheduledAt)
   if (now < start) return job
   const batches = Math.max(0, Math.floor((now - start) / batchDurationMs))
   const terminal = now >= jobEnd(job)
-  return { ...job, startedAt: job.scheduledAt, status: terminal ? job.outcome : 'running', completedBatches: Math.min(batches, job.outcome === 'failed' ? failureBatch : job.totalBatches), ...(terminal ? { finishedAt: new Date(jobEnd(job)).toISOString(), ...(job.outcome === 'failed' ? { error: 'Eksekusi terhenti pada batch 43. Periksa perubahan sebelum mengajukan retry.' } : {}) } : {}) }
+  return { ...job, startedAt: job.scheduledAt, status: terminal ? job.outcome : 'running', completedBatches: Math.min(Math.max(job.completedBatches, (job.startBatch ?? 0) + batches), job.outcome === 'failed' ? failureCheckpoint(job) : job.totalBatches), ...(terminal ? { finishedAt: new Date(jobEnd(job)).toISOString(), ...(job.outcome === 'failed' ? { error: `Eksekusi terhenti pada batch ${failureCheckpoint(job) + 1}. Periksa perubahan sebelum pemulihan.` } : {}) } : {}) }
 }
 export function advanceWorkflow(rows: MigrationDraft[], now: number): MigrationDraft[] {
   return rows.map(row => {
@@ -38,11 +39,11 @@ export function advanceWorkflow(rows: MigrationDraft[], now: number): MigrationD
   })
 }
 export function workflowExecutions(rows: MigrationDraft[]): Execution[] {
-  return rows.flatMap(row => (row.jobs ?? []).filter(job => job.status === 'success' || job.status === 'failed').map(job => ({ id: job.executionId, version: row.version, name: row.name, action: 'UP' as const, actor: job.actor, executedAt: job.finishedAt!, status: job.status as 'success' | 'failed', duration: `${((Date.parse(job.finishedAt!) - Date.parse(job.startedAt!)) / 1000).toLocaleString('id-ID')} detik`, sql: row.sqlUp, irreversible: row.irreversible, error: job.error }))).sort((a, b) => b.executedAt.localeCompare(a.executedAt))
+  return rows.flatMap(row => (row.jobs ?? []).filter(job => job.status === 'success' || job.status === 'failed').map(job => ({ id: job.executionId, version: row.version, name: row.name, action: row.intent?.kind === 'rollback' || row.intent?.kind === 'compensation' ? 'ROLLBACK' as const : row.intent?.kind === 'forward' ? 'FORWARD' as const : 'UP' as const, ...(row.intent?.kind === 'rollback' || row.intent?.kind === 'compensation' ? { rollbackTarget: row.intent.targetExecutionId } : {}), actor: job.actor, executedAt: job.finishedAt!, status: job.status as 'success' | 'failed', duration: `${((Date.parse(job.finishedAt!) - Date.parse(job.startedAt!)) / 1000).toLocaleString('id-ID')} detik`, sql: row.sqlUp, irreversible: row.irreversible, error: job.error }))).sort((a, b) => b.executedAt.localeCompare(a.executedAt))
 }
 export function latestReview(row: MigrationDraft) { return row.reviews?.at(-1) }
 export function latestJob(row: MigrationDraft) { return row.jobs?.at(-1) }
-export function isEditable(row: MigrationDraft) { return row.status === 'draft' || row.status === 'rejected' }
+export function isEditable(row: MigrationDraft) { return !row.intent && (row.status === 'draft' || row.status === 'rejected') }
 export function allApproved(row: MigrationDraft) { const round = latestReview(row); return !!round?.groups.length && round.groups.every(group => group.status === 'approved') }
 
 export function validReview(value: unknown): value is ReviewRound {
@@ -53,12 +54,12 @@ export function validReview(value: unknown): value is ReviewRound {
 export function validJob(value: unknown): value is MigrationJob {
   if (!value || typeof value !== 'object') return false
   const job = value as MigrationJob
-  return typeof job.id === 'string' && /^JOB-[\da-f-]{36}$/.test(job.id) && job.executionId === `E-${job.id.slice(4)}` && ['queued', 'running', 'success', 'failed', 'canceled'].includes(job.status) && ['success', 'failed'].includes(job.outcome) && typeof job.actor === 'string' && Number.isFinite(Date.parse(job.queuedAt)) && Number.isFinite(Date.parse(job.scheduledAt)) && job.totalBatches === 80 && Number.isSafeInteger(job.completedBatches) && job.completedBatches >= 0 && job.completedBatches <= job.totalBatches && Number.isSafeInteger(job.attempt) && job.attempt > 0
+  return typeof job.id === 'string' && /^JOB-[\da-f-]{36}$/.test(job.id) && job.executionId === `E-${job.id.slice(4)}` && ['queued', 'running', 'success', 'failed', 'canceled'].includes(job.status) && ['success', 'failed'].includes(job.outcome) && typeof job.actor === 'string' && Number.isFinite(Date.parse(job.queuedAt)) && Number.isFinite(Date.parse(job.scheduledAt)) && Number.isInteger(job.totalBatches) && job.totalBatches > 0 && job.totalBatches <= 80 && Number.isSafeInteger(job.completedBatches) && Number.isInteger(job.startBatch ?? 0) && (job.startBatch ?? 0) >= 0 && (job.startBatch ?? 0) < job.totalBatches && job.completedBatches >= (job.startBatch ?? 0) && job.completedBatches <= job.totalBatches && Number.isSafeInteger(job.attempt) && job.attempt > 0
     && (!['running', 'success', 'failed'].includes(job.status) || (!!job.startedAt && Number.isFinite(Date.parse(job.startedAt))))
     && (!['success', 'failed', 'canceled'].includes(job.status) || (!!job.finishedAt && Number.isFinite(Date.parse(job.finishedAt))))
-    && (job.status !== 'success' || (job.outcome === 'success' && job.completedBatches === 80))
-    && (job.status !== 'failed' || (job.outcome === 'failed' && job.completedBatches === failureBatch && typeof job.error === 'string'))
-    && (!['queued', 'canceled'].includes(job.status) || job.completedBatches === 0)
+    && (job.status !== 'success' || (job.outcome === 'success' && job.completedBatches === job.totalBatches))
+    && (job.status !== 'failed' || (job.outcome === 'failed' && job.completedBatches === failureCheckpoint(job) && typeof job.error === 'string'))
+    && (!['queued', 'canceled'].includes(job.status) || job.completedBatches === (job.startBatch ?? 0))
 }
 export function validWorkflow(row: MigrationDraft) {
   const reviews = row.reviews ?? []

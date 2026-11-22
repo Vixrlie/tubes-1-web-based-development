@@ -72,9 +72,9 @@
 .ds-alert[class*="ds-tone--"] p { color: inherit; }
 .ds-alert.ds-tone--info { --tone-fg: var(--primary-500); }
 .ds-alert.ds-tone--success { --tone-fg: var(--success-500); }
-.ds-alert.ds-tone--warning { --tone-fg: var(--warning-500); }
+.ds-alert.ds-tone--warning { --tone-fg: var(--warning-600); }
 .ds-alert.ds-tone--error { --tone-bg: var(--error-100); --tone-fg: var(--error-500); }
-.ds-alert.ds-tone--error > strong { font-weight: 400; }
+.ds-alert > strong { font-weight: 600; color: inherit; }
 .ds-alert.ds-tone--warning { background: var(--warning-50); }
 .ds-card { background: var(--surface); padding: var(--space-24); border: 1px solid var(--neutral-100); border-radius: var(--radius-card); min-width: 0; }
 .ds-card hr { margin: 0; border: 0; border-top: 1px solid var(--neutral-100); }

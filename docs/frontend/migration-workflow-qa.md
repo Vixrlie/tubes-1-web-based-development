@@ -35,8 +35,9 @@ memerlukan sesi login yang sama dengan halaman Database.
    membuat revision baru, semua approval direset. Alasan revisi lama tetap ada.
 8. Cancel hanya untuk queued; jika job sudah berjalan, dialog lama ditolak. Cancel
    tidak membuat hasil eksekusi dan mengembalikan migrasi ke Approved.
-9. Retry hanya untuk Failed dan SQL yang tetap dikunci dengan approval lengkap.
-   Attempt/Job ID baru; hasil gagal lama tetap tersimpan.
+9. Retry biasa hanya untuk Failed tanpa batch committed dan SQL yang tetap dikunci
+   dengan approval lengkap. Partial failure memakai Resume/Compensation dengan
+   persetujuan ulang. Attempt/Job ID baru; hasil gagal lama tetap tersimpan.
 
 ## Batas mock dan permission
 
@@ -60,8 +61,9 @@ AbortSignal, storage yang valid dan quota sebelum commit perubahan lokal.
 
 Default hasil job sukses. Untuk mencoba gagal saat dev, tambahkan
 `?jobOutcome=failed` pada URL review sebelum enqueue. Job menyimpan outcome itu,
-gagal pada batch43 dengan42 batch selesai. Hapus param sebelum **Ajukan Retry**
-untuk mencoba retry sukses. Parameter ini tidak digunakan oleh production build;
+gagal pada batch43 dengan42 batch selesai, untuk Resume/Compensation. Gunakan
+`?jobOutcome=error` untuk gagal0 batch dan mencoba Retry; hapus param sebelum retry
+agar hasil berikutnya sukses. Parameter ini tidak digunakan oleh production build;
 tidak ada kontrol teknis simulasi pada UI produk. Tidak ada parser SQL atau
 inferensi hasil eksekusi dari teks SQL.
 

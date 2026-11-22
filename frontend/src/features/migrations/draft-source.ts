@@ -4,9 +4,11 @@ import { waitForMock } from '../databases/mock-source.ts'
 import { createMockMigrationSource } from './migration-source.ts'
 import { advanceWorkflow, allApproved, isEditable, jobEnd, latestJob, latestReview, reviewGroups, validJob, validReview, validWorkflow, workflowStates } from './workflow-model.ts'
 import type { MigrationJob, ReviewRound, WorkflowAction, WorkflowStatus } from './workflow-model.ts'
+import { findExecution, operationEligibility, operationLabels, validIntent, validOperationReferences } from './operation-model.ts'
+import type { OperationIntent, OperationKind } from './operation-model.ts'
 
 export type DraftInput = { name: string; sqlUp: string; sqlDown: string; irreversible: boolean }
-export type MigrationDraft = DraftInput & { id: string; connectionId: string; ownerId: string; author: string; version: string; status: WorkflowStatus; createdAt: string; updatedAt: string; reviews?: ReviewRound[]; jobs?: MigrationJob[] }
+export type MigrationDraft = DraftInput & { id: string; connectionId: string; ownerId: string; author: string; version: string; status: WorkflowStatus; createdAt: string; updatedAt: string; reviews?: ReviewRound[]; jobs?: MigrationJob[]; intent?: OperationIntent }
 export type DraftErrors = Partial<Record<keyof DraftInput, string>>
 export type DraftStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'>
 const prefix = 'pathgres:mock-migration-drafts:v1:'
@@ -37,6 +39,7 @@ function isDraft(value: unknown, ownerId: string, connectionId: string): value i
     && (row.jobs === undefined || (Array.isArray(row.jobs) && row.jobs.every(validJob)))
     && (row.status === 'draft' || !!row.reviews?.length)
     && validWorkflow(row)
+    && (row.intent === undefined || validIntent(row.intent))
 }
 export function clearMockDraftStorage(storage: DraftStorage, exceptOwnerId?: string) {
   const keepPrefix = exceptOwnerId ? `${prefix}${encodeURIComponent(exceptOwnerId)}:` : undefined
@@ -49,8 +52,8 @@ export function browserDraftStorage(): DraftStorage {
 export function clearBrowserMockDrafts(exceptOwnerId?: string) {
   try { clearMockDraftStorage(browserDraftStorage(), exceptOwnerId) } catch { /* Storage can be unavailable; saving reports its own error. */ }
 }
-export function createMockDraftSource({ ownerId, author, storage, preview = 'ready', delay = 250, isActive = () => true, now = Date.now, outcome = 'success', reviewerGroupIds = preview === 'readonly' ? ['analytics'] : reviewGroups.map(group => group.id) }: {
-  ownerId: string; author: string; storage: () => DraftStorage; preview?: SchemaPreview; delay?: number; isActive?: () => boolean; now?: () => number; outcome?: 'success' | 'failed'; reviewerGroupIds?: string[]
+export function createMockDraftSource({ ownerId, author, storage, preview = 'ready', delay = 250, isActive = () => true, now = Date.now, outcome = 'success', failAfter, reviewerGroupIds = preview === 'readonly' ? ['analytics'] : reviewGroups.map(group => group.id) }: {
+  ownerId: string; author: string; storage: () => DraftStorage; preview?: SchemaPreview; delay?: number; isActive?: () => boolean; now?: () => number; outcome?: 'success' | 'failed'; failAfter?: number; reviewerGroupIds?: string[]
 }) {
   function active() { if (!ownerId || !isActive()) throw new Error('Sesi sudah berubah. Silakan masuk kembali.') }
   function read(connectionId: string): MigrationDraft[] {
@@ -59,7 +62,7 @@ export function createMockDraftSource({ ownerId, author, storage, preview = 'rea
     if (!json) return []
     let value: unknown
     try { value = JSON.parse(json) } catch { throw new Error('Draft tersimpan tidak dapat dibaca. Periksa penyimpanan browser.') }
-    if (!Array.isArray(value) || !value.every(row => isDraft(row, ownerId, connectionId))) throw new Error('Data draft tersimpan tidak valid.')
+    if (!Array.isArray(value) || !value.every(row => isDraft(row, ownerId, connectionId)) || !validOperationReferences(value)) throw new Error('Data draft tersimpan tidak valid.')
     const rows = advanceWorkflow(value, now())
     if (JSON.stringify(rows) !== json) write(connectionId, rows)
     return structuredClone(rows)
@@ -76,6 +79,23 @@ export function createMockDraftSource({ ownerId, author, storage, preview = 'rea
   return {
     reviewerGroupIds,
     list,
+    async requestOperation(connectionId: string, executionId: string, kind: OperationKind, signal: AbortSignal) {
+      await waitForMock(signal, delay)
+      const workspace = await createMockSchemaSource(preview, 0).load(connectionId, signal)
+      if (workspace.database.permission !== 'edit') throw new Error('Pemulihan memerlukan akses Edit.')
+      const rows = read(connectionId)
+      const eligibility = operationEligibility(rows, executionId, kind)
+      if (!eligibility.allowed) throw new Error(eligibility.reason)
+      const target = findExecution(rows, executionId)!
+      const originDraftId = target.row.intent?.originDraftId ?? target.row.id
+      const origin = rows.find(row => row.id === originDraftId)!
+      const reverse = kind === 'rollback' || kind === 'compensation'
+      const timestamp = new Date(now()).toISOString()
+      const row: MigrationDraft = { id: `draft-${crypto.randomUUID()}`, ownerId, connectionId, author, version: origin.version, name: `${operationLabels[kind]} · ${origin.name}`, sqlUp: reverse ? target.row.sqlDown : origin.sqlUp, sqlDown: reverse ? origin.sqlUp : origin.sqlDown, irreversible: !reverse && origin.irreversible, status: 'pending_review', createdAt: timestamp, updatedAt: timestamp, intent: { kind, originDraftId, targetDraftId: target.row.id, targetJobId: target.job.id, targetExecutionId: executionId, checkpoint: target.job.completedBatches, totalBatches: target.job.totalBatches }, reviews: [{ id: `review-${crypto.randomUUID()}`, revision: 1, submittedAt: timestamp, groups: reviewGroups.map(group => ({ ...group, status: 'pending' })) }] }
+      active(); if (signal.aborted) throw signal.reason
+      write(connectionId, [row, ...rows])
+      return structuredClone(row)
+    },
     async nextVersion(connectionId: string, signal: AbortSignal) {
       const drafts = await list(connectionId, signal)
       const history = await createMockMigrationSource('ready', preview, 0).list(connectionId, signal)
@@ -134,10 +154,13 @@ export function createMockDraftSource({ ownerId, author, storage, preview = 'rea
         row.status = 'approved'
       } else {
         if (row.status !== (action.type === 'retry' ? 'failed' : 'approved') || !allApproved(row)) throw new Error('Semua grup wajib menyetujui sebelum migrasi masuk antrean.')
+        if (action.type === 'retry' && (latestJob(row)?.completedBatches ?? 0) > 0) throw new Error('Gunakan Resume atau Compensation untuk kegagalan sebagian.')
+        if (row.intent) { const eligibility = operationEligibility(rows, row.intent.targetExecutionId, row.intent.kind, row.id); if (!eligibility.allowed) throw new Error(eligibility.reason) }
         const otherJobs = rows.flatMap(item => item.jobs ?? []).filter(job => job.status === 'queued' || job.status === 'running')
         const scheduledAt = new Date(Math.max(now() + 3000, ...otherJobs.map(job => jobEnd(job) + 1000))).toISOString()
         const id = crypto.randomUUID()
-        row.jobs = [...(row.jobs ?? []), { id: `JOB-${id}`, executionId: `E-${id}`, status: 'queued', queuedAt: timestamp, scheduledAt, actor: author, totalBatches: 80, completedBatches: 0, outcome, attempt: (latestJob(row)?.attempt ?? 0) + 1 }]
+        const startBatch = row.intent?.kind === 'resume' ? row.intent.checkpoint : 0
+        row.jobs = [...(row.jobs ?? []), { id: `JOB-${id}`, executionId: `E-${id}`, status: 'queued', queuedAt: timestamp, scheduledAt, actor: author, totalBatches: row.intent?.kind === 'compensation' ? row.intent.checkpoint : row.intent?.totalBatches ?? 80, completedBatches: startBatch, ...(startBatch ? { startBatch } : {}), ...(failAfter !== undefined ? { failAfter } : {}), outcome: row.intent ? 'success' : outcome, attempt: (latestJob(row)?.attempt ?? 0) + 1 }]
         row.status = 'queued'
       }
       row.updatedAt = timestamp

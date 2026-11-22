@@ -51,7 +51,7 @@ masih merupakan target integrasi dan harus ditegakkan server.
 | Connections | `/admin/connections`, `/new`, `/:connectionId[/edit]` | CRUD + test koneksi | Platform admin | HTML/form |
 | Review/approval | migrations + `/reviews[/:draftId]` (mock FE) | reviewer, threshold, alasan/transisi | Capability grup; kontrak API belum tersedia | Route tidak ditemukan pada handler yang diaudit |
 | Queue/batch | migrations + `/queue[/:jobId]` (mock FE) | job/progres/cancel/retry | Edit untuk mutasi; view untuk membaca | Route tidak ditemukan pada handler yang diaudit |
-| Rollback manual | Belum diregistrasikan | SQL Down/target execution | Belum ada kontrak | Route tidak ditemukan pada handler yang diaudit |
+| Rollback/forward/recovery | detail job/execution → review baru (mock FE) | SQL snapshot, target/checkpoint, approval baru | Edit; kontrak API belum ada | Route tidak ditemukan pada handler yang diaudit |
 
 `D = /databases/{connID}`, `M = D/migrations/{mID}`.
 History FE saat ini menautkan **execution ID** (E1048) pada segment
@@ -62,7 +62,8 @@ menyediakan list/detail read-only. Form baru dan detail/edit draft menggunakan
 adapter mock `draft-source.ts` dengan sessionStorage; route terpisah
 `migrations/drafts/:draftId[/edit]`. SQL Up/Down dan irreversible belum dikirim
 ke endpoint HTML lama. Review dan antrean aktif dengan state machine mock dan
-polling lokal; diff belum aktif. Capability grup reviewer masih fixture, bukan
+polling lokal; diff, EXPLAIN dan recovery juga memakai fixture FE. Tidak ada SQL
+bisnis yang dikirim ke server. Capability grup reviewer masih fixture, bukan
 grant server. Lihat [QA history](migration-history-qa.md),
 [QA draft](migration-draft-qa.md) dan [QA workflow](migration-workflow-qa.md).
 

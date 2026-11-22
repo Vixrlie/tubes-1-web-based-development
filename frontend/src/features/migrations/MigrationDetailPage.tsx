@@ -4,6 +4,7 @@ import { Alert, Badge, Button, Card, EmptyState, Spinner, SqlPreview } from '../
 import { paths } from '../../app/routes'
 import { executionAction, executionStatus, withMigrationSearch } from './migration-source'
 import { useMigrations } from './useMigrations'
+import RecoveryActions from './RecoveryActions'
 import './migrations.css'
 
 export default function MigrationDetailPage() {
@@ -37,6 +38,7 @@ function ExecutionDetail({ executionId }: { executionId: string }) {
       { label: 'Durasi', value: row.duration },
     ].map(item => <div key={item.label}><dt>{item.label}</dt><dd>{item.value}</dd></div>)}</dl>
     <Card className="migration-sql"><div><h2>SQL yang Dijalankan</h2><Button variant="secondary" size="sm" onClick={() => { void copySql() }}>{copyStatus === 'success' ? 'Tersalin' : 'Salin SQL'}</Button></div><SqlPreview value={row.sql} label={`${row.version} · ${row.name} · ${executionAction(row)}`} />{copyStatus === 'success' && <p role="status">SQL berhasil disalin.</p>}{copyStatus === 'error' && <Alert tone="error" title="SQL belum dapat disalin">Pilih teks SQL lalu salin secara manual.</Alert>}</Card>
+    <RecoveryActions executionId={row.id} />
     <div className="migration-detail-mobile-back">{historyLink}</div>
   </div>
 }

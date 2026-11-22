@@ -1,9 +1,9 @@
 # Pathgres Design System
 
 Standar feedback error (Alert): background `error-100`, teks `error-500`,
-font-weight 400 (tanpa bold). Berlaku pada komponen Alert di katalog dan produk.
+judul font-weight 600 (bold), isi font-weight normal. Berlaku pada komponen Alert di katalog dan produk.
 Teks Alert info memakai `primary-500`, success `success-500`, dan warning
-`warning-500`; background soft masing-masing tetap dipertahankan.
+`warning-600` (`#c47e09`); background soft masing-masing tetap dipertahankan.
 
 Drawer navigasi produk memakai logo Pathgres lokal pada heading, bukan teks
 "Navigasi". Menu mobile tersedia juga di Admin dan Beranda. Sidebar Admin tampil

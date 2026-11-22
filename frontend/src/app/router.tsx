@@ -22,6 +22,8 @@ import ReviewListPage from '../features/migrations/ReviewListPage'
 import ReviewDetailPage from '../features/migrations/ReviewDetailPage'
 import QueuePage from '../features/migrations/QueuePage'
 import JobDetailPage from '../features/migrations/JobDetailPage'
+import SchemaDiffPage from '../features/migrations/SchemaDiffPage'
+import SqlPreviewPage from '../features/migrations/SqlPreviewPage'
 
 const CatalogLayout = lazy(() => import('../catalog/CatalogLayout'))
 const FoundationsPage = lazy(() => import('../catalog/FoundationsPage'))
@@ -52,13 +54,15 @@ export function AppRouter() {
         <Route path="migrations/new" element={<MigrationFormPage />} />
         <Route path="migrations/drafts/:draftId" element={<MigrationDraftPage />} />
         <Route path="migrations/drafts/:draftId/edit" element={<MigrationFormPage />} />
+        <Route path="migrations/drafts/:draftId/preview" element={<SqlPreviewPage />} />
         <Route path="migrations/reviews" element={<ReviewListPage />} />
         <Route path="migrations/reviews/:draftId" element={<ReviewDetailPage />} />
         <Route path="migrations/queue" element={<QueuePage />} />
         <Route path="migrations/queue/:jobId" element={<JobDetailPage />} />
-        <Route path="migrations/diff" element={<RoutePlaceholder title="Schema Diff" />} />
+        <Route path="migrations/diff" element={<SchemaDiffPage />} />
+        <Route path="migrations/explain" element={<SqlPreviewPage />} />
         <Route path="migrations/:migrationId" element={<MigrationDetailPage />} />
-        <Route path="migrations/:migrationId/preview" element={<RoutePlaceholder title="Preview migrasi" />} />
+        <Route path="migrations/:migrationId/preview" element={<SqlPreviewPage />} />
       </Route>
       <Route element={<AdminGate />}><Route path="/admin" element={<AdminLayout />}>
         <Route index element={<RoutePlaceholder title="Admin Dashboard" />} />

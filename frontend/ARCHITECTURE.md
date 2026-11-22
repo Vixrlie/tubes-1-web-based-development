@@ -30,7 +30,14 @@ skenario preview, memakai AbortSignal dan cache lifecycle sesi. Draft baru/edit
 memakai adapter `draft-source.ts` dan sessionStorage per akun/database; lifecycle
 sesi membersihkannya pada logout/expiry/perubahan akun. Refresh sesi aktif tetap
 mempertahankan draft. Route draft terpisah dari execution. SQL tidak dieksekusi;
-Schema Diff masih disabled. Validasi field bukan validasi sintaks SQL.
+Schema Diff dan EXPLAIN memakai `schema-tools-source.ts`, bersumber dari fixture
+schema/tabel yang sama. Generator menghasilkan kandidat SQL untuk draft, bukan
+validasi sintaks/kompatibilitas SQL atau hasil optimizer sebenarnya.
+`operation-model.ts` menangani ledger eksekusi aktif dan eligibility pemulihan.
+Rollback/forward/resume/compensation membuat request immutable terpisah dengan
+approval ulang, tanpa menulis ulang hasil job asal. Metadata job menyimpan offset
+checkpoint dan total untuk progress resume/compensation. Lihat
+[batas schema tools/recovery](../docs/frontend/schema-tools-recovery-qa.md).
 `workflow-model.ts` mendefinisikan review per grup, revision dan job; `draft-source`
 menyimpan transisi secara atomik pada record per akun/database. `useDrafts`
 melakukan polling lokal hanya untuk queued/running; status direkonstruksi dari

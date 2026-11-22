@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createMockDraftSource, clearMockDraftStorage } from '../src/features/migrations/draft-source.ts'
-import { allApproved, batchDurationMs, failureBatch, jobEnd, latestJob, latestReview, reviewGroups, workflowExecutions } from '../src/features/migrations/workflow-model.ts'
+import { allApproved, batchDurationMs, jobEnd, latestJob, latestReview, reviewGroups, workflowExecutions } from '../src/features/migrations/workflow-model.ts'
 import { paths } from '../src/app/routes.ts'
 import { withMigrationSearch } from '../src/features/migrations/migration-source.ts'
 
@@ -104,7 +104,7 @@ test('FIFO queue serializes jobs per database and refresh reconstructs progress 
 })
 
 test('failure reaches a bounded checkpoint; retry preserves prior result and completes with a new ID', async () => {
-  const state = setup({ outcome: 'failed' })
+  const state = setup({ outcome: 'failed', failAfter: 0 })
   const { source, setTime, make } = state
   let row = await approve(source, await submitted(source))
   row = await source.transition('mock-shop', row.id, { type: 'enqueue' }, signal())
@@ -112,7 +112,7 @@ test('failure reaches a bounded checkpoint; retry preserves prior result and com
   setTime(jobEnd(latestJob(row)))
   row = (await source.list('mock-shop', signal()))[0]
   assert.equal(row.status, 'failed')
-  assert.equal(latestJob(row).completedBatches, failureBatch)
+  assert.equal(latestJob(row).completedBatches, 0)
   assert.equal(workflowExecutions([row])[0].status, 'failed')
   assert.ok(latestJob(row).error)
   const retrySource = make({ outcome: 'success' })

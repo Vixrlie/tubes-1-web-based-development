@@ -7,6 +7,7 @@ import { isEditable, latestJob, latestReview } from './workflow-model'
 import { useDrafts } from './useDrafts'
 import { useWorkflowAction } from './useWorkflowAction'
 import { WorkflowBadge, WorkflowDate, WorkflowHeading, WorkflowState } from './WorkflowUI'
+import OperationNotice from './OperationNotice'
 import './workflow.css'
 
 export default function ReviewDetailPage() {
@@ -40,6 +41,7 @@ function ReviewDetail({ draftId }: { draftId: string }) {
   return <div className="workflow-page"><WorkflowHeading title={`Review Migration ${row?.version ?? ''}`} database={database.name} connectionId={database.id}><Link className="ds-button ds-button--secondary ds-button--sm" to={url(paths.reviews(database.id))}>Daftar Review</Link></WorkflowHeading>
     <WorkflowState pending={query.isPending} error={query.isError ? query.error : null} missing={!row || !round} retry={() => { void query.refetch() }}>{row && round && <>
       {feedback && <Alert tone="success" title={feedback} />}
+      <OperationNotice intent={row.intent} />
       {mutation.isError && !modal && <Alert tone="error" title="Tindakan belum berhasil">{mutation.error.message}</Alert>}
       <div className="workflow-columns"><Card className="workflow-panel"><h2>Ringkasan & Persetujuan</h2><p>{row.version} · {row.name} · {database.name}</p><SqlPreview label="SQL UP · PostgreSQL" value={row.sqlUp} />{row.irreversible ? <Alert tone="warning" title="Migrasi irreversible">Tidak tersedia SQL Down untuk rollback.</Alert> : <SqlPreview label="SQL DOWN · ROLLBACK" value={row.sqlDown} />}
         <div className="workflow-panel-heading"><h2>Approval per Group</h2><small>{round.groups.filter(group => group.status === 'approved').length} / {round.groups.length} disetujui</small></div>
@@ -49,7 +51,8 @@ function ReviewDetail({ draftId }: { draftId: string }) {
         <div className="workflow-info"><strong>Persetujuan lengkap</strong><p>Semua grup, termasuk grup View, wajib menyetujui. Penolakan menghentikan pengajuan ini.</p></div>
         {row.status === 'pending_review' && (selected ? <><Dropdown label="Group reviewer" value={selected.id} options={eligible.map(group => ({ value: group.id, label: group.name }))} onChange={value => { setGroupId(value); setReason(''); setAttempted(false) }} /><Textarea label="Alasan reviewer" placeholder="Jelaskan hasil pemeriksaan SQL dan perubahan schema..." required maxLength={1000} value={reason} onChange={event => { setReason(event.target.value); setFeedback('') }} error={reasonError} /><div className="workflow-actions"><Button variant="secondary" disabled={mutation.isPending} onClick={() => decide('rejected')}>Tolak</Button><Button disabled={mutation.isPending} onClick={() => decide('approved')}>Setujui Migration</Button></div></> : <Alert title="Menunggu reviewer lain">Keputusan untuk grup yang dapat Anda tinjau sudah dicatat.</Alert>)}
         {row.status === 'approved' && <><Alert tone="success" title="Semua grup telah menyetujui">Migrasi siap dimasukkan ke antrean.</Alert>{database.permission === 'edit' && <Button onClick={() => { mutation.reset(); setModal('enqueue') }}>Masukkan ke Antrean</Button>}</>}
-        {row.status === 'rejected' && <Alert tone="error" title="Pengajuan ditolak">Perbaiki draft lalu ajukan review ulang. Persetujuan seluruh grup akan dimulai kembali.</Alert>}
+        {row.status === 'rejected' && <Alert tone="error" title="Pengajuan ditolak">{row.intent ? 'Ajukan permintaan baru dari hasil eksekusi target setelah meninjau alasan penolakan.' : 'Perbaiki draft lalu ajukan review ulang. Persetujuan seluruh grup akan dimulai kembali.'}</Alert>}
+        {row.intent && <Link to={url(paths.migration(database.id, row.intent.targetExecutionId))}>Lihat Eksekusi Target</Link>}
         {isEditable(row) && database.permission === 'edit' && <Link className="ds-button ds-button--secondary ds-button--md" to={url(paths.editMigrationDraft(database.id, row.id))}>Edit Draft</Link>}
         {latestJob(row) && <Link className="ds-button ds-button--secondary ds-button--md" to={url(paths.job(database.id, latestJob(row)!.id))}>Lihat Job Terakhir</Link>}
       </Card></div>
