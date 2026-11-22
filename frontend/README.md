@@ -31,6 +31,8 @@ backend dapat menyiapkan admin jika belum ada, bukan mengganti password akun lam
 | /databases/:connectionId/migrations/:executionId | detail eksekusi dan salin SQL read-only |
 | /databases/:connectionId/migrations/new | form nama, SQL Up/Down, irreversible; simpan draft mock |
 | /databases/:connectionId/migrations/drafts/:draftId[/edit] | detail/edit draft pada tab browser yang sama |
+| /databases/:connectionId/migrations/reviews[/:draftId] | daftar/detail review, approve/reject per grup dan alasan |
+| /databases/:connectionId/migrations/queue[/:jobId] | antrean, timeline, batch progress, retry/cancel mock |
 | /databases/:connectionId/migrations/diff, /databases/:connectionId/migrations/:id/preview, /admin | placeholder terlindungi; Admin hanya admin platform |
 
 ## Pemeriksaan
@@ -54,7 +56,9 @@ JSON bisnis database/admin masih harus dibangun.
    key. Detail tabel memiliki tiga tab dan pagination; Migrasi membuka history
    dan detail eksekusi. Migrasi Baru → Simpan Draft membuka detail draft; bisa
    diedit dan tetap ada saat refresh tab. Logout menghapus draft mock.
-   Review/antrean/Admin masih disiapkan.
+   Dari detail draft, Ajukan Review → setujui ketiga grup dengan alasan → Masukkan
+   ke Antrean. Progress bergerak otomatis dan hasil masuk history. Admin masih
+   disiapkan; SQL tidak pernah dijalankan pada backend.
 4. Refresh halaman: sesi dipulihkan dari cookie. Non-admin tidak melihat Admin;
    akses URL `/admin` langsung menampilkan akses terbatas.
 5. Klik avatar → Keluar: kembali ke Login. Back/refresh tidak membuka sesi lama.
@@ -71,3 +75,4 @@ Test backend (tanpa database, httptest):
 - [Table Detail: batas mock dan QA](../docs/frontend/table-detail-qa.md)
 - [Migration History: batas mock dan QA](../docs/frontend/migration-history-qa.md)
 - [Buat Migrasi dan Draft: batas mock dan QA](../docs/frontend/migration-draft-qa.md)
+- [Review, Queue dan Progress: batas mock dan QA](../docs/frontend/migration-workflow-qa.md)

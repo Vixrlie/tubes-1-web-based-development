@@ -49,8 +49,9 @@ masih merupakan target integrasi dan harus ditegakkan server.
 | Users | `/admin/users`, `/new`, `/:userId` | daftar/form/aksi akun | Platform admin | HTML/form |
 | Groups | `/admin/groups`, `/new`, `/:groupId` | anggota dan grant | Platform admin | HTML/form |
 | Connections | `/admin/connections`, `/new`, `/:connectionId[/edit]` | CRUD + test koneksi | Platform admin | HTML/form |
-| Review/approval | Belum diregistrasikan | reviewer, threshold, transisi | Belum ada kontrak | Route tidak ditemukan pada handler yang diaudit |
-| Queue/batch/rollback manual | Belum diregistrasikan | job/progres/cancel/retry/SQL Down | Belum ada kontrak | Route tidak ditemukan pada handler yang diaudit |
+| Review/approval | migrations + `/reviews[/:draftId]` (mock FE) | reviewer, threshold, alasan/transisi | Capability grup; kontrak API belum tersedia | Route tidak ditemukan pada handler yang diaudit |
+| Queue/batch | migrations + `/queue[/:jobId]` (mock FE) | job/progres/cancel/retry | Edit untuk mutasi; view untuk membaca | Route tidak ditemukan pada handler yang diaudit |
+| Rollback manual | Belum diregistrasikan | SQL Down/target execution | Belum ada kontrak | Route tidak ditemukan pada handler yang diaudit |
 
 `D = /databases/{connID}`, `M = D/migrations/{mID}`.
 History FE saat ini menautkan **execution ID** (E1048) pada segment
@@ -60,8 +61,10 @@ secara eksplisit sebelum adapter integrasi dibuat. `MigrationSource` hanya
 menyediakan list/detail read-only. Form baru dan detail/edit draft menggunakan
 adapter mock `draft-source.ts` dengan sessionStorage; route terpisah
 `migrations/drafts/:draftId[/edit]`. SQL Up/Down dan irreversible belum dikirim
-ke endpoint HTML lama. Review, antrean dan diff belum aktif. Lihat
-[QA history](migration-history-qa.md) dan [QA draft](migration-draft-qa.md).
+ke endpoint HTML lama. Review dan antrean aktif dengan state machine mock dan
+polling lokal; diff belum aktif. Capability grup reviewer masih fixture, bukan
+grant server. Lihat [QA history](migration-history-qa.md),
+[QA draft](migration-draft-qa.md) dan [QA workflow](migration-workflow-qa.md).
 
 `shop_db` di katalog adalah nama contoh, bukan ID koneksi server. Route SPA tabel
 memisahkan schema/table; backend lama memakai parser `schema.table` yang menolak

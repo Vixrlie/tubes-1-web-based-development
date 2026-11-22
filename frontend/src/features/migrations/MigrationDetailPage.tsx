@@ -20,7 +20,7 @@ function ExecutionDetail({ executionId }: { executionId: string }) {
   const historyPath = withMigrationSearch(paths.migrations(database.id), params)
   const historyLink = <Link className="ds-button ds-button--secondary ds-button--sm" to={historyPath}>Kembali ke Riwayat Migrasi</Link>
   if (query.isPending) return <Card className="schema-state"><Spinner label="Memuat detail eksekusi" /><p>Memuat detail eksekusi.</p></Card>
-  if (query.isError) return <Card className="schema-state"><Alert tone="error" title="Detail eksekusi belum dapat dimuat">{query.error.message}</Alert><Button variant="secondary" loading={query.isFetching} onClick={() => { void query.refetch() }}>Coba lagi</Button>{historyLink}</Card>
+  if (query.isError) return <Card className="schema-state"><Alert tone="error" title="Detail eksekusi belum dapat dimuat">{query.error?.message}</Alert><Button variant="secondary" loading={query.isFetching} onClick={() => { void query.refetch() }}>Coba lagi</Button>{historyLink}</Card>
   if (!row) return <Card><EmptyState title="Eksekusi tidak ditemukan" action={historyLink}>Pilih eksekusi yang tersedia dalam riwayat database ini.</EmptyState></Card>
   async function copySql() {
     try { await navigator.clipboard.writeText(row!.sql); setCopyStatus('success') } catch { setCopyStatus('error') }

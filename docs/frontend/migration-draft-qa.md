@@ -13,7 +13,9 @@ Badge, Alert dan ConfirmationModal digunakan bersama. Tidak ada aset baru.
   `/databases/:connectionId/migrations/drafts/:draftId`, dan detail + `/edit`.
 - Versi shop mulai v015 karena history sudah mencapai v014. Inventory/analytics
   mulai v001. Contoh v013 di Figma tidak diulang. Edit mempertahankan ID/versi.
-- Review, antrean, diff dan eksekusi belum diaktifkan pada tahap ini.
+- Review/approval dan antrean/progress kini tersambung dalam mock FE. SQL dikunci
+  setelah submit; draft ditolak bisa diedit lalu diajukan ulang. Schema Diff dan
+  eksekusi backend belum aktif. Lihat [QA workflow](migration-workflow-qa.md).
 
 `draft-source.ts` memisahkan storage dan UI. sessionStorage dipisahkan per akun
 dan database. Draft tersimpan bertahan saat refresh tab yang sama; logout, sesi

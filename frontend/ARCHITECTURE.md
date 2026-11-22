@@ -2,8 +2,8 @@
 
 SPA memiliki Login, Beranda dan application shell dengan sesi cookie Go asli.
 Database List, Schema Explorer, Table Detail serta Migration History/Execution
-Detail serta form/detail/edit draft memakai mock data terpisah. Review, antrean
-dan admin belum diimplementasikan. Katalog tetap publik.
+Detail, form/detail/edit draft, review/approval dan antrean/progress memakai mock
+data terpisah. Admin belum diimplementasikan. Katalog tetap publik.
 
 | Lokasi | Tanggung jawab |
 | --- | --- |
@@ -30,7 +30,13 @@ skenario preview, memakai AbortSignal dan cache lifecycle sesi. Draft baru/edit
 memakai adapter `draft-source.ts` dan sessionStorage per akun/database; lifecycle
 sesi membersihkannya pada logout/expiry/perubahan akun. Refresh sesi aktif tetap
 mempertahankan draft. Route draft terpisah dari execution. SQL tidak dieksekusi;
-review/queue/diff masih disabled. Validasi field bukan validasi sintaks SQL.
+Schema Diff masih disabled. Validasi field bukan validasi sintaks SQL.
+`workflow-model.ts` mendefinisikan review per grup, revision dan job; `draft-source`
+menyimpan transisi secara atomik pada record per akun/database. `useDrafts`
+melakukan polling lokal hanya untuk queued/running; status direkonstruksi dari
+waktu yang tersimpan. `useMigrations` menggabungkan fixture history dengan hasil
+job terminal tanpa menduplikasinya. Capability review dan hasil job masih mock;
+lihat [batas workflow](../docs/frontend/migration-workflow-qa.md).
 Fixture database berada di `features/databases/mock-source.ts`, terpisah dari
 katalog dan sesi. Query key memuat mode mock; fixture bukan bukti grant backend.
 Adapter `DatabaseSource` menerima AbortSignal agar request batal saat navigasi.

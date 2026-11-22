@@ -2,9 +2,11 @@ import { createMockSchemaSource } from '../databases/schema-source.ts'
 import type { SchemaPreview } from '../databases/schema-source.ts'
 import { waitForMock } from '../databases/mock-source.ts'
 import { createMockMigrationSource } from './migration-source.ts'
+import { advanceWorkflow, allApproved, isEditable, jobEnd, latestJob, latestReview, reviewGroups, validJob, validReview, validWorkflow, workflowStates } from './workflow-model.ts'
+import type { MigrationJob, ReviewRound, WorkflowAction, WorkflowStatus } from './workflow-model.ts'
 
 export type DraftInput = { name: string; sqlUp: string; sqlDown: string; irreversible: boolean }
-export type MigrationDraft = DraftInput & { id: string; connectionId: string; ownerId: string; author: string; version: string; status: 'draft'; createdAt: string; updatedAt: string }
+export type MigrationDraft = DraftInput & { id: string; connectionId: string; ownerId: string; author: string; version: string; status: WorkflowStatus; createdAt: string; updatedAt: string; reviews?: ReviewRound[]; jobs?: MigrationJob[] }
 export type DraftErrors = Partial<Record<keyof DraftInput, string>>
 export type DraftStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'>
 const prefix = 'pathgres:mock-migration-drafts:v1:'
@@ -26,11 +28,15 @@ function storageKey(ownerId: string, connectionId: string) { return `${prefix}${
 function isDraft(value: unknown, ownerId: string, connectionId: string): value is MigrationDraft {
   if (!value || typeof value !== 'object') return false
   const row = value as MigrationDraft
-  return row.ownerId === ownerId && row.connectionId === connectionId && row.status === 'draft' && typeof row.id === 'string' && /^draft-[\w-]+$/.test(row.id)
+  return row.ownerId === ownerId && row.connectionId === connectionId && Object.hasOwn(workflowStates, row.status) && typeof row.id === 'string' && /^draft-[\w-]+$/.test(row.id)
     && typeof row.version === 'string' && /^v\d+$/.test(row.version) && Number.isSafeInteger(Number(row.version.slice(1))) && Number(row.version.slice(1)) > 0 && typeof row.author === 'string' && typeof row.name === 'string'
     && typeof row.sqlUp === 'string' && typeof row.sqlDown === 'string' && typeof row.irreversible === 'boolean'
     && typeof row.createdAt === 'string' && Number.isFinite(Date.parse(row.createdAt)) && typeof row.updatedAt === 'string' && Number.isFinite(Date.parse(row.updatedAt))
     && Object.keys(validateDraft(row)).length === 0 && (!row.irreversible || row.sqlDown === '')
+    && (row.reviews === undefined || (Array.isArray(row.reviews) && row.reviews.every(validReview)))
+    && (row.jobs === undefined || (Array.isArray(row.jobs) && row.jobs.every(validJob)))
+    && (row.status === 'draft' || !!row.reviews?.length)
+    && validWorkflow(row)
 }
 export function clearMockDraftStorage(storage: DraftStorage, exceptOwnerId?: string) {
   const keepPrefix = exceptOwnerId ? `${prefix}${encodeURIComponent(exceptOwnerId)}:` : undefined
@@ -43,8 +49,8 @@ export function browserDraftStorage(): DraftStorage {
 export function clearBrowserMockDrafts(exceptOwnerId?: string) {
   try { clearMockDraftStorage(browserDraftStorage(), exceptOwnerId) } catch { /* Storage can be unavailable; saving reports its own error. */ }
 }
-export function createMockDraftSource({ ownerId, author, storage, preview = 'ready', delay = 250, isActive = () => true }: {
-  ownerId: string; author: string; storage: () => DraftStorage; preview?: SchemaPreview; delay?: number; isActive?: () => boolean
+export function createMockDraftSource({ ownerId, author, storage, preview = 'ready', delay = 250, isActive = () => true, now = Date.now, outcome = 'success', reviewerGroupIds = preview === 'readonly' ? ['analytics'] : reviewGroups.map(group => group.id) }: {
+  ownerId: string; author: string; storage: () => DraftStorage; preview?: SchemaPreview; delay?: number; isActive?: () => boolean; now?: () => number; outcome?: 'success' | 'failed'; reviewerGroupIds?: string[]
 }) {
   function active() { if (!ownerId || !isActive()) throw new Error('Sesi sudah berubah. Silakan masuk kembali.') }
   function read(connectionId: string): MigrationDraft[] {
@@ -54,7 +60,13 @@ export function createMockDraftSource({ ownerId, author, storage, preview = 'rea
     let value: unknown
     try { value = JSON.parse(json) } catch { throw new Error('Draft tersimpan tidak dapat dibaca. Periksa penyimpanan browser.') }
     if (!Array.isArray(value) || !value.every(row => isDraft(row, ownerId, connectionId))) throw new Error('Data draft tersimpan tidak valid.')
-    return value.map(row => ({ ...row }))
+    const rows = advanceWorkflow(value, now())
+    if (JSON.stringify(rows) !== json) write(connectionId, rows)
+    return structuredClone(rows)
+  }
+  function write(connectionId: string, rows: MigrationDraft[]) {
+    active()
+    try { storage().setItem(storageKey(ownerId, connectionId), JSON.stringify(rows)) } catch { throw new Error('Draft belum dapat disimpan. Periksa ruang dan izin penyimpanan browser, lalu coba lagi.') }
   }
   async function list(connectionId: string, signal: AbortSignal) {
     await waitForMock(signal, delay)
@@ -62,6 +74,7 @@ export function createMockDraftSource({ ownerId, author, storage, preview = 'rea
     return read(connectionId)
   }
   return {
+    reviewerGroupIds,
     list,
     async nextVersion(connectionId: string, signal: AbortSignal) {
       const drafts = await list(connectionId, signal)
@@ -80,13 +93,58 @@ export function createMockDraftSource({ ownerId, author, storage, preview = 'rea
       const version = `v${String(Math.max(Number(nextVersion.slice(1)), ...rows.map(row => Number(row.version.slice(1)) + 1))).padStart(3, '0')}`
       const previous = draftId ? rows.find(row => row.id === draftId) : undefined
       if (draftId && !previous) throw new Error('Draft tidak ditemukan pada database ini.')
-      const now = new Date().toISOString()
-      const draft: MigrationDraft = { ...input, name: input.name.trim(), sqlDown: input.irreversible ? '' : input.sqlDown, id: previous?.id ?? `draft-${crypto.randomUUID()}`, connectionId, ownerId, author: previous?.author ?? author, version: previous?.version ?? version, status: 'draft', createdAt: previous?.createdAt ?? now, updatedAt: now }
+      if (previous && !isEditable(previous)) throw new Error('SQL terkunci setelah diajukan untuk review.')
+      const timestamp = new Date(now()).toISOString()
+      const draft: MigrationDraft = { ...previous, ...input, name: input.name.trim(), sqlDown: input.irreversible ? '' : input.sqlDown, id: previous?.id ?? `draft-${crypto.randomUUID()}`, connectionId, ownerId, author: previous?.author ?? author, version: previous?.version ?? version, status: 'draft', createdAt: previous?.createdAt ?? timestamp, updatedAt: timestamp }
       const next = previous ? rows.map(row => row.id === previous.id ? draft : row) : [draft, ...rows]
       active()
       if (signal.aborted) throw signal.reason
-      try { storage().setItem(storageKey(ownerId, connectionId), JSON.stringify(next)) } catch { throw new Error('Draft belum dapat disimpan. Periksa ruang dan izin penyimpanan browser, lalu coba lagi.') }
-      return { ...draft }
+      write(connectionId, next)
+      return structuredClone(draft)
+    },
+    async transition(connectionId: string, draftId: string, action: WorkflowAction, signal: AbortSignal) {
+      await waitForMock(signal, delay)
+      const workspace = await createMockSchemaSource(preview, 0).load(connectionId, signal)
+      if (action.type !== 'decide' && workspace.database.permission !== 'edit') throw new Error('Anda hanya memiliki akses untuk melihat database ini.')
+      const rows = read(connectionId)
+      const row = rows.find(item => item.id === draftId)
+      if (!row) throw new Error('Migrasi tidak ditemukan pada database ini.')
+      const timestamp = new Date(now()).toISOString()
+      if (action.type === 'submit') {
+        if (row.status !== 'draft') throw new Error('Hanya draft yang dapat diajukan untuk review.')
+        const fields = validateDraft(row)
+        if (Object.keys(fields).length) throw new DraftValidationError(fields)
+        row.reviews = [...(row.reviews ?? []), { id: `review-${crypto.randomUUID()}`, revision: (latestReview(row)?.revision ?? 0) + 1, submittedAt: timestamp, groups: reviewGroups.map(group => ({ ...group, status: 'pending' })) }]
+        row.status = 'pending_review'
+      } else if (action.type === 'decide') {
+        if (action.decision !== 'approved' && action.decision !== 'rejected') throw new Error('Keputusan review tidak valid.')
+        const round = latestReview(row)
+        if (row.status !== 'pending_review' || round?.id !== action.reviewId) throw new Error('Review sudah berubah. Muat ulang sebelum memberi keputusan.')
+        if (!reviewerGroupIds.includes(action.groupId)) throw new Error('Anda tidak memiliki izin review untuk grup ini.')
+        const group = round.groups.find(item => item.id === action.groupId)
+        if (!group || group.status !== 'pending') throw new Error('Keputusan grup ini sudah dicatat.')
+        const reason = action.reason.trim()
+        if (!reason || reason.length > 1000) throw new Error('Alasan wajib diisi, maksimal 1.000 karakter.')
+        Object.assign(group, { status: action.decision, reason, actor: author, decidedAt: timestamp })
+        row.status = action.decision === 'rejected' ? 'rejected' : allApproved(row) ? 'approved' : 'pending_review'
+      } else if (action.type === 'cancel') {
+        const job = latestJob(row)
+        if (row.status !== 'queued' || job?.id !== action.jobId || job.status !== 'queued') throw new Error('Job yang sudah berjalan tidak dapat dibatalkan.')
+        job.status = 'canceled'; job.finishedAt = timestamp
+        row.status = 'approved'
+      } else {
+        if (row.status !== (action.type === 'retry' ? 'failed' : 'approved') || !allApproved(row)) throw new Error('Semua grup wajib menyetujui sebelum migrasi masuk antrean.')
+        const otherJobs = rows.flatMap(item => item.jobs ?? []).filter(job => job.status === 'queued' || job.status === 'running')
+        const scheduledAt = new Date(Math.max(now() + 3000, ...otherJobs.map(job => jobEnd(job) + 1000))).toISOString()
+        const id = crypto.randomUUID()
+        row.jobs = [...(row.jobs ?? []), { id: `JOB-${id}`, executionId: `E-${id}`, status: 'queued', queuedAt: timestamp, scheduledAt, actor: author, totalBatches: 80, completedBatches: 0, outcome, attempt: (latestJob(row)?.attempt ?? 0) + 1 }]
+        row.status = 'queued'
+      }
+      row.updatedAt = timestamp
+      active()
+      if (signal.aborted) throw signal.reason
+      write(connectionId, rows)
+      return structuredClone(row)
     },
   }
 }

@@ -130,6 +130,8 @@ memakai komponen ini, sehingga perubahan master berlaku di seluruh pemakaian.
 Button mendukung `primary`, `secondary`, `tertiary`, `destructive`, ukuran
 `sm/md/lg`, serta `disabled/loading`. Hover, pressed, dan keyboard focus memakai
 pseudo-class CSS asli. IconButton memerlukan `label` untuk nama aksesibel.
+Primary dan destructive pada state disabled/loading memakai fill `neutral-100`
+dan teks/spinner `neutral-500`. Destructive aktif memakai fill `error-500`.
 Choice mendukung checkbox/radio dengan atribut input HTML asli.
 
 `Input` mendukung tipe search/password/email dan lainnya; password memiliki toggle.

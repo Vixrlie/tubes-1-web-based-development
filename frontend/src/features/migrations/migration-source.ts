@@ -55,7 +55,7 @@ export function createMockMigrationSource(preview: DatabasePreview = 'ready', wo
 /** Preserve history filters and development previews across detail/back navigation. */
 export function withMigrationSearch(path: string, params: URLSearchParams) {
   const next = new URLSearchParams()
-  for (const key of ['preview', 'migrationPreview', 'hideRollback', 'status']) {
+  for (const key of ['preview', 'migrationPreview', 'hideRollback', 'status', 'jobOutcome', 'reviewStatus', 'queueStatus']) {
     const value = params.get(key)
     if (value) next.set(key, value)
   }

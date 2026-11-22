@@ -9,7 +9,7 @@
 .ds-button--primary { background: var(--primary-500); color: white; }
 .ds-button--primary:hover:not(:disabled) { background: var(--primary-600); }
 .ds-button--primary:active:not(:disabled) { background: var(--primary-700); }
-.ds-button--primary:disabled { background: var(--primary-100); color: var(--primary-600); }
+.ds-button--primary:disabled { background: var(--neutral-100); color: var(--neutral-500); }
 .ds-button--secondary { background: var(--surface); border-color: var(--border); color: var(--neutral-500); }
 .ds-button--secondary:hover:not(:disabled), .ds-button--secondary:active:not(:disabled) { border-color: var(--primary-500); color: var(--primary-500); }
 .ds-button--secondary:disabled { color: var(--neutral-400); border-color: var(--neutral-100); }
@@ -19,7 +19,7 @@
 .ds-button--tertiary:disabled { color: var(--neutral-400); }
 .ds-button--destructive { background: var(--error-500); color: white; }
 .ds-button--destructive:hover:not(:disabled), .ds-button--destructive:active:not(:disabled) { background: var(--error-700); }
-.ds-button--destructive:disabled { background: var(--error-100); color: var(--error-700); }
+.ds-button--destructive:disabled { background: var(--neutral-100); color: var(--neutral-500); }
 .ds-icon-button { min-width: 44px; min-height: 44px; padding: var(--space-8); }
 .ds-spinner { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: ds-spin .7s linear infinite; }
 @keyframes ds-spin { to { transform: rotate(360deg); } }

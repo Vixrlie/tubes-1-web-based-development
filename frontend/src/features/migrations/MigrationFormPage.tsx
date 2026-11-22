@@ -9,6 +9,7 @@ import type { DraftInput, MigrationDraft } from './draft-source'
 import { withMigrationSearch } from './migration-source'
 import { useDrafts } from './useDrafts'
 import DraftSummary from './DraftSummary'
+import { isEditable } from './workflow-model'
 import './drafts.css'
 
 export default function MigrationFormPage() {
@@ -24,6 +25,7 @@ export default function MigrationFormPage() {
   if (query.isError || (!draftId && version.isError)) return <Card className="schema-state"><Alert tone="error" title="Form migrasi belum dapat dimuat">{query.error?.message ?? version.error?.message}</Alert><Button variant="secondary" onClick={() => { void query.refetch(); if (!draftId) void version.refetch() }}>Coba lagi</Button></Card>
   const draft = query.data?.find(row => row.id === draftId)
   if (draftId && !draft) return <Card><EmptyState title="Draft tidak ditemukan" action={<Link to={back}>Kembali ke Migrasi</Link>}>Pilih draft yang tersedia pada database ini.</EmptyState></Card>
+  if (draft && !isEditable(draft)) return <Card><EmptyState title="SQL terkunci untuk review" action={<Link to={withMigrationSearch(paths.review(database.id, draft.id), params)}>Buka Review</Link>}>SQL migrasi yang sudah diajukan tidak dapat diubah.</EmptyState></Card>
   return <MigrationForm key={`${state.user?.id}/${database.id}/${draftId ?? 'new'}`} draft={draft} version={draft?.version ?? version.data ?? ''} author={state.user?.username ?? ''} />
 }
 
@@ -83,7 +85,7 @@ function MigrationForm({ draft, version, author }: { draft?: MigrationDraft; ver
           <div className="draft-reversibility"><Choice label="Irreversible (tanpa SQL Down)" checked={input.irreversible} onChange={event => change('irreversible', event.target.checked)} />{input.irreversible && <Alert tone="warning" title="Migrasi irreversible">SQL Down tidak akan disimpan. Perubahan ini tidak menyediakan rollback otomatis.</Alert>}</div>
           <SqlEditor label="SQL DOWN · ROLLBACK" value={input.irreversible ? '' : input.sqlDown} onChange={value => change('sqlDown', value)} readOnly={input.irreversible || mutation.isPending} error={errors.sqlDown} />
           {mutation.isError && <Alert tone="error" title="Draft belum tersimpan">{mutation.error instanceof DraftValidationError ? 'Periksa field migrasi.' : mutation.error.message}</Alert>}
-          <div className="draft-actions"><Button variant="tertiary" onClick={() => dirty ? setCancelOpen(true) : navigate(back)}>Batal</Button><Button type="submit" variant="secondary" loading={mutation.isPending}>Simpan Draft</Button><Button disabled title="Pengajuan review belum tersedia">Ajukan Review</Button></div>
+          <div className="draft-actions"><Button variant="tertiary" onClick={() => dirty ? setCancelOpen(true) : navigate(back)}>Batal</Button><Button type="submit" variant="secondary" loading={mutation.isPending}>Simpan Draft</Button></div>
         </fieldset>
       </form>
     </div>
