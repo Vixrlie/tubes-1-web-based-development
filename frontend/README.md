@@ -80,3 +80,4 @@ Test backend (tanpa database, httptest):
 - [Buat Migrasi dan Draft: batas mock dan QA](../docs/frontend/migration-draft-qa.md)
 - [Review, Queue dan Progress: batas mock dan QA](../docs/frontend/migration-workflow-qa.md)
 - [Schema Diff, EXPLAIN dan Recovery: batas mock dan QA](../docs/frontend/schema-tools-recovery-qa.md)
+- [Checkpoint Database/Beranda dan menu mobile](../docs/frontend/database-home-final-qa.md)

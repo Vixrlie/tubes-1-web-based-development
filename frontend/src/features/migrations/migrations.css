@@ -5,7 +5,7 @@
 .migration-actions > p, .migration-list-heading p, .migration-rollback-mobile p { font-size: 12px; line-height: 1.6; color: var(--neutral-600); }
 .migration-actions > .ds-button { width: 100%; min-height: 48px; }
 .migration-plus { display: none; }
-.migration-actions nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
+.migration-actions nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
 .migration-actions nav .ds-button { padding: 8px; min-height: 44px; font-size: 12px; border-radius: 12px; }
 .migration-history { display: grid; gap: 12px; min-width: 0; }
 .migration-list-heading, .migration-list-heading > div:first-child, .migration-filters { display: grid; gap: 12px; min-width: 0; }
@@ -36,7 +36,7 @@
   .migration-actions { grid-area: 2 / 1; padding: 0; grid-template-columns: 1fr auto; align-items: center; }
   .migration-actions > h2, .migration-actions > p { display: none; }
   .migration-actions > .migration-new { grid-column: 2; grid-row: 1; width: auto; min-height: 40px; }
-  .migration-actions nav { grid-column: 1; grid-row: 1; justify-self: start; grid-template-columns: repeat(3, 112px); gap: 8px; }
+  .migration-actions nav { grid-column: 1; grid-row: 1; justify-self: start; grid-template-columns: repeat(4, minmax(72px, 112px)); gap: 8px; }
   .migration-plus { display: inline; }
   .migration-history { padding: 24px; border-radius: 20px; background: var(--surface); }
   .migration-list-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px 24px; }

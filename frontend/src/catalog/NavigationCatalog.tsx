@@ -2,9 +2,10 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   AdminSidebar, ApprovalGroupCard, Badge, Button, Card, DatabaseCard, DatabaseSidebar,
-  DataTable, EmptyState, KpiCard, ListToolbar, MetadataPanel, MigrationJobCard, Modal,
+  DataTable, EmptyState, KpiCard, ListToolbar, MetadataPanel, MigrationJobCard, MobileContextMenu, Modal,
   Pagination, ProductBottomNavigation, ProductHeader, ProfilePopup, TableCard,
 } from '../design-system'
+import { ChevronRightIcon } from '../design-system/control-icons'
 import type { AdminDestination, Column, DatabaseSelection, ProductDestination } from '../design-system'
 
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
@@ -56,7 +57,7 @@ export default function NavigationCatalog({ notify }: { notify: (message: string
   return <>
     <Section title="Header & sidebar produk" description="Pilih Database atau Admin untuk mencoba navigasi. Klik schema untuk membuka/tutup daftar tabel.">
       <div className="workspace-preview">
-        <ProductHeader active={workspace} onNavigate={setWorkspace} onMenu={() => setDrawer(true)} profile={<ProfilePopup name="Arina Azka" email="arina@example.com" onLogout={() => notify('Contoh aksi logout dipilih')} />} />
+        <ProductHeader active={workspace} onNavigate={setWorkspace} onMenu={() => setDrawer(true)} menuOpen={drawer} profile={<ProfilePopup name="Arina Azka" email="arina@example.com" onLogout={() => notify('Contoh aksi logout dipilih')} />} />
         <div className="workspace-preview-body">
           {workspace !== 'home' && <aside className="workspace-preview-sidebar">{workspace === 'database' ? databaseSidebar : adminSidebar}</aside>}
           <div className="workspace-preview-content">
@@ -71,7 +72,14 @@ export default function NavigationCatalog({ notify }: { notify: (message: string
           </div>
         </div>
       </div>
-      <Modal open={drawer} onClose={() => setDrawer(false)} title={workspace === 'admin' ? 'Admin' : 'Database'} drawer>{workspace === 'admin' ? adminSidebar : databaseSidebar}</Modal>
+      <Button variant="secondary" onClick={() => setDrawer(true)}>Buka navigasi mobile</Button>
+      <MobileContextMenu open={drawer} onClose={() => setDrawer(false)} title={workspace === 'admin' ? 'Kelola platform' : 'shop_db'} description={workspace === 'admin' ? 'Pengguna · Grup · Koneksi' : `Schema public · ${tables.length} tabel`}>
+        <nav className="ds-context-links" aria-label="Contoh navigasi mobile">{workspace === 'admin' ? (Object.keys(adminTitles) as AdminDestination[]).map(item => <button key={item} type="button" onClick={() => { setAdmin(item); setDrawer(false) }}>{adminTitles[item]}<ChevronRightIcon /></button>) : <>
+          <button type="button" onClick={() => { setDrawer(false); notify('Schema public dipilih') }}>Schema public<ChevronRightIcon /></button>
+          {tables.map(table => <button key={table.name} type="button" onClick={() => { setSelection({ kind: 'table', schemaId: 'public', tableId: table.name }); setDrawer(false) }}>{table.name}<ChevronRightIcon /></button>)}
+          <button type="button" onClick={() => { setSelection({ kind: 'migration' }); setDrawer(false) }}>Migrasi<ChevronRightIcon /></button>
+        </>}</nav>
+      </MobileContextMenu>
     </Section>
 
     <Section title="Database cards" description="Contoh koneksi aktif, terputus, dan sedang diperiksa.">
@@ -111,7 +119,7 @@ export default function NavigationCatalog({ notify }: { notify: (message: string
       <ApprovalGroupCard name="Engineering" required={1} approvers={[{ id: '3', name: 'Engineering Reviewer', status: 'approved' }]} />
     </div></Section>
 
-    <Section title="Navigasi bawah produk" description="Preview inline Beranda / Database / Admin. Versi ini dapat dilihat di desktop; penyesuaian mobile lengkap menyusul.">
+    <Section title="Navigasi bawah produk" description="Preview inline Beranda / Database / Admin. Komponen yang sama dipakai untuk navigasi aplikasi pada mobile.">
       <div className="catalog-preview"><ProductBottomNavigation inline active={workspace} onNavigate={setWorkspace} /></div>
       <small role="status">Pilihan aktif: {workspace === 'home' ? 'Beranda' : workspace === 'admin' ? 'Admin' : 'Database'}</small>
     </Section>

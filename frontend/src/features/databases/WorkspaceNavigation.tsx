@@ -1,9 +1,8 @@
 import { useLocation, useMatch, useNavigate, useSearchParams } from 'react-router-dom'
-import { DatabaseSidebar, Spinner } from '../../design-system'
+import { DatabaseSidebar } from '../../design-system'
 import { paths } from '../../app/routes'
 import { selectSchema, withWorkspacePreview } from './schema-source'
 import type { DatabaseWorkspace, SchemaPreview } from './schema-source'
-import { useDatabaseWorkspaceQuery } from './useDatabaseWorkspace'
 
 export function WorkspaceSidebar({ workspace, preview, onNavigate }: { workspace: DatabaseWorkspace; preview: SchemaPreview; onNavigate?: () => void }) {
   const navigate = useNavigate()
@@ -17,11 +16,4 @@ export function WorkspaceSidebar({ workspace, preview, onNavigate }: { workspace
     selection={tableMatch?.params.tableName ? { kind: 'table', schemaId: tableMatch.params.schemaName ?? '', tableId: tableMatch.params.tableName } : pathname.includes('/migrations') ? { kind: 'migration' } : undefined}
     onSelectSchema={name => go(`${paths.schema(workspace.database.id)}?schema=${encodeURIComponent(name)}`)}
     onSelect={selection => go(selection.kind === 'migration' ? paths.migrations(workspace.database.id) : paths.table(workspace.database.id, selection.schemaId, selection.tableId))} />
-}
-
-export function DatabaseDrawerNavigation({ connectionId, onNavigate }: { connectionId: string; onNavigate: () => void }) {
-  const query = useDatabaseWorkspaceQuery(connectionId)
-  if (query.isPending) return <Spinner label="Memuat navigasi schema" />
-  if (!query.data || query.isError) return null
-  return <WorkspaceSidebar workspace={query.data} preview={query.preview} onNavigate={onNavigate} />
 }

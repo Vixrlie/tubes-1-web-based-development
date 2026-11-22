@@ -1,7 +1,7 @@
 import { ApiError } from '../../shared/api/api-error.ts'
 import { createApiClient } from '../../shared/api/client.ts'
 
-export type SessionUser = { id: string; username: string; isPlatformAdmin: boolean }
+export type SessionUser = { id: string; username: string; fullName?: string; email?: string; isPlatformAdmin: boolean }
 export type Session = { user: SessionUser; csrfToken: string }
 export type SessionState = { status: 'checking' | 'authenticated' | 'anonymous' | 'error'; user: SessionUser | null; busy: boolean; message: string }
 
@@ -9,7 +9,9 @@ export function parseSession(value: unknown): Session {
   if (typeof value === 'object' && value !== null && 'user' in value && 'csrfToken' in value) {
     const { user, csrfToken } = value
     if (typeof user === 'object' && user !== null && 'id' in user && 'username' in user && 'isPlatformAdmin' in user && typeof user.id === 'string' && /^[1-9]\d*$/.test(user.id) && typeof user.username === 'string' && user.username.trim() && typeof user.isPlatformAdmin === 'boolean' && typeof csrfToken === 'string' && csrfToken.length > 0) {
-      return { user: { id: user.id, username: user.username, isPlatformAdmin: user.isPlatformAdmin }, csrfToken }
+      const profile = user as { fullName?: unknown; email?: unknown }
+      if ((profile.fullName !== undefined && typeof profile.fullName !== 'string') || (profile.email !== undefined && typeof profile.email !== 'string')) throw new ApiError('Respons profil server tidak valid.', { kind: 'unexpected-response' })
+      return { user: { id: user.id, username: user.username, isPlatformAdmin: user.isPlatformAdmin, ...(typeof profile.fullName === 'string' ? { fullName: profile.fullName.trim() } : {}), ...(typeof profile.email === 'string' ? { email: profile.email.trim() } : {}) }, csrfToken }
     }
   }
   throw new ApiError('Respons sesi server tidak valid.', { kind: 'unexpected-response' })

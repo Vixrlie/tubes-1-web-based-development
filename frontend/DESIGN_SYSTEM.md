@@ -5,9 +5,19 @@ judul font-weight 600 (bold), isi font-weight normal. Berlaku pada komponen Aler
 Teks Alert info memakai `primary-500`, success `success-500`, dan warning
 `warning-600` (`#c47e09`); background soft masing-masing tetap dipertahankan.
 
-Drawer navigasi produk memakai logo Pathgres lokal pada heading, bukan teks
-"Navigasi". Menu mobile tersedia juga di Admin dan Beranda. Sidebar Admin tampil
-mulai 1024px; pada layar lebih kecil menu administrasi dipindahkan ke drawer.
+Navigasi produk mobile mengikuti overlay Figma terbaru: panel putih selebar
+viewport tepat di bawah app bar, heading/deskripsi konteks, divider dan baris
+ber-chevron. Tombol tiga garis ada di kanan. `MobileContextMenu` dipakai bersama
+oleh aplikasi dan contoh interaktif pada katalog Navigation. Panel Daftar Database
+berisi pilihan koneksi; workspace berisi schema, tabel dan Migrasi; Admin berisi
+Pengguna, Grup, Koneksi Database. Sidebar desktop tetap memakai `DatabaseSidebar`
+dan `AdminSidebar`, bukan versi desktop yang diperkecil ke dalam drawer.
+
+ProfilePopup mengikuti Figma `498:10530`: avatar inisial56px, nama16px/600,
+email13px, badge Admin/User, divider tipis dan Logout merah soft dengan ikon
+Figma lokal `profile-logout.svg`. Props `email` opsional; email kosong tidak
+ditampilkan. Produk memakai fullName (fallback username), email asli dari sesi,
+dan badge berdasarkan isPlatformAdmin. Nama/email contoh hanya milik katalog.
 
 ## Komponen workspace desktop
 
@@ -124,7 +134,7 @@ memakai komponen ini, sehingga perubahan master berlaku di seluruh pemakaian.
 | Feedback | Alert, Spinner, EmptyState, Toast |
 | Navigation | Header, Sidebar, SidebarItem, Breadcrumb, BottomNavigation, Icon |
 | Surface dan data | Card, DatabaseCard, KpiCard, DataTable, Pagination, MetadataRow, ListRow |
-| Overlay | Modal, ConfirmationModal, ProfilePopup |
+| Overlay | Modal, MobileContextMenu, ConfirmationModal, ProfilePopup |
 | Pathgres | SqlEditor, SqlPreview, BatchProgress, MigrationJobRow, ApprovalGroupRow, SchemaDiffRow |
 
 Button mendukung `primary`, `secondary`, `tertiary`, `destructive`, ukuran
@@ -147,7 +157,8 @@ tanpa outline tambahan di luar field.
 `Tabs` dikendalikan melalui `value/onChange` dan mendukung panah, Home, serta End.
 
 `Modal` menggunakan native dialog agar focus trap dan Escape konsisten. Drawer
-memakai `Modal` dengan `drawer`. `ProfilePopup` memakai disclosure native dengan
+katalog memakai `Modal` dengan `drawer`; navigasi produk memakai
+`MobileContextMenu` (`Modal context`) dengan batas tinggi dan safe area. `ProfilePopup` memakai disclosure native dengan
 Escape dan penutupan saat klik di luar. Avatar memakai inisial nama dari props;
 foto contoh pengguna pada Figma tidak dijadikan identitas pengguna aplikasi.
 
@@ -197,3 +208,10 @@ Form Buat Migrasi/detail draft menggunakan komponen bersama. `SqlEditor` menerim
 `error` opsional; pesan error terhubung ke content editor melalui aria-describedby
 dan aria-invalid, tanpa mengubah pemakaian SqlPreview di layar lain. Model dan
 penyimpanan draft berada di feature migrations, bukan di design system.
+
+
+Beranda sekarang mobile-first: ilustrasi berada setelah deskripsi dan sebelum
+CTA pada mobile, kemudian pindah ke kolom kanan pada desktop. Menu EXPLAIN dapat
+dibuka langsung dari Aksi Cepat Migrasi, selain melalui preview SQL draft.
+Batas checkpoint dan checklist lintas viewport ada di
+[QA Database/Beranda](../docs/frontend/database-home-final-qa.md).

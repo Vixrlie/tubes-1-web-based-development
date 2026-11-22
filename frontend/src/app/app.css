@@ -10,17 +10,6 @@
 .app-section-navigation { display: flex; flex-wrap: wrap; gap: var(--space-16); border-bottom: 1px solid var(--border); padding-bottom: var(--space-16); }
 .app-section-navigation a, .app-admin-overview { display: block; color: var(--text-muted); text-decoration: none; padding: var(--space-12) var(--space-16); }
 .app-section-navigation a.active, .app-admin-overview.active { color: var(--primary-500); font-weight: 600; }
-.ds-modal--drawer:has(.app-drawer-brand) { width: 316px; border: 0; }
-.ds-modal--drawer:has(.app-drawer-brand)::backdrop { background: rgb(36 43 54 / 35%); }
-.ds-modal--drawer:has(.app-drawer-brand) .ds-modal-heading { border-bottom: 0; padding: 22px 22px 14px; }
-.ds-modal--drawer:has(.app-drawer-brand) .ds-modal-body { padding: 12px 14px 24px; }
-.app-drawer-brand { display: flex; align-items: center; min-height: 44px; }
-.app-drawer-brand img { display: block; width: 128px; height: auto; }
-.app-drawer-label { margin: 0 8px 24px; font-size: 11px; font-weight: 600; color: var(--neutral-500); }
-.ds-modal--drawer:has(.app-drawer-brand) .app-mobile-drawer-links { gap: 11px; }
-.ds-modal--drawer:has(.app-drawer-brand) .app-mobile-drawer-links a { min-height: 53px; padding: 13px 18px; border-radius: 13px; font-size: 15px; }
-.app-drawer-admin { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
-.app-drawer-admin .ds-sidebar { padding: 0; }
 .app-shell--admin .app-workspace { grid-template-columns: minmax(0, 1fr); }
 .app-shell--admin .app-workspace > aside { display: none; }
 .app-shell--admin .ds-menu-trigger { display: inline-flex; }
@@ -42,3 +31,5 @@
   .app-content { padding: var(--space-16) var(--space-16) calc(104px + env(safe-area-inset-bottom)); }
   .app-workspace { grid-template-columns: 1fr; }
 }
+
+.app-shell > .ds-header { position: sticky; top: 0; z-index: 35; }

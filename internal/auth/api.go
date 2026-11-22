@@ -27,7 +27,17 @@ func (h *Handlers) JSONRoutes(r chi.Router, validator SessionValidator) {
 		r.Post("/login", func(w http.ResponseWriter, r *http.Request) { h.jsonLogin(w, r, validator) })
 		r.Get("/session", func(w http.ResponseWriter, r *http.Request) {
 			if info, ok := h.jsonSession(w, r, validator); ok {
-				writeSession(w, info)
+				account, err := h.store.GetByID(r.Context(), info.User.ID)
+				if errors.Is(err, ErrUserNotFound) || (err == nil && !account.IsActive) {
+					ClearSessionCookie(w, h.secure)
+					apiError(w, 401, "SESSION_EXPIRED", "Sesi sudah berakhir. Silakan masuk kembali.")
+					return
+				}
+				if err != nil {
+					apiError(w, 503, "SESSION_UNAVAILABLE", "Profil belum dapat dimuat. Coba lagi.")
+					return
+				}
+				writeSession(w, info, account.FullName, account.Email)
 			}
 		})
 		r.Post("/logout", func(w http.ResponseWriter, r *http.Request) {
@@ -66,9 +76,9 @@ func apiError(w http.ResponseWriter, status int, code, message string) {
 	_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": code, "message": message}})
 }
 
-func writeSession(w http.ResponseWriter, info SessionInfo) {
+func writeSession(w http.ResponseWriter, info SessionInfo, fullName, email string) {
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"user":      map[string]any{"id": strconv.FormatInt(info.User.ID, 10), "username": info.User.Username, "isPlatformAdmin": info.User.IsPlatformAdmin},
+		"user":      map[string]any{"id": strconv.FormatInt(info.User.ID, 10), "username": info.User.Username, "fullName": fullName, "email": email, "isPlatformAdmin": info.User.IsPlatformAdmin},
 		"csrfToken": info.CSRFToken,
 	})
 }
@@ -153,7 +163,7 @@ func (h *Handlers) jsonLogin(w http.ResponseWriter, r *http.Request, v SessionVa
 		}
 		SetSessionCookie(w, token, h.secure)
 		h.logActivity(r, "user.login", activity.StatusSuccess, username, nil)
-		writeSession(w, info)
+		writeSession(w, info, account.FullName, account.Email)
 		return
 	}
 	h.logActivity(r, "user.login", activity.StatusFailed, username, errors.New(msgLoginFailed))

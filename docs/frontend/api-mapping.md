@@ -154,7 +154,7 @@ Respons sesi auth yang diimplementasikan (login dan session):
 
 ```json
 {
-  "user": { "id": "12", "username": "arina", "isPlatformAdmin": false },
+  "user": { "id": "12", "username": "arina", "fullName": "Arina Azka", "email": "arina@example.com", "isPlatformAdmin": false },
   "csrfToken": "token-dari-server"
 }
 ```
@@ -170,6 +170,10 @@ Contoh error **usulan**:
   }
 }
 ```
+
+Field fullName/email diambil dari profil user yang sudah tersimpan; nilai kosong
+dikirim sebagai string kosong. FE juga menerima DTO lama tanpa kedua field.
+Hash password, status sesi dan token cookie tidak masuk ke objek user JSON.
 
 Cookie sesi tidak disalin ke JSON. CSRF disimpan di memori session provider,
 diperbarui setelah login/bootstrap sesi. Login JSON memakai same-origin check

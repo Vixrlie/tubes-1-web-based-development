@@ -39,7 +39,7 @@ func TestJSONAuthJourney(t *testing.T) {
 	}
 	user := User{ID: 42, Username: "arina", IsActive: true, IsPlatformAdmin: true}
 	sessions := &jsonTestSessions{}
-	h := NewHandlers(handlerTestStore{account: Account{User: user, PasswordHash: hash}}, sessions, handlerTestRenderer{}, false)
+	h := NewHandlers(handlerTestStore{account: Account{User: user, FullName: "Arina Azka", Email: "arina@example.com", PasswordHash: hash}}, sessions, handlerTestRenderer{}, false)
 	router := chi.NewRouter()
 	h.JSONRoutes(router, jsonTestValidator(func(_ context.Context, token string) (SessionInfo, error) {
 		if token != "private-session-token" || sessions.revoked {
@@ -74,6 +74,8 @@ func TestJSONAuthJourney(t *testing.T) {
 		User struct {
 			ID              string
 			Username        string
+			FullName        string
+			Email           string
 			IsPlatformAdmin bool
 		}
 		CSRFToken string
@@ -84,12 +86,17 @@ func TestJSONAuthJourney(t *testing.T) {
 	if dto.User.ID != "42" || !dto.User.IsPlatformAdmin || dto.CSRFToken != "private-csrf" {
 		t.Fatalf("unexpected DTO: %+v", dto)
 	}
+	if dto.User.FullName != "Arina Azka" || dto.User.Email != "arina@example.com" {
+		t.Fatalf("profile not included: %+v", dto.User)
+	}
 	cookie := login.Result().Cookies()[0]
 	if !cookie.HttpOnly || cookie.SameSite != http.SameSiteLaxMode || cookie.Path != "/" {
 		t.Fatalf("insecure cookie: %+v", cookie)
 	}
 	if res := request("GET", "/api/auth/session", "", cookie, ""); res.Code != 200 || res.Header().Get("Cache-Control") != "no-store" {
 		t.Fatalf("restore: %d %s", res.Code, res.Body)
+	} else if !strings.Contains(res.Body.String(), `"email":"arina@example.com"`) || !strings.Contains(res.Body.String(), `"fullName":"Arina Azka"`) || strings.Contains(res.Body.String(), hash) {
+		t.Fatalf("restore profile missing or leaking credentials: %s", res.Body)
 	}
 	if res := request("POST", "/api/auth/logout", "", cookie, "wrong"); res.Code != 403 || sessions.revoked {
 		t.Fatalf("CSRF: %d", res.Code)
@@ -156,7 +163,7 @@ func TestJSONSessionErrorsRotationAndLogoutFailure(t *testing.T) {
 		{"rotated", SessionInfo{User: User{ID: 42, Username: "arina", IsActive: true}, CSRFToken: "csrf", NewToken: "rotated-secret"}, nil, 200},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			h := NewHandlers(handlerTestStore{}, &handlerTestSessions{}, handlerTestRenderer{}, true)
+			h := NewHandlers(handlerTestStore{account: Account{User: tc.info.User}}, &handlerTestSessions{}, handlerTestRenderer{}, true)
 			router := chi.NewRouter()
 			h.JSONRoutes(router, jsonTestValidator(func(context.Context, string) (SessionInfo, error) { return tc.info, tc.err }))
 			r := httptest.NewRequest("GET", "/api/auth/session", nil)

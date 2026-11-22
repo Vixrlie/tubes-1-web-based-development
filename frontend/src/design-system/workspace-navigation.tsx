@@ -7,11 +7,11 @@ import { EmptyState } from './primitives'
 export type Workspace = 'database' | 'admin'
 export type ProductDestination = 'home' | Workspace
 
-export function ProductHeader({ active, onNavigate, profile, onMenu, showAdmin = true }: {
+export function ProductHeader({ active, onNavigate, profile, onMenu, menuOpen, showAdmin = true }: {
   active: ProductDestination; onNavigate: (destination: Workspace) => void
-  profile?: ReactNode; onMenu?: () => void; showAdmin?: boolean
+  profile?: ReactNode; onMenu?: () => void; menuOpen?: boolean; showAdmin?: boolean
 }) {
-  return <Header homeTo="/home" onMenu={onMenu} profile={profile} navigation={<>
+  return <Header homeTo="/home" onMenu={onMenu} menuOpen={menuOpen} profile={profile} navigation={<>
     <button type="button" className="ds-header-link" aria-current={active === 'database' ? 'page' : undefined} onClick={() => onNavigate('database')}>Database</button>
     {showAdmin && <button type="button" className="ds-header-link" aria-current={active === 'admin' ? 'page' : undefined} onClick={() => onNavigate('admin')}>Admin</button>}
   </>} />

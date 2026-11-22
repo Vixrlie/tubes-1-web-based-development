@@ -16,6 +16,22 @@ test('login destinations accept only product routes', () => {
   assert.equal(loginDestination('/databases/2/schema?tab=data'), '/databases/2/schema?tab=data')
 })
 
+test('session profile accepts real optional name/email and excludes private account fields', () => {
+  const dto = sessionData()
+  dto.user.fullName = '  Arina Azka  '
+  dto.user.email = ' arina@example.com '
+  dto.user.passwordHash = 'must-not-reach-ui'
+  const result = parseSession(dto)
+  assert.equal(result.user.fullName, 'Arina Azka')
+  assert.equal(result.user.email, 'arina@example.com')
+  assert.equal('passwordHash' in result.user, false)
+  for (const field of ['fullName', 'email']) {
+    assert.throws(() => parseSession({ ...dto, user: { ...dto.user, [field]: 42 } }))
+    assert.throws(() => parseSession({ ...dto, user: { ...dto.user, [field]: null } }))
+  }
+  assert.equal(parseSession({ ...dto, user: { ...dto.user, email: '' } }).user.email, '')
+})
+
 test('401 restores anonymous state; infrastructure errors remain retryable errors', async () => {
   let status = 401
   const controller = new SessionController(() => {}, async () => status === 401 ? unauthorized() : Response.json({ error: { message: 'Database unavailable' } }, { status }))
