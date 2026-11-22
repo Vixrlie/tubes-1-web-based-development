@@ -8,7 +8,7 @@ import { WorkspaceSidebar } from '../../features/databases/WorkspaceNavigation'
 import '../../features/databases/schema.css'
 
 export default function DatabaseLayout() {
-  const { connectionId = '' } = useParams()
+  const { connectionId = '', schemaName } = useParams()
   const { pathname, search } = useLocation()
   const contentRef = useRef<HTMLDivElement>(null)
   useEffect(() => { if (contentRef.current) contentRef.current.scrollTop = 0 }, [pathname, search])
@@ -20,5 +20,6 @@ export default function DatabaseLayout() {
     return <Card className="schema-state"><Alert tone="error" title={error instanceof SchemaSourceError && error.code === 'not-found' ? 'Database tidak ditemukan' : error instanceof SchemaSourceError && error.code === 'denied' ? 'Akses ditolak' : 'Schema belum dapat dimuat'}>{error?.message}</Alert>{retryable && <Button variant="secondary" loading={query.isFetching} onClick={() => { void query.refetch() }}>Coba lagi</Button>}<Link to={paths.databases}>Kembali ke daftar database</Link></Card>
   }
   const explorer = pathname === paths.schema(connectionId) || pathname === paths.database(connectionId)
-  return <div className="schema-workspace"><aside className="schema-sidebar"><WorkspaceSidebar workspace={query.data} preview={query.preview} /></aside><div ref={contentRef} className="schema-content" role="region" aria-label="Konten database" tabIndex={0}><Link className="schema-back" to={explorer ? paths.databases : withWorkspacePreview(paths.schema(connectionId), query.preview)}><span aria-hidden="true">←</span>Kembali</Link><Outlet context={{ workspace: query.data, preview: query.preview }} /></div></div>
+  const schemaBack = `${paths.schema(connectionId)}${schemaName ? `?schema=${encodeURIComponent(schemaName)}` : ''}`
+  return <div className="schema-workspace"><aside className="schema-sidebar"><WorkspaceSidebar workspace={query.data} preview={query.preview} /></aside><div ref={contentRef} className="schema-content" role="region" aria-label="Konten database" tabIndex={0}><Link className="schema-back" to={explorer ? paths.databases : withWorkspacePreview(schemaBack, query.preview)}><span aria-hidden="true">&larr;</span>Kembali</Link><Outlet context={{ workspace: query.data, preview: query.preview }} /></div></div>
 }

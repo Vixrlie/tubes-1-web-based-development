@@ -13,12 +13,12 @@ export function Header({ navigation, profile, onMenu, homeTo = '/' }: { navigati
   return <header className="ds-header"><div className="ds-brand-row">{onMenu && <span className="ds-menu-trigger"><IconButton label="Buka navigasi" onClick={onMenu}><MenuIcon /></IconButton></span>}<NavLink to={homeTo} aria-label="Pathgres beranda"><img className="ds-logo" src={asset + 'c0d63.png'} width="191" height="44" alt="Pathgres" /></NavLink></div><nav className="ds-header-nav" aria-label="Navigasi utama">{navigation}</nav>{profile}</header>
 }
 
-export function SidebarItem({ active = false, children, icon, nested = false, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean; nested?: boolean; icon?: ReactNode }) {
-  return <button type="button" {...props} aria-current={active ? 'page' : undefined} className={`ds-sidebar-item ${nested ? 'ds-sidebar-item--nested' : ''}`} >{icon}{children}</button>
+export function SidebarItem({ active = false, children, icon, nested = false, className = '', ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean; nested?: boolean; icon?: ReactNode }) {
+  return <button type="button" {...props} aria-current={active ? 'page' : undefined} className={`ds-sidebar-item ${nested ? 'ds-sidebar-item--nested' : ''} ${className}`} >{icon && <span className="ds-sidebar-item-icon" aria-hidden="true">{icon}</span>}<span className="ds-sidebar-item-content">{typeof children === 'string' || typeof children === 'number' ? <span className="ds-nav-label">{children}</span> : children}</span></button>
 }
 
 export function Sidebar({ label, children }: { label: string; children: ReactNode }) {
-  return <nav className="ds-sidebar" aria-label={label}><p className="ds-eyebrow">{label}</p>{children}</nav>
+  return <nav className="ds-sidebar" aria-label={label}><div className="ds-sidebar-heading"><p className="ds-eyebrow">{label}</p></div>{children}</nav>
 }
 
 export function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {

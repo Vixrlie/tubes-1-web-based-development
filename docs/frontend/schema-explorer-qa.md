@@ -31,8 +31,8 @@ ID tidak dikenal ditolak, `hr_db` tetap gagal terhubung, tidak ada fallback ke
 shop_db. Flag mock View Only dipropagasikan ke seluruh tabel, bukan hak akses
 server. Model API dan otorisasi nyata belum diintegrasikan.
 
-Detail tabel hanya menampilkan tujuan dan tautan kembali; Columns/Data belum
-diimplementasikan. Migrasi dan Schema Diff masih memakai placeholder yang ada.
+Detail tabel kini memiliki Column, Constraint & Index, Data serta pagination
+berbasis mock. Migrasi dan Schema Diff masih memakai placeholder yang ada.
 Belum ada eksekusi SQL, grant/revoke, atau mutasi backend.
 
 ## Preview development

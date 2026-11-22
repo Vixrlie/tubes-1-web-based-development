@@ -40,7 +40,7 @@ export default function NavigationCatalog({ notify }: { notify: (message: string
     ] })
   }
 
-  const databaseSidebar = <DatabaseSidebar database="shop_db" schemas={[
+  const databaseSidebar = <DatabaseSidebar variant="schema" database="shop_db" schemas={[
     { id: 'public', name: 'public', tables: tables.map(table => ({ id: table.name, name: table.name })) },
     { id: 'archive', name: 'archive', tables: [] },
   ]} selection={selection} onSelect={value => { setSelection(value); setDrawer(false) }} />

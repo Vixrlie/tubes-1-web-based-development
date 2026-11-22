@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Alert, Badge, Button, Card, EmptyState, Spinner } from './primitives'
 import type { Tone } from './primitives'
 import { Icon } from './navigation'
+import { paginationItems } from './pagination'
 
 const SqlCodeMirror = lazy(() => import('./sql-editor'))
 
@@ -30,14 +31,15 @@ export function KpiCard({ label, value, detail }: { label: string; value: string
   return <Card className="ds-stack"><small>{label}</small><strong className="ds-kpi-value">{value}</strong>{detail && <small>{detail}</small>}</Card>
 }
 
-export type Column<T> = { key: string; label: string; render: (row: T) => ReactNode }
+export type Column<T> = { key: string; label: string; header?: ReactNode; sortDirection?: 'ascending' | 'descending'; render: (row: T) => ReactNode }
 export function DataTable<T>({ columns, rows, rowKey, caption }: { columns: Column<T>[]; rows: T[]; rowKey: (row: T) => string; caption: string }) {
   if (!rows.length) return <EmptyState title="Belum ada data">Data yang sesuai akan muncul di sini.</EmptyState>
-  return <div className="ds-table-scroll" tabIndex={0} role="region" aria-label={caption}><table className="ds-table"><caption className="sr-only">{caption}</caption><thead><tr>{columns.map(col => <th key={col.key} scope="col">{col.label}</th>)}</tr></thead><tbody>{rows.map(row => <tr key={rowKey(row)}>{columns.map(col => <td key={col.key} data-label={col.label}>{col.render(row)}</td>)}</tr>)}</tbody></table></div>
+  return <div className="ds-table-scroll" tabIndex={0} role="region" aria-label={caption}><table className="ds-table"><caption className="sr-only">{caption}</caption><thead><tr>{columns.map(col => <th key={col.key} scope="col" aria-sort={col.sortDirection}>{col.header ?? col.label}</th>)}</tr></thead><tbody>{rows.map(row => <tr key={rowKey(row)}>{columns.map(col => <td key={col.key} data-label={col.label}>{col.render(row)}</td>)}</tr>)}</tbody></table></div>
 }
 
-export function Pagination({ page, total, pageSize, onChange }: { page: number; total: number; pageSize: number; onChange: (page: number) => void }) {
+export function Pagination({ page, total, pageSize, onChange, variant = 'default' }: { page: number; total: number; pageSize: number; onChange: (page: number) => void; variant?: 'default' | 'table' }) {
   const pages = Math.max(1, Math.ceil(total / pageSize)); const current = Math.min(pages, Math.max(1, page))
+  if (variant === 'table') return <nav className="ds-pagination ds-pagination--table" aria-label="Paginasi data tabel"><small>Menampilkan {total ? (current - 1) * pageSize + 1 : 0}–{Math.min(current * pageSize, total)} dari {total.toLocaleString('id-ID')} baris</small><div className="ds-row"><Button variant="secondary" size="sm" aria-label="Halaman sebelumnya" disabled={current === 1} onClick={() => onChange(current - 1)}>‹ Prev</Button><span className="ds-pagination-current" aria-live="polite">Halaman {current} / {pages}</span><span className="ds-pagination-numbers">{paginationItems(current, pages).map(item => typeof item === 'number' ? <Button key={item} variant="secondary" size="sm" aria-current={item === current ? 'page' : undefined} aria-label={`Halaman ${item}`} onClick={() => onChange(item)}>{item}</Button> : <span key={item} aria-hidden="true">…</span>)}</span><Button variant="secondary" size="sm" aria-label="Halaman berikutnya" disabled={current === pages} onClick={() => onChange(current + 1)}>Next ›</Button></div></nav>
   return <nav className="ds-pagination" aria-label="Paginasi"><small>{total === 0 ? 0 : (current - 1) * pageSize + 1}–{Math.min(current * pageSize, total)} dari {total}</small><div className="ds-row"><Button variant="secondary" size="sm" disabled={current === 1} onClick={() => onChange(current - 1)}>Sebelumnya</Button><span aria-live="polite">{current} / {pages}</span><Button variant="secondary" size="sm" disabled={current === pages} onClick={() => onChange(current + 1)}>Berikutnya</Button></div></nav>
 }
 

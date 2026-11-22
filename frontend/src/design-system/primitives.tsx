@@ -57,8 +57,8 @@ export function Card({ children, className = '', ...props }: HTMLAttributes<HTML
   return <div {...props} className={`ds-card ${className}`}>{children}</div>
 }
 
-export function Tabs({ items, value, onChange, label }: { items: { value: string; label: string; disabled?: boolean }[]; value: string; onChange: (value: string) => void; label: string }) {
-  return <div className="ds-tabs" role="tablist" aria-label={label}>{items.map((item) => <button type="button" key={item.value} role="tab" aria-selected={item.value === value} tabIndex={item.value === value ? 0 : -1} disabled={item.disabled} onClick={() => onChange(item.value)} onKeyDown={(event) => {
+export function Tabs({ items, value, onChange, label, idPrefix }: { items: { value: string; label: string; disabled?: boolean }[]; value: string; onChange: (value: string) => void; label: string; idPrefix?: string }) {
+  return <div className="ds-tabs" role="tablist" aria-label={label}>{items.map((item) => <button type="button" key={item.value} id={idPrefix ? `${idPrefix}-tab-${item.value}` : undefined} aria-controls={idPrefix ? `${idPrefix}-panel-${item.value}` : undefined} role="tab" aria-selected={item.value === value} tabIndex={item.value === value ? 0 : -1} disabled={item.disabled} onClick={() => onChange(item.value)} onKeyDown={(event) => {
     const enabled = items.filter(i => !i.disabled); const index = enabled.findIndex(i => i.value === value)
     let next: number
     if (event.key === 'ArrowRight') next = (index + 1) % enabled.length

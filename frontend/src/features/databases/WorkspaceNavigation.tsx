@@ -10,7 +10,7 @@ export function WorkspaceSidebar({ workspace, preview, onNavigate }: { workspace
   const { pathname } = useLocation()
   const [params] = useSearchParams()
   const tableMatch = useMatch('/databases/:connectionId/schemas/:schemaName/tables/:tableName')
-  const activeSchema = pathname.includes('/migrations') ? undefined : tableMatch?.params.schemaName ?? selectSchema(workspace.schemas, params.get('schema'))?.name
+  const activeSchema = pathname.includes('/migrations') || tableMatch ? undefined : selectSchema(workspace.schemas, params.get('schema'))?.name
   const go = (path: string) => { onNavigate?.(); navigate(withWorkspacePreview(path, preview)) }
   return <DatabaseSidebar database={workspace.database.name} variant="schema" activeSchema={activeSchema}
     schemas={workspace.schemas.map(schema => ({ id: schema.name, name: schema.name, tables: schema.tables.map(table => ({ id: table.name, name: table.name })) }))}

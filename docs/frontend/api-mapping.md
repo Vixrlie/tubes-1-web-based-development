@@ -24,8 +24,8 @@ Sumber: `main.go`, `internal/auth/{handlers,middleware}.go`,
 
 ## Matriks layar / route / data / akses
 
-Login, Beranda, shell, Database List dan Schema Explorer sudah diimplementasikan.
-Daftar dan schema memakai fixture FE, bukan endpoint bisnis JSON. Detail tabel/admin masih
+Login, Beranda, shell, Database List, Schema Explorer dan Table Detail sudah
+diimplementasikan. Data bisnis memakai fixture FE, bukan endpoint bisnis JSON. Admin masih
 **placeholder**, dengan session guard dan admin guard aktif. Izin per database
 masih merupakan target integrasi dan harus ditegakkan server.
 

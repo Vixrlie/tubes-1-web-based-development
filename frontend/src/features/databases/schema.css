@@ -35,7 +35,6 @@
 .schema-pending-page h1 { font-size: 23px; overflow-wrap: anywhere; }
 .schema-drawer-tree { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
 .schema-drawer-tree .ds-sidebar { padding: 0; }
-.schema-sidebar-divider { display: block; margin: 12px 16px 16px; }
 @media (min-width: 1024px) {
   .app-shell--database-workspace { display: flex; flex-direction: column; height: 100dvh; min-height: 0; overflow: hidden; background: linear-gradient(152deg, var(--primary-50) 13.366%, var(--primary-200) 75.709%); }
   .app-shell--database-workspace > .ds-header { position: relative; flex-shrink: 0; }
@@ -45,11 +44,7 @@
   .app-shell--database-workspace .app-content > .ds-alert { flex-shrink: 0; margin-bottom: 16px; }
   .app-shell--database-workspace .app-content > .schema-state { min-height: 0; overflow-y: auto; }
   .schema-workspace { display: grid; flex: 1; min-height: 0; grid-template-columns: 276px minmax(0, 1fr); gap: 32px; align-items: stretch; }
-  .schema-sidebar { display: block; background: var(--surface); border: 1px solid var(--neutral-100); border-radius: 24px; min-height: 0; padding: 17px; overflow: clip; }
-  .schema-sidebar .ds-sidebar { padding: 16px 0; }
-  .schema-sidebar .ds-eyebrow { padding: 0 16px; letter-spacing: .6px; }
-  .schema-sidebar .ds-sidebar-item { min-height: 45px; }
-  .schema-sidebar .ds-sidebar-item--nested { padding-left: 48px; }
+  .schema-sidebar { display: block; background: var(--surface); border: 1px solid var(--neutral-100); border-radius: 24px; min-height: 0; padding: 0; overflow: clip; }
   .schema-content { min-height: 0; padding: 22px 32px 0 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; }
   .schema-back, .schema-mobile-rows, .schema-mobile-actions { display: none; }
   .schema-explorer { gap: 32px; }

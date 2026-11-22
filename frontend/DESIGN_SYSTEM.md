@@ -11,6 +11,17 @@ mulai 1024px; pada layar lebih kecil menu administrasi dipindahkan ke drawer.
 
 ## Komponen workspace desktop
 
+Sidebar memakai satu divider pada header bersama, baris menu 48px, slot ikon
+20px, gap ikon/teks 12px, serta indent tabel 32px dari baris schema. Chevron
+sejajar di kanan dan label panjang memakai ellipsis. Spacing ini dimiliki
+komponen Sidebar/SidebarItem; halaman tidak menambah padding atau divider lagi.
+Preview katalog memakai variant schema yang sama dengan halaman produk.
+
+`Tabs` menerima `idPrefix` opsional untuk menghubungkan tab dan panel secara
+aksesibel. `Pagination variant="table"` menyediakan kontrol Prev/Next, nomor
+halaman desktop dan indikator Halaman pada mobile. `DataTable` mendukung header
+interaktif dan `aria-sort` melalui properti kolom opsional.
+
 Contoh interaktif ada di `/design-system/navigation`, melalui `src/catalog/NavigationCatalog.tsx`.
 Katalog awal dibuat untuk desktop. Database List produk kini diimplementasikan
 mobile-first mengikuti frame final mobile dan desktop, memakai komponen yang sama.

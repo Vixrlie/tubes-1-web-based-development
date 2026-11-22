@@ -26,7 +26,7 @@ backend dapat menyiapkan admin jika belum ada, bukan mengganti password akun lam
 | /home | Beranda dan shortcut, memerlukan sesi |
 | /databases | Database List responsif dengan mock data; memerlukan sesi |
 | /databases/:connectionId/schema | Schema Explorer responsif dengan mock data |
-| /databases/:connectionId/schemas/:schemaName/tables/:tableName | tujuan detail tabel; masih disiapkan |
+| /databases/:connectionId/schemas/:schemaName/tables/:tableName | Column, Constraint & Index, Data dan pagination dengan mock data |
 | /databases/:connectionId/migrations/*, /admin | placeholder terlindungi; Admin hanya admin platform |
 
 ## Pemeriksaan
@@ -47,7 +47,7 @@ JSON bisnis database/admin masih harus dibangun.
 2. Masuk dengan akun aktif: tampil Beranda; toggle eye dan loading berfungsi.
 3. Klik Database: tampil empat kartu contoh, status koneksi dan View/Edit.
    Buka menuju Schema Explorer; coba sidebar/drawer, kartu tabel dan link foreign
-   key. Detail tabel, migrasi dan Admin masih disiapkan.
+   key. Detail tabel memiliki tiga tab dan pagination; migrasi/Admin masih disiapkan.
 4. Refresh halaman: sesi dipulihkan dari cookie. Non-admin tidak melihat Admin;
    akses URL `/admin` langsung menampilkan akses terbatas.
 5. Klik avatar → Keluar: kembali ke Login. Back/refresh tidak membuka sesi lama.
@@ -61,3 +61,4 @@ Test backend (tanpa database, httptest):
 - [Mapping UI/API/Role](../docs/frontend/api-mapping.md)
 - [Database List: batas mock dan QA](../docs/frontend/database-list-qa.md)
 - [Schema Explorer: batas mock dan QA](../docs/frontend/schema-explorer-qa.md)
+- [Table Detail: batas mock dan QA](../docs/frontend/table-detail-qa.md)
