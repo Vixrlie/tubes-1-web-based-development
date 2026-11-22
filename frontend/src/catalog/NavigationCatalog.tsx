@@ -19,7 +19,7 @@ const tables = [
   { name: 'payments', columns: 4, permission: 'View only' },
   { name: 'categories', columns: 3, permission: 'View + Edit' },
 ]
-const adminTitles = { users: 'Pengguna', groups: 'Grup', connections: 'Koneksi Database' }
+const adminTitles = { users: 'Pengguna', groups: 'Grup', connections: 'Koneksi Database', activity: 'Activity Logs', observability: 'Observability' }
 
 export default function NavigationCatalog({ notify }: { notify: (message: string) => void }) {
   const [workspace, setWorkspace] = useState<ProductDestination>('database')

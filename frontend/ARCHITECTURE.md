@@ -3,7 +3,7 @@
 SPA memiliki Login, Beranda dan application shell dengan sesi cookie Go asli.
 Database List, Schema Explorer, Table Detail serta Migration History/Execution
 Detail, form/detail/edit draft, review/approval dan antrean/progress memakai mock
-data terpisah. Admin belum diimplementasikan. Katalog tetap publik.
+data terpisah. Admin menyediakan monitoring Activity Logs (mock) dan akses Grafana; CRUD administrasi belum diimplementasikan. Katalog tetap publik.
 
 | Lokasi | Tanggung jawab |
 | --- | --- |

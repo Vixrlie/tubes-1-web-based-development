@@ -36,7 +36,9 @@ backend dapat menyiapkan admin jika belum ada, bukan mengganti password akun lam
 | /databases/:connectionId/migrations/diff | bandingkan dua schema, pilih perubahan dan buat draft |
 | /databases/:connectionId/migrations/drafts/:draftId/preview | preview SQL dan EXPLAIN fixture |
 | /databases/:connectionId/migrations/explain | editor dan execution plan fixture |
-| /admin | placeholder terlindungi; Admin hanya admin platform |
+| /admin | redirect ke Activity Logs; hanya admin platform |
+| /admin/activity-logs | pencarian, filter, pagination dan detail log mock |
+| /admin/observability | akses dashboard, logs dan traces Grafana |
 
 ## Pemeriksaan
 
@@ -60,8 +62,9 @@ JSON bisnis database/admin masih harus dibangun.
    dan detail eksekusi. Migrasi Baru → Simpan Draft membuka detail draft; bisa
    diedit dan tetap ada saat refresh tab. Logout menghapus draft mock.
    Dari detail draft, Ajukan Review → setujui ketiga grup dengan alasan → Masukkan
-   ke Antrean. Progress bergerak otomatis dan hasil masuk history. Admin masih
-   disiapkan; SQL tidak pernah dijalankan pada backend.
+   ke Antrean. Progress bergerak otomatis dan hasil masuk history. Admin menyediakan Activity
+   Logs (mock) dan pintu masuk Grafana; CRUD administrasi belum dibangun. SQL
+   dari alur FE tidak pernah dijalankan pada backend.
 4. Refresh halaman: sesi dipulihkan dari cookie. Non-admin tidak melihat Admin;
    akses URL `/admin` langsung menampilkan akses terbatas.
 5. Klik avatar → Keluar: kembali ke Login. Back/refresh tidak membuka sesi lama.
@@ -81,3 +84,4 @@ Test backend (tanpa database, httptest):
 - [Review, Queue dan Progress: batas mock dan QA](../docs/frontend/migration-workflow-qa.md)
 - [Schema Diff, EXPLAIN dan Recovery: batas mock dan QA](../docs/frontend/schema-tools-recovery-qa.md)
 - [Checkpoint Database/Beranda dan menu mobile](../docs/frontend/database-home-final-qa.md)
+- [Admin Activity Logs dan Observability](../docs/frontend/admin-monitoring-qa.md)

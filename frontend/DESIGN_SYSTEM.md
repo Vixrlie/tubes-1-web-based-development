@@ -201,7 +201,8 @@ Katalog dipindahkan dari App.tsx ke src/catalog/; empat URL tetap tersedia.
 Router dan provider berada di src/app/. Detail ada di [ARCHITECTURE.md](ARCHITECTURE.md)
 dan [mapping API](../docs/frontend/api-mapping.md). Login dan Beranda kini memakai
 komponen katalog dengan sesi cookie Go. Database memakai data bisnis mock;
-Admin masih placeholder terlindungi.
+Admin menyediakan monitoring Activity Logs dan Observability; CRUD administrasi
+masih placeholder terlindungi.
 Aset `login-background.png` adalah background asli Figma Login, disimpan lokal.
 
 Form Buat Migrasi/detail draft menggunakan komponen bersama. `SqlEditor` menerima

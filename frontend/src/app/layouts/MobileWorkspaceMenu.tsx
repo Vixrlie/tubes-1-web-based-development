@@ -42,8 +42,8 @@ function DatabaseContext({ connectionId, onClose }: MenuProps & { connectionId: 
 }
 
 export default function MobileWorkspaceMenu({ active, connectionId, onClose }: MenuProps & { active: 'home' | 'database' | 'admin'; connectionId?: string }) {
-  if (active === 'admin') return <MobileContextMenu open onClose={onClose} title="Kelola platform" description="Pengguna · Grup · Koneksi"><nav className="ds-context-links" aria-label="Navigasi Admin">
-    <ContextLink to={paths.users} onClose={onClose}>Pengguna</ContextLink><ContextLink to={paths.groups} onClose={onClose}>Grup</ContextLink><ContextLink to={paths.connections} onClose={onClose}>Koneksi Database</ContextLink>
+  if (active === 'admin') return <MobileContextMenu open onClose={onClose} title="Kelola platform" description="Administrasi · Aktivitas · Monitoring"><nav className="ds-context-links" aria-label="Navigasi Admin">
+    <ContextLink to={paths.users} onClose={onClose}>Pengguna</ContextLink><ContextLink to={paths.groups} onClose={onClose}>Grup</ContextLink><ContextLink to={paths.connections} onClose={onClose}>Koneksi Database</ContextLink><ContextLink to={paths.activity} onClose={onClose}>Activity Logs</ContextLink><ContextLink to={paths.observability} onClose={onClose}>Observability</ContextLink>
   </nav></MobileContextMenu>
   return connectionId ? <DatabaseContext connectionId={connectionId} onClose={onClose} /> : <DatabaseChoices onClose={onClose} />
 }

@@ -8,8 +8,9 @@
 .app-workspace { display: grid; grid-template-columns: 256px minmax(0, 1fr); gap: var(--space-24); }
 .app-workspace > aside { background: var(--surface); border: 1px solid var(--neutral-100); border-radius: var(--radius-panel); }
 .app-section-navigation { display: flex; flex-wrap: wrap; gap: var(--space-16); border-bottom: 1px solid var(--border); padding-bottom: var(--space-16); }
-.app-section-navigation a, .app-admin-overview { display: block; color: var(--text-muted); text-decoration: none; padding: var(--space-12) var(--space-16); }
-.app-section-navigation a.active, .app-admin-overview.active { color: var(--primary-500); font-weight: 600; }
+.app-section-navigation a { display: block; color: var(--text-muted); text-decoration: none; padding: var(--space-12) var(--space-16); }
+.app-section-navigation a.active { color: var(--primary-500); font-weight: 600; }
+.app-shell--admin { background: var(--workspace-background-mobile); }
 .app-shell--admin .app-workspace { grid-template-columns: minmax(0, 1fr); }
 .app-shell--admin .app-workspace > aside { display: none; }
 .app-shell--admin .ds-menu-trigger { display: inline-flex; }
@@ -18,7 +19,7 @@
   .app-shell--admin .app-workspace { grid-template-columns: 256px minmax(0, 1fr); }
   .app-shell--admin .app-workspace > aside { display: block; }
   .app-shell--admin .ds-menu-trigger { display: none; }
-  .app-shell--admin { display: flex; flex-direction: column; height: 100dvh; min-height: 0; overflow: hidden; }
+  .app-shell--admin { display: flex; flex-direction: column; height: 100dvh; min-height: 0; overflow: hidden; background: var(--workspace-background-desktop); }
   .app-shell--admin > .ds-header { flex-shrink: 0; position: relative; z-index: 35; }
   .app-shell--admin .app-content { display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%; max-width: none; padding-right: 0; overflow: hidden; }
   .app-shell--admin .app-content > .ds-alert { flex-shrink: 0; margin-bottom: 16px; }

@@ -26,8 +26,9 @@ Sumber: `main.go`, `internal/auth/{handlers,middleware}.go`,
 
 Login, Beranda, shell, Database List, Schema Explorer, Table Detail dan Migration
 History/Execution Detail sudah diimplementasikan. Data bisnis memakai fixture FE,
-bukan endpoint bisnis JSON. Admin masih
-**placeholder**, dengan session guard dan admin guard aktif. Izin per database
+bukan endpoint bisnis JSON. Admin menyediakan Activity Logs (mock) dan akses
+Grafana pada Observability; CRUD administrasi masih **placeholder**. Session
+guard dan admin guard aktif. Izin per database
 masih merupakan target integrasi dan harus ditegakkan server.
 
 | Layar | Route SPA | Kebutuhan data/aksi | Akses target | BE saat ini |
@@ -110,7 +111,7 @@ mode dev bukan bukti fitur/API production tersedia.
 | Rollback manual | Rollback transaksi gagal ada, route rollback manual tidak ditemukan | Pisahkan kegagalan transaksi dan menjalankan SQL Down |
 | View + Edit | Grant `edit` sudah mencakup view | Label UI dipetakan dari enum backend |
 | Search/filter | Contoh katalog masih lokal | Sepakati pagination/sort/filter server |
-| Activity Logs | Logging tidak otomatis menyediakan API daftar log | Tentukan scope dan endpoint layar log |
+| Activity Logs | FE `/admin/activity-logs` memakai mock; logging backend menulis stdout | Sepakati API daftar/detail log, filter dan pagination dengan otorisasi admin |
 
 Sumber state: `internal/dbm/migration.go`, `migration_pages.go`; izin:
 `internal/access/policy.go`. EXPLAIN ANALYZE di-rollback, bukan fitur rollback
@@ -195,3 +196,7 @@ SESSION_EXPIRED, 403 ORIGIN_REJECTED/CSRF_INVALID, 415 JSON_REQUIRED,
 menggunakan `{error: {code, message}}`; validasi field kosong dilakukan juga
 di FE. Logout gagal jaringan mempertahankan sesi agar bisa dicoba lagi;
 LOGOUT_FAILED berarti cookie sudah dihapus tetapi revocation server gagal.
+
+Observability SPA `/admin/observability` hanya menyediakan pintu masuk Grafana;
+metrik Prometheus berasal dari backend `/metrics` yang diaktifkan lewat
+`OBSERVABILITY_METRICS=1`. Tidak ada endpoint JSON monitoring baru pada tahap ini.

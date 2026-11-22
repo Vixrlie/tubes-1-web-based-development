@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ChevronDownIcon, HomeIcon } from './control-icons'
+import { ActivityLogIcon, ChevronDownIcon, HomeIcon, MonitoringIcon } from './control-icons'
 import { Header, Icon, Sidebar, SidebarItem } from './navigation'
 import { EmptyState } from './primitives'
 
@@ -48,7 +48,7 @@ export function DatabaseSidebar({ database, schemas, selection, onSelect, loadin
   </Sidebar>
 }
 
-export type AdminDestination = 'users' | 'groups' | 'connections'
+export type AdminDestination = 'users' | 'groups' | 'connections' | 'activity' | 'observability'
 const adminItems = [
   { value: 'users', label: 'Pengguna', icon: 'user' },
   { value: 'groups', label: 'Grup', icon: 'group' },
@@ -56,7 +56,7 @@ const adminItems = [
 ] as const
 
 export function AdminSidebar({ active, onNavigate }: { active?: AdminDestination; onNavigate: (destination: AdminDestination) => void }) {
-  return <Sidebar label="Admin workspace">{adminItems.map(item => <SidebarItem key={item.value} icon={<Icon name={item.icon} />} active={active === item.value} onClick={() => onNavigate(item.value)}>{item.label}</SidebarItem>)}</Sidebar>
+  return <Sidebar label="Admin workspace">{adminItems.map(item => <SidebarItem key={item.value} icon={<Icon name={item.icon} />} active={active === item.value} onClick={() => onNavigate(item.value)}>{item.label}</SidebarItem>)}<div className="ds-sidebar-monitoring"><SidebarItem icon={<ActivityLogIcon />} active={active === 'activity'} onClick={() => onNavigate('activity')}>Activity Logs</SidebarItem><SidebarItem icon={<MonitoringIcon />} active={active === 'observability'} onClick={() => onNavigate('observability')}>Observability</SidebarItem></div></Sidebar>
 }
 
 /** Inline previews the mobile navigation without fixing it to the viewport. */

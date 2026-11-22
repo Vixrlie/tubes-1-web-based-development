@@ -8,6 +8,8 @@
   --warning-50: #fffbeb; --warning-100: #fff5ea; --warning-500: #f59e0b; --warning-600: #c47e09; --warning-700: #aa6c05;
   --error-100: #fce8e5; --error-500: #c10007; --error-700: #850003;
   --surface: var(--white); --canvas: var(--neutral-50); --text: var(--neutral-900);
+  --workspace-background-mobile: linear-gradient(119deg, var(--primary-50) 13.366%, var(--primary-200) 75.709%);
+  --workspace-background-desktop: linear-gradient(152deg, var(--primary-50) 13.366%, var(--primary-200) 75.709%);
   --text-muted: var(--neutral-600); --border: var(--neutral-200); --code-bg: #0b1b3a;
   --font-sans: 'Poppins', sans-serif; --font-code: Consolas, monospace;
   --text-display: 36px; --text-title: 22px; --text-section: 18px;

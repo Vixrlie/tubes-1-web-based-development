@@ -1,5 +1,5 @@
 /* Mobile-first Schema Explorer; desktop is an enhancement of the same data. */
-.app-shell--database-workspace { background: linear-gradient(119deg, var(--primary-50) 13.366%, var(--primary-200) 75.709%); }
+.app-shell--database-workspace { background: var(--workspace-background-mobile); }
 .app-shell--database-workspace > .ds-header { position: sticky; top: 0; z-index: 35; }
 .app-shell--database-workspace .ds-logo { width: 128px; height: auto; }
 .app-shell--database-workspace .ds-profile summary { display: grid; place-items: center; min-width: 44px; min-height: 44px; }
@@ -36,7 +36,7 @@
 .schema-drawer-tree { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
 .schema-drawer-tree .ds-sidebar { padding: 0; }
 @media (min-width: 1024px) {
-  .app-shell--database-workspace { display: flex; flex-direction: column; height: 100dvh; min-height: 0; overflow: hidden; background: linear-gradient(152deg, var(--primary-50) 13.366%, var(--primary-200) 75.709%); }
+  .app-shell--database-workspace { display: flex; flex-direction: column; height: 100dvh; min-height: 0; overflow: hidden; background: var(--workspace-background-desktop); }
   .app-shell--database-workspace > .ds-header { position: relative; flex-shrink: 0; }
   .app-shell--database-workspace .ds-logo { width: 191px; height: 44px; }
   .app-shell--database-workspace .ds-avatar { width: 48px; height: 48px; }

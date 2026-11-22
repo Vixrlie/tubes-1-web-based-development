@@ -19,6 +19,8 @@ export const paths = {
   previewMigration: (id: string, draftId: string) => `/databases/${encodeURIComponent(id)}/migrations/drafts/${encodeURIComponent(draftId)}/preview`,
   explain: (id: string) => `/databases/${encodeURIComponent(id)}/migrations/explain`,
   admin: '/admin',
+  activity: '/admin/activity-logs',
+  observability: '/admin/observability',
   users: '/admin/users',
   groups: '/admin/groups',
   connections: '/admin/connections',

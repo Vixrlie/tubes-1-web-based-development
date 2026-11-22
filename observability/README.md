@@ -1,5 +1,15 @@
 # Pathgres Observability
 
+Di SPA, admin dapat membuka **Admin → Observability** pada
+`http://localhost:5173/admin/observability`, lalu memilih dashboard metrik atau
+Grafana Explore untuk log/trace. Dashboard Grafana juga dapat dibuka langsung
+di `http://localhost:3000/d/pathgres-observability`.
+
+Halaman **Admin → Activity Logs** (`/admin/activity-logs`) saat ini memakai
+fixture FE; belum membaca Loki atau stdout. Menjalankan SPA tidak otomatis
+menjalankan stack monitoring di bawah ini. URL Grafana FE dapat diatur melalui
+`VITE_GRAFANA_URL` pada `frontend/.env.local` (lihat `frontend/.env.example`).
+
 Jalankan dari root repo pada PowerShell dengan Docker Desktop aktif. Siapkan
 database platform seperti pada README utama dan gunakan `APP_ADDR=:8080`.
 Jika port aplikasi berbeda, sesuaikan target di `prometheus.yml`.
