@@ -57,8 +57,11 @@ History FE saat ini menautkan **execution ID** (E1048) pada segment
 `migrations/:migrationId`; parameter lama ini belum dihubungkan ke ID migrasi
 backend. JSON API perlu memisahkan migration ID, execution ID dan rollback target
 secara eksplisit sebelum adapter integrasi dibuat. `MigrationSource` hanya
-menyediakan list/detail read-only. Form baru, review, antrean dan diff belum
-diaktifkan di history UI. Lihat [QA history](migration-history-qa.md).
+menyediakan list/detail read-only. Form baru dan detail/edit draft menggunakan
+adapter mock `draft-source.ts` dengan sessionStorage; route terpisah
+`migrations/drafts/:draftId[/edit]`. SQL Up/Down dan irreversible belum dikirim
+ke endpoint HTML lama. Review, antrean dan diff belum aktif. Lihat
+[QA history](migration-history-qa.md) dan [QA draft](migration-draft-qa.md).
 
 `shop_db` di katalog adalah nama contoh, bukan ID koneksi server. Route SPA tabel
 memisahkan schema/table; backend lama memakai parser `schema.table` yang menolak

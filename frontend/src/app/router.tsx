@@ -16,6 +16,8 @@ import SchemaExplorerPage from '../features/databases/SchemaExplorerPage'
 import TableDetailPage from '../features/databases/TableDetailPage'
 import MigrationHistoryPage from '../features/migrations/MigrationHistoryPage'
 import MigrationDetailPage from '../features/migrations/MigrationDetailPage'
+import MigrationFormPage from '../features/migrations/MigrationFormPage'
+import MigrationDraftPage from '../features/migrations/MigrationDraftPage'
 
 const CatalogLayout = lazy(() => import('../catalog/CatalogLayout'))
 const FoundationsPage = lazy(() => import('../catalog/FoundationsPage'))
@@ -43,7 +45,9 @@ export function AppRouter() {
         <Route path="schema" element={<SchemaExplorerPage />} />
         <Route path="schemas/:schemaName/tables/:tableName" element={<TableDetailPage />} />
         <Route path="migrations" element={<MigrationHistoryPage />} />
-        <Route path="migrations/new" element={<RoutePlaceholder title="Buat migrasi" />} />
+        <Route path="migrations/new" element={<MigrationFormPage />} />
+        <Route path="migrations/drafts/:draftId" element={<MigrationDraftPage />} />
+        <Route path="migrations/drafts/:draftId/edit" element={<MigrationFormPage />} />
         <Route path="migrations/diff" element={<RoutePlaceholder title="Schema Diff" />} />
         <Route path="migrations/:migrationId" element={<MigrationDetailPage />} />
         <Route path="migrations/:migrationId/preview" element={<RoutePlaceholder title="Preview migrasi" />} />

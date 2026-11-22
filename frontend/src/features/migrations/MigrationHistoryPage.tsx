@@ -4,10 +4,13 @@ import { paths } from '../../app/routes'
 import { executionAction, executionStatus, filterExecutions, parseExecutionStatus, withMigrationSearch } from './migration-source'
 import type { Execution } from './migration-source'
 import { useMigrations } from './useMigrations'
+import { useDrafts } from './useDrafts'
 import './migrations.css'
+import './drafts.css'
 
 export default function MigrationHistoryPage() {
   const query = useMigrations()
+  const drafts = useDrafts()
   const [params, setParams] = useSearchParams()
   const { database } = query.workspace
   const hideRollback = params.get('hideRollback') === '1'
@@ -20,9 +23,10 @@ export default function MigrationHistoryPage() {
   return <div className="migration-page">
     <header className="schema-heading"><h1>Riwayat Migrasi</h1><p><Link to={paths.databases}>{database.name}</Link> › Riwayat Migrasi</p></header>
     <section className="migration-actions" aria-label="Aksi migrasi"><h2>Aksi Cepat</h2><p>Buat migrasi, buka review, atau pantau antrean.</p>
-      <Button className="migration-new" disabled title={database.permission === 'view' ? 'Akses database hanya untuk melihat' : 'Pembuatan migrasi belum tersedia'}><span className="migration-plus" aria-hidden="true">＋</span>Migrasi Baru</Button>
+      {database.permission === 'view' ? <Button className="migration-new" disabled title="Akses database hanya untuk melihat"><span className="migration-plus" aria-hidden="true">＋</span>Migrasi Baru</Button> : <Link className="ds-button ds-button--primary ds-button--md migration-new" to={withMigrationSearch(paths.newMigration(database.id), params)}><span className="migration-plus" aria-hidden="true">＋</span>Migrasi Baru</Link>}
       <nav aria-label="Menu terkait migrasi"><Button variant="secondary" disabled title="Review belum tersedia">Review</Button><Button variant="secondary" disabled title="Antrean belum tersedia">Antrean</Button><Button variant="secondary" disabled title="Schema Diff belum tersedia">Schema Diff</Button></nav>
     </section>
+    {drafts.isError ? <section className="migration-drafts"><Alert tone="error" title="Draft belum dapat dimuat">{drafts.error.message}</Alert><Button variant="secondary" onClick={() => { void drafts.refetch() }}>Coba lagi</Button></section> : !!drafts.data?.length && <section className="migration-drafts" aria-labelledby="migration-drafts-title"><div className="migration-drafts-title"><h2 id="migration-drafts-title">Draft Migrasi</h2><Badge tone="neutral">{drafts.data.length}</Badge></div><div className="migration-draft-list">{drafts.data.map(draft => <Link className="migration-draft-card" key={draft.id} to={withMigrationSearch(paths.migrationDraft(database.id, draft.id), params)}><span><strong>{draft.name}</strong><small>{draft.version} · {draft.author}</small></span><Badge tone="neutral">Draft</Badge></Link>)}</div></section>}
     <section className="migration-history" aria-labelledby="execution-list-title">
       <div className="migration-list-heading"><div><h2 id="execution-list-title">Daftar Eksekusi</h2><p>Catatan eksekusi terbaru, termasuk UP, ROLLBACK, dan FORWARD.</p></div>
         <div className="migration-filters"><Dropdown label="Filter status eksekusi" hideLabel value={status} options={[{ value: 'all', label: 'Semua status' }, { value: 'success', label: 'Sukses' }, { value: 'failed', label: 'Gagal' }]} onChange={value => filter('status', value === 'all' ? '' : value)} />

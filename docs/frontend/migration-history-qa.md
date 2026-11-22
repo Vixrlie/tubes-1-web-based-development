@@ -17,9 +17,9 @@ Dropdown, Choice, Badge, Button, Alert, DataTable dan SqlPreview yang tersedia.
 - Inventory dan analytics memiliki empty history, tidak memakai data shop_db.
 - Read-only workspace tetap bisa membaca history. Tidak ada perubahan SQL,
   session, backend, job queue, approval, atau database nyata.
-- Tombol Migrasi Baru, Review, Antrean dan Schema Diff sengaja disabled. Alur
-  tersebut belum diimplementasikan pada checkpoint history/detail ini. Route
-  new/diff/preview lama masih placeholder, tidak ditautkan dari halaman ini.
+- Migrasi Baru membuka form dan detail/edit draft mock. Draft tampil pada bagian
+  sendiri, terpisah dari eksekusi. Review, Antrean dan Schema Diff masih disabled;
+  diff/preview belum diimplementasikan. Lihat [QA draft](migration-draft-qa.md).
 
 `MigrationSource` dan fixture terpisah dari komponen dan katalog. Query key
 memuat connection, workspace preview, history preview dan mode mock. Pembatalan

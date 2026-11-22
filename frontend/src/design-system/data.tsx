@@ -56,9 +56,9 @@ export function BatchProgress({ value, total, detail }: { value: number; total: 
   return <Card className="ds-stack"><strong id={id}>Batch Processing</strong><span className="ds-accent">{safeValue}/{safeTotal} batches · {percent}%</span><progress aria-labelledby={id} value={safeValue} max={safeTotal || 1} />{detail && <small>{detail}</small>}</Card>
 }
 
-export function SqlEditor({ value, onChange, readOnly = false, label = 'SQL UP' }: { value: string; onChange?: (value: string) => void; readOnly?: boolean; label?: string }) {
+export function SqlEditor({ value, onChange, readOnly = false, label = 'SQL UP', error }: { value: string; onChange?: (value: string) => void; readOnly?: boolean; label?: string; error?: string }) {
   const id = useId()
-  return <div className="ds-sql"><div id={id} className="ds-sql-label">{label}</div><Suspense fallback={<div className="ds-sql-loading"><Spinner /></div>}><SqlCodeMirror value={value} onChange={onChange} readOnly={readOnly} labelId={id} /></Suspense></div>
+  return <div className={`ds-sql ${error ? 'ds-sql--error' : ''}`}><div id={id} className="ds-sql-label">{label}</div><Suspense fallback={<div className="ds-sql-loading"><Spinner /></div>}><SqlCodeMirror value={value} onChange={onChange} readOnly={readOnly} labelId={id} errorId={error ? `${id}-error` : undefined} /></Suspense>{error && <p className="ds-sql-error" id={`${id}-error`}>{error}</p>}</div>
 }
 export function SqlPreview({ value, label }: { value: string; label?: string }) { return <SqlEditor value={value} label={label} readOnly /> }
 export function MigrationJobRow({ job, migration, detail, tone = 'info' }: { job: string; migration: string; detail: string; tone?: Tone }) { return <ListRow title={job} detail={`${migration} · ${detail}`} trailing={<Badge tone={tone}>{tone === 'success' ? 'Selesai' : tone === 'error' ? 'Gagal' : 'Berjalan'}</Badge>} /> }
