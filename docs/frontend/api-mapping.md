@@ -9,7 +9,7 @@ Endpoint database/admin JSON di bawah masih usulan; audit source bukan test live
 - Handler bisnis saat ini melayani HTML, form, redirect 303, atau fragmen HTML.
   JSON auth kini didaftarkan terpisah; routing bisnis database/admin tetap HTML.
 - Vite meneruskan `/api/...` tanpa rewrite ke port 8080. Proxy tidak berarti JSON
-  API bisnis sudah siap. Integrasi otomatis saat ini hanya untuk auth.
+  API bisnis sudah siap. Integrasi JSON aktif untuk auth dan Activity Logs (Loki).
 - Cookie `pathgres_session`: HttpOnly, Path=/, SameSite=Lax, Secure sesuai config.
 - Mutasi terautentikasi memerlukan `X-CSRF-Token` atau form `csrf_token`.
   Login lama memakai pemeriksaan same-origin CrossOriginProtection.
@@ -26,7 +26,7 @@ Sumber: `main.go`, `internal/auth/{handlers,middleware}.go`,
 
 Login, Beranda, shell, Database List, Schema Explorer, Table Detail dan Migration
 History/Execution Detail sudah diimplementasikan. Data bisnis memakai fixture FE,
-bukan endpoint bisnis JSON. Admin menyediakan Activity Logs (mock) dan akses
+bukan endpoint bisnis JSON. Admin menyediakan Activity Logs (API/Loki) dan akses
 Grafana pada Observability; CRUD administrasi masih **placeholder**. Session
 guard dan admin guard aktif. Izin per database
 masih merupakan target integrasi dan harus ditegakkan server.
@@ -111,7 +111,7 @@ mode dev bukan bukti fitur/API production tersedia.
 | Rollback manual | Rollback transaksi gagal ada, route rollback manual tidak ditemukan | Pisahkan kegagalan transaksi dan menjalankan SQL Down |
 | View + Edit | Grant `edit` sudah mencakup view | Label UI dipetakan dari enum backend |
 | Search/filter | Contoh katalog masih lokal | Sepakati pagination/sort/filter server |
-| Activity Logs | FE `/admin/activity-logs` memakai mock; logging backend menulis stdout | Sepakati API daftar/detail log, filter dan pagination dengan otorisasi admin |
+| Activity Logs | FE `/admin/activity-logs` membaca API khusus admin dari Loki | GET `/api/admin/activity-logs` dan `/{eventID}` tersedia; stack Loki/collector harus berjalan |
 
 Sumber state: `internal/dbm/migration.go`, `migration_pages.go`; izin:
 `internal/access/policy.go`. EXPLAIN ANALYZE di-rollback, bukan fitur rollback
@@ -199,4 +199,4 @@ LOGOUT_FAILED berarti cookie sudah dihapus tetapi revocation server gagal.
 
 Observability SPA `/admin/observability` hanya menyediakan pintu masuk Grafana;
 metrik Prometheus berasal dari backend `/metrics` yang diaktifkan lewat
-`OBSERVABILITY_METRICS=1`. Tidak ada endpoint JSON monitoring baru pada tahap ini.
+`OBSERVABILITY_METRICS=1`. Activity Logs kini memiliki endpoint JSON daftar/detail khusus admin yang membaca Loki.

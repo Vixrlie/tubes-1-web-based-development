@@ -3,7 +3,7 @@
 SPA memiliki Login, Beranda dan application shell dengan sesi cookie Go asli.
 Database List, Schema Explorer, Table Detail serta Migration History/Execution
 Detail, form/detail/edit draft, review/approval dan antrean/progress memakai mock
-data terpisah. Admin menyediakan monitoring Activity Logs (mock) dan akses Grafana; CRUD administrasi belum diimplementasikan. Katalog tetap publik.
+data terpisah. Admin menyediakan monitoring Activity Logs (API/Loki) dan akses Grafana; CRUD administrasi belum diimplementasikan. Katalog tetap publik.
 
 | Lokasi | Tanggung jawab |
 | --- | --- |
@@ -108,7 +108,7 @@ memperpanjang idle timeout. Otorisasi sebenarnya tetap di server.
 
 Lihat [mapping UI/API/Role](../docs/frontend/api-mapping.md). Proxy Vite tidak
 diubah: `/api` diteruskan ke Go 8080 tanpa rewrite. Tiga endpoint auth JSON
-tersedia di `internal/auth/api.go`; adapter database/admin belum tersedia.
+tersedia di `internal/auth/api.go`; adapter Database dan CRUD Admin belum tersedia; Activity Logs memakai API Go/Loki.
 
 ## Pemeriksaan
 

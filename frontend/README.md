@@ -37,7 +37,7 @@ backend dapat menyiapkan admin jika belum ada, bukan mengganti password akun lam
 | /databases/:connectionId/migrations/drafts/:draftId/preview | preview SQL dan EXPLAIN fixture |
 | /databases/:connectionId/migrations/explain | editor dan execution plan fixture |
 | /admin | redirect ke Activity Logs; hanya admin platform |
-| /admin/activity-logs | pencarian, filter, pagination dan detail log mock |
+| /admin/activity-logs | pencarian, filter server, pagination dan detail log nyata dari API/Loki |
 | /admin/observability | akses dashboard, logs dan traces Grafana |
 
 ## Pemeriksaan
@@ -63,7 +63,7 @@ JSON bisnis database/admin masih harus dibangun.
    diedit dan tetap ada saat refresh tab. Logout menghapus draft mock.
    Dari detail draft, Ajukan Review → setujui ketiga grup dengan alasan → Masukkan
    ke Antrean. Progress bergerak otomatis dan hasil masuk history. Admin menyediakan Activity
-   Logs (mock) dan pintu masuk Grafana; CRUD administrasi belum dibangun. SQL
+   Logs (API/Loki) dan pintu masuk Grafana; CRUD administrasi belum dibangun. SQL
    dari alur FE tidak pernah dijalankan pada backend.
 4. Refresh halaman: sesi dipulihkan dari cookie. Non-admin tidak melihat Admin;
    akses URL `/admin` langsung menampilkan akses terbatas.
