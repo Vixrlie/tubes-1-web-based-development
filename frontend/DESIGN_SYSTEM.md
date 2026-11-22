@@ -6,14 +6,15 @@ font-weight 400 (tanpa bold). Berlaku pada komponen Alert di katalog dan produk.
 ## Komponen workspace desktop
 
 Contoh interaktif ada di `/design-system/navigation`, melalui `src/catalog/NavigationCatalog.tsx`.
-Implementasi ini memprioritaskan desktop; adaptasi mobile lengkap masih menyusul.
+Katalog awal dibuat untuk desktop. Database List produk kini diimplementasikan
+mobile-first mengikuti frame final mobile dan desktop, memakai komponen yang sama.
 
 | Komponen | API utama dan perilaku |
 | --- | --- |
 | ProductHeader | `active`, `onNavigate`, `profile`, `showAdmin`; pilihan Database/Admin dengan state aktif |
 | DatabaseSidebar | `database`, `schemas`, `selection`, `onSelect`, `loading`; schema dapat dibuka/tutup, tabel dan Migrasi dapat dipilih |
 | AdminSidebar | `active`, `onNavigate`; Pengguna, Grup, Koneksi Database |
-| DatabaseCard | Koneksi aktif, terputus, loading; `onReconnect` opsional, tombol Buka nonaktif saat koneksi terputus |
+| DatabaseCard | Default katalog; `variant="workspace"` untuk tile responsif produk, `readOnly`, `connectionError`, `onReconnect`; Buka nonaktif saat terputus |
 | TableCard | `name`, `columnCount`, `primaryKey`, `permission`, `onOpen`, `disabled`; seluruh kartu dapat diklik |
 | ListToolbar | Search terkontrol, `resultCount`, filter Dropdown dan slot `action` opsional |
 | MetadataPanel | `title`, `items` label/value, slot `action`; memakai definition list |

@@ -1,15 +1,23 @@
 import { lazy, Suspense, useId } from 'react'
 import type { ReactNode } from 'react'
-import { Badge, Button, Card, EmptyState, Spinner } from './primitives'
+import { Alert, Badge, Button, Card, EmptyState, Spinner } from './primitives'
 import type { Tone } from './primitives'
 import { Icon } from './navigation'
 
 const SqlCodeMirror = lazy(() => import('./sql-editor'))
 
-export function DatabaseCard({ name, description, connected = true, permission, onOpen, loading = false, disabled = false, onReconnect }: {
+export function DatabaseCard({ name, description, connected = true, permission, onOpen, loading = false, disabled = false, onReconnect, variant = 'default', readOnly = false, connectionError }: {
   name: string; description: string; connected?: boolean; permission: string; onOpen: () => void
   loading?: boolean; disabled?: boolean; onReconnect?: () => void
+  variant?: 'default' | 'workspace'; readOnly?: boolean; connectionError?: string
 }) {
+  if (variant === 'workspace') return <Card className="ds-database-tile" role="group" aria-label={name} aria-busy={loading || undefined}>
+    <div className="ds-database-tile-heading"><span className="ds-database-tile-icon"><picture><source media="(min-width: 768px)" srcSet={`/design-system/database-${connected ? 'connected' : 'disconnected'}.svg`} /><img src="/design-system/database-mobile.svg" alt="" /></picture></span><Badge tone={loading ? 'neutral' : connected ? 'success' : 'error'}>{loading ? 'Memeriksa…' : connected ? 'Terhubung' : 'Gagal terhubung'}</Badge></div>
+    <div className="ds-database-tile-description"><h3>{name}</h3><p>{description}</p></div>
+    <div className="ds-database-tile-permission"><Badge tone={readOnly ? 'neutral' : 'info'}>{permission}</Badge></div>
+    {connectionError && <Alert tone="error" title={connectionError} />}
+    <div className="ds-database-tile-action">{!connected && onReconnect ? <Button variant="secondary" aria-label={`Coba lagi koneksi ${name}`} disabled={disabled} loading={loading} onClick={onReconnect}>Coba lagi</Button> : <Button aria-label={`Buka ${name}`} disabled={disabled || !connected} loading={loading} onClick={onOpen}>Buka</Button>}</div>
+  </Card>
   return <Card className="ds-database-card" aria-busy={loading || undefined}>
     <div className="ds-row ds-between"><Icon name="database" /><Badge tone={loading ? 'neutral' : connected ? 'success' : 'error'}>{loading ? 'Memeriksa koneksi' : connected ? 'Terhubung' : 'Terputus'}</Badge></div>
     <div><h3>{name}</h3><p className="ds-muted">{description}</p></div><div><Badge>{permission}</Badge></div><hr />

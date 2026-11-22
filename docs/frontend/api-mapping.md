@@ -24,8 +24,9 @@ Sumber: `main.go`, `internal/auth/{handlers,middleware}.go`,
 
 ## Matriks layar / route / data / akses
 
-Login, Beranda dan shell sudah diimplementasikan. Database/admin masih
-**placeholder** dengan session guard dan admin guard aktif. Izin per database
+Login, Beranda, shell dan Database List sudah diimplementasikan. Database List
+memakai fixture FE, bukan endpoint daftar database. Detail database/admin masih
+**placeholder**, dengan session guard dan admin guard aktif. Izin per database
 masih merupakan target integrasi dan harus ditegakkan server.
 
 | Layar | Route SPA | Kebutuhan data/aksi | Akses target | BE saat ini |

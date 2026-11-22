@@ -11,6 +11,7 @@ import { paths } from './routes'
 import { AdminGate, SessionGate } from '../features/auth/guards'
 import LoginPage from '../features/auth/LoginPage'
 import HomePage from '../features/home/HomePage'
+import DatabaseListPage from '../features/databases/DatabaseListPage'
 
 const CatalogLayout = lazy(() => import('../catalog/CatalogLayout'))
 const FoundationsPage = lazy(() => import('../catalog/FoundationsPage'))
@@ -32,7 +33,7 @@ export function AppRouter() {
     <Route element={<SessionGate guest />}><Route element={<AuthLayout />}><Route path="/login" element={<LoginPage />} /></Route></Route>
     <Route element={<SessionGate />}><Route element={<AppLayout />}>
       <Route path="/home" element={<HomePage />} />
-      <Route path="/databases" element={<RoutePlaceholder title="Database" />} />
+      <Route path="/databases" element={<DatabaseListPage />} />
       <Route path="/databases/:connectionId" element={<DatabaseLayout />}>
         <Route index element={<RoutePlaceholder title="Ringkasan database" />} />
         <Route path="schema" element={<RoutePlaceholder title="Schema Explorer" />} />

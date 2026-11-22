@@ -24,7 +24,8 @@ backend dapat menyiapkan admin jika belum ada, bukan mengganti password akun lam
 | /design-system/patterns | SQL, progres, approval |
 | /login | form username/password, sesi cookie Go |
 | /home | Beranda dan shortcut, memerlukan sesi |
-| /databases, /admin | placeholder terlindungi; Admin hanya admin platform |
+| /databases | Database List responsif dengan mock data; memerlukan sesi |
+| /databases/:connectionId/*, /admin | placeholder terlindungi; Admin hanya admin platform |
 
 ## Pemeriksaan
 
@@ -42,7 +43,8 @@ JSON bisnis database/admin masih harus dibangun.
 
 1. Buka `/` tanpa sesi: diarahkan ke Login. Coba field kosong dan password salah.
 2. Masuk dengan akun aktif: tampil Beranda; toggle eye dan loading berfungsi.
-3. Klik Database/Admin: perpindahan SPA; halaman bisnis masih placeholder.
+3. Klik Database: tampil empat kartu contoh, status koneksi dan View/Edit.
+   Buka menuju route Schema yang masih placeholder. Admin masih placeholder.
 4. Refresh halaman: sesi dipulihkan dari cookie. Non-admin tidak melihat Admin;
    akses URL `/admin` langsung menampilkan akses terbatas.
 5. Klik avatar → Keluar: kembali ke Login. Back/refresh tidak membuka sesi lama.
@@ -54,3 +56,4 @@ Test backend (tanpa database, httptest):
 - [Arsitektur](ARCHITECTURE.md)
 - [Design System](DESIGN_SYSTEM.md)
 - [Mapping UI/API/Role](../docs/frontend/api-mapping.md)
+- [Database List: batas mock dan QA](../docs/frontend/database-list-qa.md)
