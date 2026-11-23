@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/access"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/admin"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/async"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/config"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/db"
@@ -29,6 +31,9 @@ func main() {
 }
 
 func run() error {
+	workerOnly := flag.Bool("worker-only", false, "jalankan hanya worker migration asynchronous tanpa HTTP server")
+	flag.Parse()
+
 	if err := config.LoadDotEnv(".env"); err != nil {
 		return err
 	}
@@ -83,6 +88,27 @@ func run() error {
 	groupStore := admin.NewPGGroupStore(pool)
 	connLister := admin.NewPGConnectionLister(pool)
 	migrationStore := dbm.NewPGMigrationStore(pool)
+	asyncStore := async.NewPGStore(pool)
+	asyncLocks := async.NewPGLockManager(pool)
+	asyncHistory := async.NewPGHistoryRecorder(pool)
+	asyncExecutor := async.NewTargetExecutor(asyncStore, registry, nil)
+	asyncWorker := async.NewWorker(async.WorkerConfig{
+		Store:    asyncStore,
+		Locks:    asyncLocks,
+		Executor: asyncExecutor,
+		History:  asyncHistory,
+	})
+
+	if *workerOnly {
+		asyncWorker.Start(ctx)
+		return nil
+	}
+
+	asyncHandlers := async.NewHandlers(async.HandlerConfig{
+		Store:      asyncStore,
+		Migrations: migrationStore,
+		Policy:     accessPolicy,
+	})
 	dbmHandlers := dbm.NewHandlers(dbm.Config{
 		Platform:   pool,
 		Policy:     accessPolicy,
@@ -108,6 +134,7 @@ func run() error {
 
 		authHandlers.ProtectedRoutes(r)
 		dbmHandlers.Routes(r)
+		asyncHandlers.Routes(r)
 
 		adminOpts := []admin.Option{
 			admin.WithUserAdmin(adminUsers, sessions, renderer),
@@ -121,6 +148,13 @@ func run() error {
 		admin.NewHandlers(adminOpts...).Routes(r)
 	})
 
+	workerCtx, stopWorker := context.WithCancel(ctx)
+	workerDone := make(chan struct{})
+	go func() {
+		defer close(workerDone)
+		asyncWorker.Start(workerCtx)
+	}()
+
 	srv := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           r,
@@ -130,13 +164,21 @@ func run() error {
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
 
+	var serveErr error
 	select {
-	case err := <-errCh:
-		return err
+	case serveErr = <-errCh:
 	case <-ctx.Done():
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return srv.Shutdown(shutdownCtx)
+	shutdownErr := srv.Shutdown(shutdownCtx)
+
+	stopWorker()
+	<-workerDone
+
+	if serveErr != nil {
+		return serveErr
+	}
+	return shutdownErr
 }
