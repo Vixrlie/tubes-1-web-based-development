@@ -129,6 +129,17 @@ func run() error {
 		return err
 	}
 	admin.ActivityJSONRoutes(r, activityReader, auth.NewSessionValidator(sessions), cfg.CookieSecure)
+	admin.RegisterAdminJSONRoutes(r, admin.AdminAPIConfig{
+		Users:        adminUsers,
+		Groups:       groupStore,
+		Connections:  connStore,
+		ConnLister:   connLister,
+		Revoker:      sessions,
+		Evictor:      registry,
+		Validator:    auth.NewSessionValidator(sessions),
+		CookieSecure: cfg.CookieSecure,
+		Logger:       activityLogger,
+	})
 	if devMode {
 		web.DevRoutes{R: renderer}.Routes(r)
 	}
