@@ -67,6 +67,16 @@ func RegisterAdminJSONRoutes(r chi.Router, cfg AdminAPIConfig) {
 			r.Delete("/groups/{id}/members/{userID}", api.removeGroupMember)
 			r.Put("/groups/{id}/access", api.updateGroupAccess)
 		}
+
+		if cfg.Connections != nil {
+			r.Get("/connections", api.listConnections)
+			r.Post("/connections", api.createConnection)
+			r.Post("/connections/test", api.testConnectionInput)
+			r.Get("/connections/{id}", api.getConnection)
+			r.Patch("/connections/{id}", api.updateConnection)
+			r.Delete("/connections/{id}", api.deleteConnection)
+			r.Post("/connections/{id}/test", api.testSavedConnection)
+		}
 	})
 }
 
