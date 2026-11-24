@@ -6,6 +6,7 @@ package dbm
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 // Aksi eksekusi migration.
@@ -241,14 +242,15 @@ const (
 // ReviewerGroup = group yang memiliki akses (view atau edit) ke database dan
 // karena itu wajib memberi approval melalui leadernya.
 type ReviewerGroup struct {
-	GroupID    int64  `json:"group_id"`
-	GroupName  string `json:"group_name"`
-	Level      string `json:"level"`
-	LeaderID   int64  `json:"leader_id,omitempty"`
-	LeaderName string `json:"leader_name,omitempty"`
-	Decision   string `json:"decision"`
-	Note       string `json:"note,omitempty"`
-	DecidedBy  string `json:"decided_by,omitempty"`
+	GroupID    int64      `json:"group_id"`
+	GroupName  string     `json:"group_name"`
+	Level      string     `json:"level"`
+	LeaderID   int64      `json:"leader_id,omitempty"`
+	LeaderName string     `json:"leader_name,omitempty"`
+	Decision   string     `json:"decision"`
+	Note       string     `json:"note,omitempty"`
+	DecidedBy  string     `json:"decided_by,omitempty"`
+	DecidedAt  *time.Time `json:"decided_at,omitempty"`
 }
 
 // ReviewOutcome: satu penolakan cukup untuk menolak.

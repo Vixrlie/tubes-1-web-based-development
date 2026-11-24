@@ -33,6 +33,7 @@ func (h *Handlers) APIRoutes(r chi.Router) {
 			r.Post("/migrations/{mID}/requests", h.apiSubmit)
 			r.Get("/requests", h.apiListRequests)
 			r.Get("/history", h.apiHistory)
+			r.Get("/workflow", h.apiBoard)
 			r.Get("/executions/{eID}", h.apiGetExecution)
 		})
 		r.Route("/migration-requests/{rID}", func(r chi.Router) {

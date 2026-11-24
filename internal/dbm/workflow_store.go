@@ -182,7 +182,7 @@ func loadReviewers(ctx context.Context, q pgxQuerier, connID, reqID int64) ([]Re
 		`SELECT gr.id, gr.name, g.level,
 		        CASE WHEN lu.id IS NULL THEN 0 ELSE gr.leader_id END,
 		        COALESCE(lu.username, ''),
-		        COALESCE(rv.decision, 'pending'), COALESCE(rv.note, ''), COALESCE(du.username, '')
+		        COALESCE(rv.decision, 'pending'), COALESCE(rv.note, ''), COALESCE(du.username, ''), rv.decided_at
 		   FROM grants g
 		   JOIN groups gr ON gr.id = g.group_id
 		   LEFT JOIN users lu ON lu.id = gr.leader_id AND lu.is_active
@@ -198,7 +198,7 @@ func loadReviewers(ctx context.Context, q pgxQuerier, connID, reqID int64) ([]Re
 	for rows.Next() {
 		var g ReviewerGroup
 		if err := rows.Scan(&g.GroupID, &g.GroupName, &g.Level, &g.LeaderID, &g.LeaderName,
-			&g.Decision, &g.Note, &g.DecidedBy); err != nil {
+			&g.Decision, &g.Note, &g.DecidedBy, &g.DecidedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, g)

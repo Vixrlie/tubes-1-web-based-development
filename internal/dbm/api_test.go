@@ -100,4 +100,29 @@ func TestAPIMigrationWorkflow(t *testing.T) {
 	if code != http.StatusForbidden {
 		t.Errorf("history tanpa akses: %d %v", code, body)
 	}
+
+	// Board memuat migration lengkap dengan SQL, reviewer, dan execution.
+	code, body = f.call(h, f.leaderA, http.MethodGet, base+"/workflow", "")
+	if code != http.StatusOK {
+		t.Fatalf("board: %d %v", code, body)
+	}
+	migs := body["migrations"].([]any)
+	if len(migs) != 1 || migs[0].(map[string]any)["up_sql"] == "" {
+		t.Fatalf("board migrations: %v", migs)
+	}
+	reqs := body["requests"].([]any)
+	first := reqs[0].(map[string]any)
+	reviewers := first["reviewers"].([]any)
+	if len(reqs) != 1 || len(reviewers) != 2 || len(first["executions"].([]any)) != 1 {
+		t.Fatalf("board requests: %v", reqs)
+	}
+	if reviewers[0].(map[string]any)["decided_at"] == nil {
+		t.Errorf("reviewer harus memuat decided_at: %v", reviewers[0])
+	}
+	if len(body["leader_group_ids"].([]any)) != 1 || body["can_edit"] != true {
+		t.Errorf("leader A: leader_group_ids/can_edit salah: %v", body)
+	}
+	if code, _ = f.call(h, f.outsider, http.MethodGet, base+"/workflow", ""); code != http.StatusForbidden {
+		t.Errorf("board tanpa akses: %d", code)
+	}
 }
