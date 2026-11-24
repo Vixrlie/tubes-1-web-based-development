@@ -1,0 +1,22 @@
+@import './workflow.css';
+.schema-tools-selectors { display: grid; gap: 16px; align-items: end; min-width: 0; }
+.schema-change-list { display: grid; gap: 16px; }
+.schema-change { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--neutral-200); border-radius: 12px; min-width: 0; }
+.schema-change-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+.schema-change-heading .ds-choice { min-width: 0; overflow-wrap: anywhere; }
+.schema-change-heading .ds-choice input { flex-shrink: 0; }
+.schema-before-after { display: grid; gap: 12px; min-width: 0; }
+.schema-before-after > div { display: grid; align-content: start; gap: 8px; padding: 16px; background: var(--neutral-50); border-radius: 10px; min-width: 0; overflow-wrap: anywhere; }
+.schema-before-after small { font-size: 11px; font-weight: 500; color: var(--neutral-600); }
+.schema-before-after p { font-size: 12px; }
+.schema-change > small { font-size: 12px; color: var(--neutral-600); }
+.schema-change > .schema-change-risk { color: var(--error-500); }
+.schema-plan-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.schema-plan-metrics > div { display: grid; gap: 8px; padding: 16px; border-radius: 12px; background: var(--neutral-50); }
+.schema-plan-metrics small { font-size: 11px; color: var(--neutral-600); }
+.schema-plan-metrics strong { font-size: 16px; overflow-wrap: anywhere; }
+@media (min-width: 1024px) {
+  .schema-tools-selectors { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .schema-before-after { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .schema-plan-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

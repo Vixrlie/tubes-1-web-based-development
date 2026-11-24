@@ -1,0 +1,34 @@
+.monitoring-page { display: grid; gap: 20px; min-width: 0; padding-bottom: 88px; }
+.monitoring-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.monitoring-heading > div { min-width: 0; }
+.monitoring-heading h1 { margin: 8px 0; font-size: 26px; line-height: 1.4; overflow-wrap: anywhere; }
+.monitoring-heading p:not(.ds-eyebrow) { color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.monitoring-panel, .monitoring-tool { min-width: 0; }
+.monitoring-section-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.monitoring-page h2 { font-size: 18px; }
+.monitoring-section-heading > span { color: var(--text-muted); font-size: 12px; }
+.activity-filters { display: grid; gap: 16px; align-items: start; }
+.activity-filters > button { align-self: end; }
+.monitoring-stack { display: grid; gap: 20px; min-width: 0; }
+.monitoring-stack code, .monitoring-page code { overflow-wrap: anywhere; word-break: break-word; font-size: 12px; }
+.monitoring-stack .ds-metadata, .monitoring-stack .ds-metadata > * { min-width: 0; }
+.monitoring-cards { display: grid; gap: 16px; }
+.monitoring-tool { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+.monitoring-tool p { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.monitoring-tool small { color: var(--text-muted); }
+.monitoring-tool .ds-button { margin-top: auto; width: 100%; text-decoration: none; }
+.monitoring-number { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--primary-50); color: var(--primary-500); font-size: 13px; font-weight: 600; }
+.monitoring-steps { display: grid; gap: 16px; padding-left: 22px; font-size: 13px; line-height: 1.7; }
+.monitoring-steps code { display: inline; }
+.monitoring-stack > a { justify-self: start; text-decoration: none; }
+@media (min-width: 600px) { .activity-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .activity-filters > :first-child { grid-column: 1 / -1; } }
+@media (min-width: 1024px) {
+  .monitoring-page { padding-bottom: 24px; }
+  .monitoring-heading h1 { font-size: 36px; }
+  .monitoring-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .activity-filters { grid-template-columns: minmax(180px, 2fr) repeat(2, minmax(140px, 1fr)); }
+  .activity-filters > :first-child { grid-column: auto; }
+  .monitoring-page .ds-table { min-width: 820px; }
+  .monitoring-page .ds-table th { background: transparent; }
+  .monitoring-page .ds-table td { font-size: 12px; }
+}

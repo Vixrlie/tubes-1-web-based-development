@@ -1,11 +1,16 @@
 receivers:
   filelog:
-    include: [/var/log/pathgres/pathgres.jsonl]
-    encoding: utf-16le
+    include: [/var/log/pathgres/activity.jsonl]
+    encoding: utf-8
     start_at: beginning
     operators:
       - type: filter
         expr: 'not (body matches "^[{]")'
+      - type: json_parser
+        timestamp:
+          parse_from: attributes.time
+          layout_type: gotime
+          layout: '2006-01-02T15:04:05.999999999Z07:00'
       - type: add
         field: resource["service.name"]
         value: pathgres

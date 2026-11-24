@@ -40,6 +40,15 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	logFile := os.Getenv("ACTIVITY_LOG_FILE")
+	if logFile == "" {
+		logFile = "observability/logs/activity.jsonl"
+	}
+	closeActivityLog, err := activity.ConfigureLogFile(logFile)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = closeActivityLog() }()
 	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"); endpoint != "" {
 		shutdown, err := activity.StartTracing(ctx, endpoint)
 		if err != nil {
@@ -145,6 +154,27 @@ func run() error {
 		r.Get("/metrics", metrics.Handler(pool, registry.PoolStats))
 	}
 	authHandlers.PublicRoutes(r)
+	authHandlers.JSONRoutes(r, auth.NewSessionValidator(sessions))
+	lokiURL := os.Getenv("LOKI_URL")
+	if lokiURL == "" {
+		lokiURL = "http://127.0.0.1:3100"
+	}
+	activityReader, err := activity.NewLokiReader(lokiURL)
+	if err != nil {
+		return err
+	}
+	admin.ActivityJSONRoutes(r, activityReader, auth.NewSessionValidator(sessions), cfg.CookieSecure)
+	admin.RegisterAdminJSONRoutes(r, admin.AdminAPIConfig{
+		Users:        adminUsers,
+		Groups:       groupStore,
+		Connections:  connStore,
+		ConnLister:   connLister,
+		Revoker:      sessions,
+		Evictor:      registry,
+		Validator:    auth.NewSessionValidator(sessions),
+		CookieSecure: cfg.CookieSecure,
+		Logger:       activityLogger,
+	})
 	if devMode {
 		web.DevRoutes{R: renderer}.Routes(r)
 	}
