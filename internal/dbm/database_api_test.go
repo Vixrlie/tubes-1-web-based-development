@@ -83,6 +83,7 @@ func TestDatabaseAPI(t *testing.T) {
 		`CREATE TABLE customers (id BIGINT PRIMARY KEY, email TEXT UNIQUE, note TEXT)`,
 		`CREATE TABLE orders (id BIGINT PRIMARY KEY, customer_id BIGINT REFERENCES customers (id), total NUMERIC(10,2) NOT NULL DEFAULT 0)`,
 		`CREATE INDEX orders_total_idx ON orders (total)`,
+		`CREATE TABLE _pathgres_internal_probe (id INT)`,
 		`INSERT INTO customers SELECT i, 'c' || i || '@mail.com', CASE WHEN i % 2 = 0 THEN NULL ELSE 'catatan' END FROM generate_series(1, 30) i`,
 	} {
 		if _, err := f.targetDB.Exec(q); err != nil {
@@ -133,6 +134,9 @@ func TestDatabaseAPI(t *testing.T) {
 		tables := map[string]SchemaTable{}
 		for _, tb := range mine.Tables {
 			tables[tb.Name] = tb
+		}
+		if _, ok := tables["_pathgres_internal_probe"]; ok {
+			t.Fatalf("tabel internal Pathgres tidak boleh tampil di schema")
 		}
 		if tables["orders"].ColumnCount != 3 || len(tables["customers"].PrimaryKey) != 1 {
 			t.Fatalf("tabel: %+v", tables)
@@ -204,6 +208,9 @@ func TestDatabaseAPI(t *testing.T) {
 			if tb.Schema == schema {
 				found[tb.Name] = len(tb.Columns) > 0
 			}
+		}
+		if _, ok := found["_pathgres_internal_probe"]; ok {
+			t.Fatalf("tabel internal Pathgres tidak boleh ikut snapshot diff")
 		}
 		if !found["orders"] || !found["customers"] {
 			t.Fatalf("snapshot schema %s tidak memuat struktur orders/customers: %v", schema, found)

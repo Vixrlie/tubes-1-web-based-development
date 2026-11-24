@@ -236,7 +236,8 @@ func (Postgres) Queries() Queries {
 		CountTables: `
 		SELECT COUNT(*) FROM information_schema.tables
 		  WHERE table_type = 'BASE TABLE'
-		    AND table_schema NOT IN ('pg_catalog', 'information_schema')`,
+		    AND table_schema NOT IN ('pg_catalog', 'information_schema')
+		    AND table_name NOT LIKE '\_pathgres\_%'`,
 		Rows: `SELECT * FROM %s LIMIT $1 OFFSET $2`,
 	}
 }
@@ -371,7 +372,8 @@ func (MySQL) Queries() Queries {
 		CountTables: `
 		SELECT COUNT(*) FROM information_schema.TABLES
 		  WHERE TABLE_TYPE = 'BASE TABLE'
-		    AND TABLE_SCHEMA NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys')`,
+		    AND TABLE_SCHEMA NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys')
+		    AND TABLE_NAME NOT LIKE '\_pathgres\_%'`,
 		Rows: `SELECT * FROM %s LIMIT ? OFFSET ?`,
 	}
 }
