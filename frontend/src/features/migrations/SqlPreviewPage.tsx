@@ -8,6 +8,9 @@ import { useDatabaseWorkspace } from '../databases/useDatabaseWorkspace'
 import { useDrafts } from './useDrafts'
 import { withMigrationSearch } from './migration-source'
 import { createMockSchemaTools } from './schema-tools-source'
+import { createApiSchemaTools } from './api-schema-tools'
+import { useSession } from '../auth/context'
+import { usesMockData } from '../../shared/api/data-mode'
 import { WorkflowHeading, WorkflowState } from './WorkflowUI'
 import './schema-tools.css'
 
@@ -24,7 +27,9 @@ function PreviewContent({ sqlUp, sqlDown, name, draftId }: { sqlUp?: string; sql
   const [sql, setSql] = useState(sqlUp ?? `SELECT * FROM public.${workspace.schemas[0]?.tables[0]?.name ?? 'products'};`)
   const [analyze, setAnalyze] = useState(false)
   const mode = import.meta.env.DEV ? databasePreview(params.get('toolsPreview')) : 'ready'
-  const source = useMemo(() => createMockSchemaTools(preview, mode), [preview, mode])
+  const { session } = useSession()
+  const mock = usesMockData(params)
+  const source = useMemo(() => mock ? createMockSchemaTools(preview, mode) : createApiSchemaTools(session.api), [mock, preview, mode, session])
   const abort = useRef<AbortController | null>(null)
   useEffect(() => () => abort.current?.abort(), [])
   const plan = useMutation({ mutationFn: () => { abort.current = new AbortController(); return source.explain(workspace.database.id, sql, analyze, abort.current.signal) } })

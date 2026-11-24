@@ -79,6 +79,8 @@ export type AdminGroupDetail = {
   candidateUsers: AdminMember[]
   grants: AdminGroupAccess[]
   availableConnections: AdminConnRef[]
+  /** Anggota yang menyetujui migration atas nama grup; null bila belum ditetapkan. */
+  leaderId: string | null
 }
 
 export type AdminConnectionGroup = {

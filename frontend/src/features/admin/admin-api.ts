@@ -146,6 +146,7 @@ export function parseAdminGroupDetail(value: unknown): AdminGroupDetail {
     availableConnections: Array.isArray(value.availableConnections)
       ? value.availableConnections.filter(isRecord).map(c => ({ id: str(c.id), name: str(c.name) }))
       : [],
+    leaderId: typeof value.leaderId === 'string' && value.leaderId ? value.leaderId : null,
   }
 }
 
@@ -238,6 +239,9 @@ export function createAdminApi(api: ReturnType<typeof createApiClient>) {
     },
     async removeGroupMember(id: string, userId: string) {
       await api.request(`/admin/groups/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, { method: 'DELETE' })
+    },
+    async setGroupLeader(id: string, userId: string | null) {
+      await api.request(`/admin/groups/${encodeURIComponent(id)}/leader`, { method: 'PUT', json: { userId } })
     },
     async updateGroupAccess(id: string, grants: { connectionId: string; level: string }[]) {
       await api.request(`/admin/groups/${encodeURIComponent(id)}/access`, { method: 'PUT', json: { grants } })

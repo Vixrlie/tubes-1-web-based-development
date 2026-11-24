@@ -6,6 +6,9 @@ import { paths } from '../../app/routes'
 import { databasePreview } from './mock-source'
 import { selectSchema, withWorkspacePreview } from './schema-source'
 import { createMockTableSource, parseTablePage, parseTableTab } from './table-source'
+import { createApiTableSource } from './api-source'
+import { useSession } from '../auth/context'
+import { usesMockData } from '../../shared/api/data-mode'
 import type { TableIdentity } from './table-source'
 import { useDatabaseWorkspace } from './useDatabaseWorkspace'
 import { TableColumnsPanel, TableConstraintsPanel } from './TableStructurePanels'
@@ -28,8 +31,10 @@ function TableDetailContent({ identity }: { identity: TableIdentity }) {
   const page = parseTablePage(params.get('page'))
   const direction = params.get('direction') === 'desc' ? 'desc' : 'asc'
   const tablePreview = import.meta.env.DEV ? databasePreview(params.get('tablePreview')) : 'ready'
-  const source = useMemo(() => createMockTableSource({ preview: tablePreview, workspacePreview: preview }), [preview, tablePreview])
-  const cacheKey = [identity.connectionId, identity.schemaName, identity.tableName, preview, tablePreview]
+  const { session } = useSession()
+  const mock = usesMockData(params)
+  const source = useMemo(() => mock ? createMockTableSource({ preview: tablePreview, workspacePreview: preview }) : createApiTableSource(session.api), [mock, preview, tablePreview, session])
+  const cacheKey = [mock ? 'mock' : 'api', identity.connectionId, identity.schemaName, identity.tableName, preview, tablePreview]
   const description = useQuery({ queryKey: ['table-description', ...cacheKey], queryFn: ({ signal }) => source.describe(identity, signal), enabled: tablePreview !== 'loading', retry: false })
   const id = useId()
   const onPage = useCallback((value: number, replace = false) => { setParams(previous => { const next = new URLSearchParams(previous); next.set('tab', 'data'); next.set('page', String(value)); return next }, { replace }) }, [setParams])

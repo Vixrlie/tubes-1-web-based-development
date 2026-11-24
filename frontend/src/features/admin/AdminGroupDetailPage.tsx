@@ -127,6 +127,18 @@ export default function AdminGroupDetailPage() {
     },
   })
 
+  const leaderMutation = useMutation({
+    mutationFn: (uid: string | null) => api.setGroupLeader(groupId, uid),
+    onSuccess: () => {
+      setActionError('')
+      setToast('Leader grup berhasil diperbarui.')
+      invalidateGroup()
+    },
+    onError: err => {
+      setActionError(err instanceof Error ? err.message : 'Gagal menetapkan leader grup.')
+    },
+  })
+
   const saveAccessMutation = useMutation({
     mutationFn: () =>
       api.updateGroupAccess(
@@ -296,6 +308,19 @@ export default function AdminGroupDetailPage() {
             </Button>
           </div>
 
+          <Select
+            label="Leader grup"
+            helper="Leader menyetujui migration atas nama grup pada database yang dapat diakses grup ini."
+            value={group.leaderId ?? ''}
+            disabled={leaderMutation.isPending}
+            onChange={e => leaderMutation.mutate(e.target.value || null)}
+          >
+            <option value="">Belum ada leader</option>
+            {group.members.filter(m => m.isActive).map(m => (
+              <option key={m.id} value={m.id}>{m.fullName ? `${m.username} (${m.fullName})` : m.username}</option>
+            ))}
+          </Select>
+
           {group.members.length === 0 ? (
             <EmptyState title="Belum ada anggota">
               Tambahkan pengguna agar mewarisi izin akses database milik grup ini.
@@ -318,6 +343,7 @@ export default function AdminGroupDetailPage() {
                         <Link to={paths.userDetail(m.id)}>
                           <strong>{m.username}</strong>
                         </Link>
+                        {group.leaderId === m.id && <> <Badge tone="info">Leader</Badge></>}
                       </td>
                       <td>{m.fullName || '-'}</td>
                       <td>

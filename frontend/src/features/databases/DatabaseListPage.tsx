@@ -4,6 +4,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Alert, Button, Card, DatabaseCard, EmptyState, Spinner } from '../../design-system'
 import { paths } from '../../app/routes'
 import { connectionErrorMessage, createMockDatabaseSource, databasePreview } from './mock-source'
+import { createApiDatabaseSource } from './api-source'
+import { useSession } from '../auth/context'
+import { usesMockData } from '../../shared/api/data-mode'
 import { databaseDescription } from './types'
 import type { DatabaseConnection, DatabaseSource } from './types'
 import './databases.css'
@@ -32,8 +35,10 @@ export default function DatabaseListPage() {
   const [searchParams] = useSearchParams()
   // Development preview states do not add controls to the product UI.
   const preview = import.meta.env.DEV ? databasePreview(searchParams.get('preview')) : 'ready'
-  const source = useMemo(() => createMockDatabaseSource(preview), [preview])
-  const query = useQuery({ queryKey: ['databases', 'mock', preview], queryFn: ({ signal }) => source.list(signal), enabled: preview !== 'loading', retry: false })
+  const { session } = useSession()
+  const mock = usesMockData(searchParams)
+  const source = useMemo(() => mock ? createMockDatabaseSource(preview) : createApiDatabaseSource(session.api), [mock, preview, session])
+  const query = useQuery({ queryKey: ['databases', mock ? 'mock' : 'api', preview], queryFn: ({ signal }) => source.list(signal), enabled: preview !== 'loading', retry: false })
   return <section className="database-list-page" aria-labelledby="database-list-title">
     <Link to={paths.home} className="database-back"><span aria-hidden="true">←</span>Kembali</Link>
     <header className="database-list-heading"><h1 id="database-list-title">Daftar Database</h1><p>Pilih database sesuai hak akses.</p></header>

@@ -3,12 +3,15 @@ import type { ReactNode } from 'react'
 import { NavLink, useLocation, useMatch, useSearchParams } from 'react-router-dom'
 import { Button, MobileContextMenu, Spinner } from '../../design-system'
 import { ChevronRightIcon } from '../../design-system/control-icons'
+import { useMemo } from 'react'
 import { createMockDatabaseSource } from '../../features/databases/mock-source'
+import { createApiDatabaseSource } from '../../features/databases/api-source'
+import { useSession } from '../../features/auth/context'
+import { usesMockData } from '../../shared/api/data-mode'
 import { useDatabaseWorkspaceQuery } from '../../features/databases/useDatabaseWorkspace'
 import { withWorkspacePreview } from '../../features/databases/schema-source'
 import { paths } from '../routes'
 
-const databaseSource = createMockDatabaseSource()
 type MenuProps = { onClose: () => void }
 
 function ContextLink({ to, children, onClose, current }: { to: string; children: ReactNode; onClose: () => void; current?: boolean }) {
@@ -16,7 +19,11 @@ function ContextLink({ to, children, onClose, current }: { to: string; children:
 }
 
 function DatabaseChoices({ onClose }: MenuProps) {
-  const query = useQuery({ queryKey: ['databases', 'mock', 'ready'], queryFn: ({ signal }) => databaseSource.list(signal), retry: false })
+  const { session } = useSession()
+  const [params] = useSearchParams()
+  const mock = usesMockData(params)
+  const databaseSource = useMemo(() => mock ? createMockDatabaseSource() : createApiDatabaseSource(session.api), [mock, session])
+  const query = useQuery({ queryKey: ['databases', mock ? 'mock' : 'api', 'ready'], queryFn: ({ signal }) => databaseSource.list(signal), retry: false })
   return <MobileContextMenu open onClose={onClose} title="Pilih database" description="Buka koneksi yang tersedia">
     {query.isPending ? <Spinner label="Memuat database" /> : query.isError ? <div role="alert"><p>Daftar database belum dapat dimuat.</p><Button size="sm" variant="secondary" onClick={() => { void query.refetch() }}>Coba lagi</Button></div>
       : <nav className="ds-context-links" aria-label="Pilih database">{query.data.length ? query.data.map(database => <ContextLink key={database.id} to={paths.schema(database.id)} onClose={onClose}>{database.name}{database.status === 'disconnected' ? ' · gagal terhubung' : ''}</ContextLink>) : <p>Belum ada database.</p>}</nav>}

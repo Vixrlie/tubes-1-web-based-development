@@ -9,6 +9,9 @@ import { withMigrationSearch } from './migration-source'
 import { useDrafts } from './useDrafts'
 import { useSession } from '../auth/context'
 import { comparisonDraft, createMockSchemaTools } from './schema-tools-source'
+import { createApiSchemaTools } from './api-schema-tools'
+import { createApiDatabaseSource } from '../databases/api-source'
+import { usesMockData } from '../../shared/api/data-mode'
 import type { SchemaComparison } from './schema-tools-source'
 import { WorkflowHeading, WorkflowState } from './WorkflowUI'
 import './schema-tools.css'
@@ -19,9 +22,12 @@ export default function SchemaDiffPage() {
   const navigate = useNavigate()
   const referenceId = params.get('reference') ?? ''
   const mode = import.meta.env.DEV ? databasePreview(params.get('toolsPreview')) : 'ready'
-  const source = useMemo(() => createMockSchemaTools(preview, mode), [preview, mode])
-  const databases = useQuery({ queryKey: ['diff-connections', 'mock'], queryFn: ({ signal }) => createMockDatabaseSource().list(signal), retry: false })
-  const comparison = useQuery({ queryKey: ['schema-diff', workspace.database.id, referenceId, preview, mode], queryFn: ({ signal }) => source.compare(workspace.database.id, referenceId, signal), enabled: !!referenceId && mode !== 'loading', retry: false })
+  const { session } = useSession()
+  const mock = usesMockData(params)
+  const source = useMemo(() => mock ? createMockSchemaTools(preview, mode) : createApiSchemaTools(session.api), [mock, preview, mode, session])
+  const databaseSource = useMemo(() => mock ? createMockDatabaseSource() : createApiDatabaseSource(session.api), [mock, session])
+  const databases = useQuery({ queryKey: ['diff-connections', mock ? 'mock' : 'api'], queryFn: ({ signal }) => databaseSource.list(signal), retry: false })
+  const comparison = useQuery({ queryKey: ['schema-diff', mock ? 'mock' : 'api', workspace.database.id, referenceId, preview, mode], queryFn: ({ signal }) => source.compare(workspace.database.id, referenceId, signal), enabled: !!referenceId && mode !== 'loading', retry: false })
   const options = (databases.data ?? []).map(database => ({ value: database.id, label: database.name, disabled: database.status !== 'connected' }))
   return <div className="workflow-page"><WorkflowHeading title="Preview Schema Diff" database={workspace.database.name} connectionId={workspace.database.id}><Link className="ds-button ds-button--secondary ds-button--sm" to={withMigrationSearch(paths.migrations(workspace.database.id), params)}>Kembali ke Migrasi</Link></WorkflowHeading>
     <Card className="workflow-panel"><h2>Bandingkan Koneksi</h2><p>Database target akan disesuaikan dengan struktur database pembanding.</p>

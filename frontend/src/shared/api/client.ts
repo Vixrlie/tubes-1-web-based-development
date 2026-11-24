@@ -56,7 +56,8 @@ export function createApiClient({ getCsrfToken = () => null, fetchImpl = (...arg
       }
       if (!response.ok) {
         const detail = record(body) && record(body.error) ? body.error : body
-        const message = record(detail) && typeof detail.message === 'string' ? detail.message : 'Permintaan gagal diproses.'
+        // Workflow API (dbm) memakai { error: "pesan", code }; admin API memakai { error: { code, message } }.
+        const message = record(detail) && typeof detail.message === 'string' ? detail.message : record(body) && typeof body.error === 'string' ? body.error : 'Permintaan gagal diproses.'
         const code = record(detail) && typeof detail.code === 'string' ? detail.code : undefined
         const fields = record(detail) && record(detail.fields) && Object.values(detail.fields).every(value => typeof value === 'string') ? detail.fields as Record<string, string> : undefined
         throw new ApiError(message, { status: response.status, kind: 'http', code, fields })

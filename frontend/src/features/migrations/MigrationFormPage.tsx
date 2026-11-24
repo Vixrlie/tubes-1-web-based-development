@@ -36,7 +36,7 @@ function MigrationForm({ draft, version, author }: { draft?: MigrationDraft; ver
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const client = useQueryClient()
-  const initial: DraftInput = draft ? { name: draft.name, sqlUp: draft.sqlUp, sqlDown: draft.sqlDown, irreversible: draft.irreversible } : { name: '', sqlUp: '', sqlDown: '', irreversible: false }
+  const initial: DraftInput = draft ? { name: draft.name, sqlUp: draft.sqlUp, sqlDown: draft.sqlDown, irreversible: draft.irreversible, ...(draft.batch ? { batch: { ...draft.batch } } : {}) } : { name: '', sqlUp: '', sqlDown: '', irreversible: false }
   const [input, setInput] = useState<DraftInput>(initial)
   const [submitted, setSubmitted] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
@@ -84,6 +84,11 @@ function MigrationForm({ draft, version, author }: { draft?: MigrationDraft; ver
           <SqlEditor label="SQL UP" value={input.sqlUp} onChange={value => change('sqlUp', value)} readOnly={mutation.isPending} error={errors.sqlUp} />
           <div className="draft-reversibility"><Choice label="Irreversible (tanpa SQL Down)" checked={input.irreversible} onChange={event => change('irreversible', event.target.checked)} />{input.irreversible && <Alert tone="warning" title="Migrasi irreversible">SQL Down tidak akan disimpan. Perubahan ini tidak menyediakan rollback otomatis.</Alert>}</div>
           <SqlEditor label="SQL DOWN · ROLLBACK" value={input.irreversible ? '' : input.sqlDown} onChange={value => change('sqlDown', value)} readOnly={input.irreversible || mutation.isPending} error={errors.sqlDown} />
+          <div className="draft-reversibility"><Choice label="Eksekusi per batch (dataset besar)" checked={!!input.batch} onChange={event => change('batch', event.target.checked ? { table: '', column: 'id', size: 10000 } : null)} />
+            {input.batch && <><Alert tone="info" title="Mode batch">Setiap batch berjalan dalam transaksi sendiri dengan checkpoint. Pakai $1 dan $2 sebagai batas rentang kursor, misalnya <code>WHERE id BETWEEN $1 AND $2</code>. Bila gagal di tengah, batch yang sudah tersimpan dapat dilanjutkan (Resume) atau dibalik (Rollback).</Alert>
+              <Input label="Tabel" placeholder="public.orders" value={input.batch.table} error={errors.batch} onChange={event => change('batch', { ...input.batch!, table: event.target.value })} />
+              <Input label="Kolom kursor" placeholder="id" value={input.batch.column} onChange={event => change('batch', { ...input.batch!, column: event.target.value })} />
+              <Input label="Ukuran batch (baris)" type="number" min={1} max={1000000} value={String(input.batch.size)} onChange={event => change('batch', { ...input.batch!, size: Number(event.target.value) })} /></>}</div>
           {mutation.isError && <Alert tone="error" title="Draft belum tersimpan">{mutation.error instanceof DraftValidationError ? 'Periksa field migrasi.' : mutation.error.message}</Alert>}
           <div className="draft-actions"><Button variant="tertiary" onClick={() => dirty ? setCancelOpen(true) : navigate(back)}>Batal</Button><Button type="submit" variant="secondary" loading={mutation.isPending}>Simpan Draft</Button></div>
         </fieldset>

@@ -7,7 +7,9 @@ import type { MigrationJob, ReviewRound, WorkflowAction, WorkflowStatus } from '
 import { findExecution, operationEligibility, operationLabels, validIntent, validOperationReferences } from './operation-model.ts'
 import type { OperationIntent, OperationKind } from './operation-model.ts'
 
-export type DraftInput = { name: string; sqlUp: string; sqlDown: string; irreversible: boolean }
+/** Batch: SQL dijalankan per rentang kursor ($1 = awal, $2 = akhir), satu transaksi per batch. */
+export type BatchConfig = { table: string; column: string; size: number }
+export type DraftInput = { name: string; sqlUp: string; sqlDown: string; irreversible: boolean; batch?: BatchConfig | null }
 export type MigrationDraft = DraftInput & { id: string; connectionId: string; ownerId: string; author: string; version: string; status: WorkflowStatus; createdAt: string; updatedAt: string; reviews?: ReviewRound[]; jobs?: MigrationJob[]; intent?: OperationIntent }
 export type DraftErrors = Partial<Record<keyof DraftInput, string>>
 export type DraftStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'>
@@ -20,6 +22,11 @@ export function validateDraft(input: DraftInput): DraftErrors {
   else if (input.sqlUp.length > 50000) errors.sqlUp = 'SQL Up maksimal 50.000 karakter.'
   if (!input.irreversible && !input.sqlDown.trim()) errors.sqlDown = 'Isi SQL Down atau tandai migrasi sebagai irreversible.'
   else if (!input.irreversible && input.sqlDown.length > 50000) errors.sqlDown = 'SQL Down maksimal 50.000 karakter.'
+  if (input.batch) {
+    if (!input.batch.table.trim() || !input.batch.column.trim()) errors.batch = 'Isi tabel dan kolom kursor untuk mode batch.'
+    else if (!Number.isInteger(input.batch.size) || input.batch.size < 1 || input.batch.size > 1_000_000) errors.batch = 'Ukuran batch antara 1 dan 1.000.000 baris.'
+    else if (!/\$1(?!\d)/.test(input.sqlUp) || !/\$2(?!\d)/.test(input.sqlUp)) errors.batch = 'SQL Up mode batch wajib memakai $1 (awal) dan $2 (akhir) rentang kursor.'
+  }
   return errors
 }
 export class DraftValidationError extends Error {
