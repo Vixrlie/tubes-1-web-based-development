@@ -216,7 +216,7 @@ func TestDatabaseAPI(t *testing.T) {
 			t.Fatalf("%d %s", code, raw)
 		}
 		res := decodeInto[struct{ Items []ExplainResult }](t, raw)
-		if len(res.Items) != 1 || res.Items[0].Plan == "" || res.Items[0].Kind == "ddl" {
+		if len(res.Items) != 1 || res.Items[0].Plan == "" || res.Items[0].Kind == "ddl" || res.Items[0].Root == nil || res.Items[0].Root.TotalCost <= 0 {
 			t.Fatalf("explain: %+v", res.Items)
 		}
 		if code, _ := f.get(h, f.viewer, http.MethodPost, base+"/explain", `{"sql":"SELECT 1","analyze":true}`); code != http.StatusForbidden {
@@ -225,6 +225,9 @@ func TestDatabaseAPI(t *testing.T) {
 		code, raw = f.get(h, f.editor, http.MethodPost, base+"/explain", `{"sql":"DELETE FROM customers","analyze":true}`)
 		if code != http.StatusOK {
 			t.Fatalf("editor analyze: %d %s", code, raw)
+		}
+		if r := decodeInto[struct{ Items []ExplainResult }](t, raw); r.Items[0].ExecutionMs == nil {
+			t.Fatalf("ANALYZE harus memuat execution_ms: %s", raw)
 		}
 		var left int
 		if err := f.targetDB.QueryRow(`SELECT COUNT(*) FROM customers`).Scan(&left); err != nil || left != 30 {

@@ -602,6 +602,19 @@ type ExplainResult struct {
 	Rows       string `json:"rows,omitempty"`
 	Plan       string `json:"plan,omitempty"`
 	Analyze    bool   `json:"analyze"`
+	// Root plan untuk metrik di SPA; null bila statement tidak punya plan.
+	Root        *ExplainRoot `json:"root"`
+	PlanningMs  *float64     `json:"planning_ms"`
+	ExecutionMs *float64     `json:"execution_ms"`
+}
+
+type ExplainRoot struct {
+	Node        string  `json:"node"`
+	Relation    string  `json:"relation"`
+	StartupCost float64 `json:"startup_cost"`
+	TotalCost   float64 `json:"total_cost"`
+	Rows        float64 `json:"rows"`
+	Width       float64 `json:"width"`
 }
 
 const maxExplainSQL = 50_000
@@ -635,7 +648,12 @@ func (h *Handlers) apiExplain(w http.ResponseWriter, r *http.Request) {
 	for _, it := range items {
 		out = append(out, ExplainResult{N: it.N, Statement: it.Stmt, Kind: it.Kind, Note: it.Note,
 			Scan: it.Summary.Scan, Index: it.Summary.Index, Join: it.Summary.Join, Cost: it.Summary.Cost,
-			ActualTime: it.Summary.ActualTime, Rows: it.Summary.Rows, Plan: it.Tree, Analyze: it.Analyze})
+			ActualTime: it.Summary.ActualTime, Rows: it.Summary.Rows, Plan: it.Tree, Analyze: it.Analyze,
+			PlanningMs: it.PlanningMs, ExecutionMs: it.ExecutionMs})
+		if it.Root.Node != "" {
+			root := ExplainRoot(it.Root)
+			out[len(out)-1].Root = &root
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": out})
 }
