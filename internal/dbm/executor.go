@@ -175,6 +175,9 @@ type startedExecution struct {
 	Action       string
 	ConnectionID int64
 	Version      int64
+	// Diisi untuk migration per batch.
+	Batch    *BatchConfig
+	BatchKey int64
 }
 
 // start: kegagalan revalidasi dicatat sebagai attempt gagal tanpa menyentuh target.
@@ -218,6 +221,20 @@ func (x *Executor) start(ctx context.Context, job ExecJob) (*startedExecution, e
 	if err != nil {
 		return nil, err
 	}
+	// Tahan migration lain selama database punya migration batch yang berhenti
+	// sebagian; hanya resume/rollback migration itu yang boleh berjalan.
+	states, err := loadStates(ctx, tx, req.ConnectionID)
+	if err != nil {
+		return nil, RetryableError{err}
+	}
+	for _, st := range states {
+		if st.State() == StatePartial && st.MigrationID != m.ID {
+			x.event(ctx, req, "migration.held", activity.StatusWarning, map[string]string{
+				"job_id": idStr(job.JobID), "partial_migration_id": idStr(st.MigrationID),
+			}, nil)
+			return nil, ErrDatabaseBusy
+		}
+	}
 
 	sqlText := m.UpSQL
 	if req.Action == ActionRollback {
@@ -225,6 +242,24 @@ func (x *Executor) start(ctx context.Context, job ExecJob) (*startedExecution, e
 	}
 
 	reason := x.revalidate(ctx, tx, req, m)
+	// Kunci rangkaian batch: up/forward memulai rangkaian baru (ID pengajuan),
+	// resume dan rollback melanjutkan rangkaian milik eksekusi target.
+	var batchKey, batchSize any
+	var key int64
+	if m.Batch.Enabled() && reason == nil {
+		key = req.ID
+		if (req.Action == ActionResume || req.Action == ActionRollback) && req.TargetExecution != nil {
+			var targetKey *int64
+			if err := tx.QueryRow(ctx, `SELECT batch_key FROM migration_executions WHERE id = $1`,
+				*req.TargetExecution).Scan(&targetKey); err != nil {
+				return nil, err
+			}
+			if targetKey != nil {
+				key = *targetKey
+			}
+		}
+		batchKey, batchSize = key, m.Batch.Size
+	}
 	var revertsID any
 	if req.Action == ActionRollback && req.TargetExecution != nil {
 		revertsID = *req.TargetExecution
@@ -261,11 +296,11 @@ func (x *Executor) start(ctx context.Context, job ExecJob) (*startedExecution, e
 	if err := tx.QueryRow(ctx,
 		`INSERT INTO migration_executions (request_id, migration_id, connection_id, action,
 		        reverts_execution_id, migration_version, migration_revision, sql_executed,
-		        status, attempt, job_id, executed_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'running', $9, $10, $11)
+		        status, attempt, job_id, executed_by, batch_key, batch_size)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'running', $9, $10, $11, $12, $13)
 		 RETURNING id`,
 		req.ID, m.ID, m.ConnectionID, req.Action, revertsID, m.Version, m.Revision, sqlText,
-		job.Attempt, job.JobID, req.RequestedBy).Scan(&execID); err != nil {
+		job.Attempt, job.JobID, req.RequestedBy, batchKey, batchSize).Scan(&execID); err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(ctx,
@@ -283,7 +318,11 @@ func (x *Executor) start(ctx context.Context, job ExecJob) (*startedExecution, e
 	x.event(ctx, req, "migration.revalidation", activity.StatusSuccess, map[string]string{
 		"job_id": idStr(job.JobID), "execution_id": idStr(execID), "attempt": strconv.Itoa(job.Attempt),
 	}, nil)
-	return &startedExecution{ID: execID, SQL: sqlText, Action: req.Action, ConnectionID: m.ConnectionID, Version: m.Version}, nil
+	started := &startedExecution{ID: execID, SQL: sqlText, Action: req.Action, ConnectionID: m.ConnectionID, Version: m.Version}
+	if m.Batch.Enabled() {
+		started.Batch, started.BatchKey = m.Batch, key
+	}
+	return started, nil
 }
 
 // revalidate memeriksa checksum, approval, dan urutan yang bisa berubah sejak approval.
@@ -306,9 +345,9 @@ func (x *Executor) revalidate(ctx context.Context, tx pgx.Tx, req requestRow, m 
 	if err != nil {
 		return err
 	}
-	if req.Action == ActionRollback {
+	if req.Action == ActionRollback || req.Action == ActionResume {
 		if req.TargetExecution == nil || plan.TargetExecution != *req.TargetExecution {
-			return errors.New("eksekusi yang akan di-rollback sudah tidak aktif")
+			return errors.New("eksekusi target sudah bukan hasil terakhir migration ini")
 		}
 	}
 	return nil
@@ -316,6 +355,9 @@ func (x *Executor) revalidate(ctx context.Context, tx pgx.Tx, req requestRow, m 
 
 // execute menjalankan SQL di target lalu mencatat hasil akhirnya.
 func (x *Executor) execute(ctx context.Context, job ExecJob, req requestRow, exec *startedExecution) error {
+	if exec.Batch != nil {
+		return x.executeBatch(ctx, job, req, exec)
+	}
 	ctx, span := activity.StartSpan(ctx, "migration.execute")
 	finish := x.metrics.StartMigration()
 	start := time.Now()
@@ -529,9 +571,10 @@ func (x *Executor) recoverRunning(ctx context.Context, req requestRow) (resolved
 
 	var execID int64
 	var started time.Time
+	var batchKey *int64
 	err = x.pool.QueryRow(ctx,
-		`SELECT id, started_at FROM migration_executions
-		  WHERE request_id = $1 AND status = 'running' ORDER BY id DESC LIMIT 1`, req.ID).Scan(&execID, &started)
+		`SELECT id, started_at, batch_key FROM migration_executions
+		  WHERE request_id = $1 AND status = 'running' ORDER BY id DESC LIMIT 1`, req.ID).Scan(&execID, &started, &batchKey)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Tidak ada attempt menggantung: kembalikan ke antrian.
 		_, err = x.pool.Exec(ctx, `UPDATE migration_requests SET status = 'queued', updated_at = now() WHERE id = $1`, req.ID)
@@ -539,6 +582,18 @@ func (x *Executor) recoverRunning(ctx context.Context, req requestRow) (resolved
 	}
 	if err != nil {
 		return false, RetryableError{err}
+	}
+
+	if batchKey != nil {
+		// Batch: checkpoint di target adalah bukti tiap batch, jadi attempt
+		// berikutnya cukup melanjutkan rangkaian tanpa mengulang batch committed.
+		msg := "worker berhenti di tengah rangkaian batch; dilanjutkan dari checkpoint terakhir"
+		if err := x.finalize(ctx, execID, req.ID, ExecFailed, "platform", msg, "", time.Since(started), nil, RequestQueued); err != nil {
+			return false, RetryableError{err}
+		}
+		x.event(ctx, req, "migration.recover.batch_resume", activity.StatusWarning,
+			map[string]string{"execution_id": idStr(execID), "batch_key": idStr(*batchKey)}, nil)
+		return false, nil
 	}
 
 	target, terr := x.registry.Get(ctx, req.ConnectionID)

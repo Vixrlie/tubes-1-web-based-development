@@ -13,6 +13,8 @@ const (
 	ActionUp       = "up"
 	ActionRollback = "rollback"
 	ActionForward  = "forward"
+	// ActionResume melanjutkan eksekusi batch yang berhenti sebagian dari checkpoint.
+	ActionResume = "resume"
 )
 
 // Status pengajuan (request) migration.
@@ -25,7 +27,9 @@ const (
 	RequestRunning       = "running"
 	RequestSuccess       = "success"
 	RequestFailed        = "failed"
-	RequestCancelled     = "cancelled"
+	// RequestPartial: eksekusi batch berhenti setelah sebagian batch committed.
+	RequestPartial   = "partial"
+	RequestCancelled = "cancelled"
 )
 
 // Status satu attempt eksekusi.
@@ -33,6 +37,8 @@ const (
 	ExecRunning = "running"
 	ExecSuccess = "success"
 	ExecFailed  = "failed"
+	// ExecPartial: sebagian batch committed lalu berhenti (final, tidak ditimpa).
+	ExecPartial = "partial"
 )
 
 // Posisi migration terhadap database target, diturunkan dari eksekusi sukses.
@@ -41,6 +47,9 @@ const (
 	StateActive     = "active"      // eksekusi sukses terakhir = up/forward
 	StateRolledBack = "rolled_back" // eksekusi sukses terakhir = rollback
 	StateFailed     = "failed"      // pernah dicoba tetapi belum pernah sukses
+	// StatePartial: hasil terakhir = eksekusi batch yang berhenti sebagian.
+	// Selesaikan dengan resume (lanjut) atau rollback (batalkan per batch).
+	StatePartial = "partial"
 )
 
 var (
@@ -49,7 +58,10 @@ var (
 	ErrNotLatestActive = errors.New("rollback hanya dapat dilakukan pada migration aktif terakhir")
 	ErrAlreadyActive   = errors.New("migration sudah aktif; rollback terlebih dahulu sebelum forward")
 	ErrForwardOrder    = errors.New("forward harus mengikuti urutan linear: forward migration yang terakhir di-rollback terlebih dahulu")
-	ErrUnknownAction   = errors.New("aksi tidak dikenal; gunakan up, forward, atau rollback")
+	ErrUnknownAction   = errors.New("aksi tidak dikenal; gunakan up, forward, rollback, atau resume")
+	ErrPartialPending  = errors.New("migration berhenti sebagian; lanjutkan dengan resume atau batalkan dengan rollback terlebih dahulu")
+	ErrNotPartial      = errors.New("resume hanya untuk eksekusi batch yang berhenti sebagian")
+	ErrDatabasePartial = errors.New("database ditahan karena ada migration yang berhenti sebagian; selesaikan migration tersebut terlebih dahulu")
 )
 
 // MigrationState = ringkasan posisi satu migration, dihitung dari riwayat
@@ -62,11 +74,25 @@ type MigrationState struct {
 	// LastSuccessID/Action = eksekusi sukses terakhir milik migration ini.
 	LastSuccessID     int64
 	LastSuccessAction string
+	// Diisi bila hasil terakhir (sukses atau partial) adalah eksekusi partial.
+	PartialID      int64
+	PartialAction  string
+	PartialReverts int64
+}
+
+// setOutcome mencatat hasil terakhir (sukses/partial); hanya partial yang
+// mengubah posisi, karena posisi sukses sudah dari LastSuccess*.
+func (s *MigrationState) setOutcome(id int64, action, status string, reverts int64) {
+	if status == ExecPartial && id > s.LastSuccessID {
+		s.PartialID, s.PartialAction, s.PartialReverts = id, action, reverts
+	}
 }
 
 // State menerjemahkan eksekusi sukses terakhir menjadi posisi migration.
 func (s MigrationState) State() string {
 	switch {
+	case s.PartialID != 0:
+		return StatePartial
 	case s.LastSuccessID == 0 && s.HasAttempts:
 		return StateFailed
 	case s.LastSuccessID == 0:
@@ -107,7 +133,20 @@ func PlanAction(states []MigrationState, migID int64, requested string) (Plan, e
 		return Plan{}, ErrMigrationNotFound
 	}
 
+	// Database ditahan selama ada migration partial; hanya migration itu yang
+	// boleh diselesaikan.
+	if self.State() == StatePartial {
+		return planPartial(*self, requested)
+	}
+	for _, other := range states {
+		if other.State() == StatePartial {
+			return Plan{}, fmt.Errorf("%w (migration #%d)", ErrDatabasePartial, other.MigrationID)
+		}
+	}
+
 	switch requested {
+	case ActionResume:
+		return Plan{}, ErrNotPartial
 	case ActionRollback:
 		if self.State() != StateActive {
 			return Plan{}, ErrNotActive
@@ -136,6 +175,31 @@ func PlanAction(states []MigrationState, migID int64, requested string) (Plan, e
 			}
 		}
 		return Plan{Action: ActionForward}, nil
+	}
+	return Plan{}, ErrUnknownAction
+}
+
+// planPartial: up/forward/resume yang berhenti sebagian boleh di-resume atau
+// dibatalkan; rollback yang berhenti sebagian (partially reverted) hanya boleh
+// dilanjutkan pembatalannya.
+func planPartial(self MigrationState, requested string) (Plan, error) {
+	reverting := self.PartialAction == ActionRollback
+	switch requested {
+	case ActionResume:
+		if reverting {
+			return Plan{}, ErrPartialPending
+		}
+		return Plan{Action: ActionResume, TargetExecution: self.PartialID}, nil
+	case ActionRollback:
+		if !self.Reversible {
+			return Plan{}, ErrNotReversible
+		}
+		if reverting {
+			return Plan{Action: ActionRollback, TargetExecution: self.PartialReverts}, nil
+		}
+		return Plan{Action: ActionRollback, TargetExecution: self.PartialID}, nil
+	case ActionUp, ActionForward:
+		return Plan{}, ErrPartialPending
 	}
 	return Plan{}, ErrUnknownAction
 }

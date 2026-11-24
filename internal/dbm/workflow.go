@@ -219,11 +219,7 @@ func (w *Workflow) Validate(ctx context.Context, actor auth.User, connID, migID 
 const validationLockWait = 5 * time.Second
 
 func (w *Workflow) dryRun(ctx context.Context, connID int64, m Migration) ValidationResult {
-	in := MigrationInput{
-		Name: m.Name, UpSQL: m.UpSQL, DownSQL: m.DownSQL,
-		Irreversible: !m.Reversible(), IrreversibleReason: m.IrreversibleReason,
-	}
-	if _, err := in.Normalize(); err != nil {
+	if _, err := m.Input().Normalize(); err != nil {
 		return ValidationResult{Message: err.Error(), Phase: "static"}
 	}
 
@@ -287,8 +283,23 @@ func (w *Workflow) dryRun(ctx context.Context, connID int64, m Migration) Valida
 	if _, err := tx.ExecContext(runCtx, fmt.Sprintf("SET LOCAL statement_timeout = %d", timeout.Milliseconds())); err != nil {
 		return ValidationResult{Message: sanitizePGError(err), Phase: "static"}
 	}
+	// Mode batch: dry-run memakai rentang batch pertama sebagai nilai $1/$2.
+	var args []any
+	if m.Batch.Enabled() {
+		run := BatchRun{Dialect: target.Dialect, Config: *m.Batch}
+		lo, hi, n, err := run.FirstWindow(runCtx, tx)
+		if err != nil {
+			return ValidationResult{Phase: "static", SQLState: sqlState(err),
+				Message: "tabel atau kolom cursor batch tidak dapat dibaca: " + sanitizePGError(err)}
+		}
+		if n == 0 {
+			return ValidationResult{OK: true, Phase: "static",
+				Message: "Tabel batch kosong; tidak ada batch untuk diuji. Validasi statis lolos."}
+		}
+		args = []any{lo, hi}
+	}
 	for _, s := range steps {
-		if _, err := tx.ExecContext(runCtx, s.sql); err != nil {
+		if _, err := tx.ExecContext(runCtx, s.sql, args...); err != nil {
 			res := ValidationResult{
 				Phase:    s.phase,
 				DryRun:   true,
@@ -305,11 +316,16 @@ func (w *Workflow) dryRun(ctx context.Context, connID int64, m Migration) Valida
 	for i, s := range steps {
 		phases[i] = "SQL " + s.phase
 	}
+	message := "Dry-run berhasil (" + strings.Join(phases, " → ") + ") dan seluruh perubahan sudah di-rollback."
+	if m.Batch.Enabled() {
+		message = fmt.Sprintf("Dry-run batch pertama (cursor %v sampai %v) berhasil (%s) dan sudah di-rollback.",
+			args[0], args[1], strings.Join(phases, " → "))
+	}
 	return ValidationResult{
 		OK:      true,
 		DryRun:  true,
 		Phase:   steps[len(steps)-1].phase,
-		Message: "Dry-run berhasil (" + strings.Join(phases, " → ") + ") dan seluruh perubahan sudah di-rollback.",
+		Message: message,
 	}
 }
 
@@ -710,6 +726,9 @@ func (w *Workflow) AllowedActions(ctx context.Context, connID int64, m Migration
 	}
 	if _, err := PlanAction(states, m.ID, ActionRollback); err == nil {
 		out = append(out, ActionRollback)
+	}
+	if _, err := PlanAction(states, m.ID, ActionResume); err == nil {
+		out = append(out, ActionResume)
 	}
 	return out
 }

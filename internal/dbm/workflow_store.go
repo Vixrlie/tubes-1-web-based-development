@@ -77,6 +77,15 @@ type Execution struct {
 	FinishedAt         *time.Time `json:"finished_at,omitempty"`
 	DurationMS         *int64     `json:"duration_ms,omitempty"`
 	RowsAffected       *int64     `json:"rows_affected,omitempty"`
+
+	// Progres mode batch (nil BatchKey = migration biasa).
+	BatchKey         *int64            `json:"batch_key,omitempty"`
+	BatchSize        *int              `json:"batch_size,omitempty"`
+	CommittedBatches int               `json:"committed_batches"`
+	CommittedRows    int64             `json:"committed_rows"`
+	TotalBatches     *int              `json:"total_batches,omitempty"`
+	CursorLast       string            `json:"cursor_last,omitempty"`
+	Checkpoints      []BatchCheckpoint `json:"checkpoints,omitempty"`
 }
 
 func (e Execution) ExecID() int64      { return e.ID }
@@ -202,7 +211,9 @@ const executionColumns = `
        e.reverts_execution_id, rb.id, e.migration_version, e.migration_revision,
        e.sql_executed, e.status, COALESCE(e.error_stage, ''), COALESCE(e.error, ''),
        COALESCE(e.sqlstate, ''), e.attempt, e.job_id, e.executed_by, COALESCE(u.username, ''),
-       e.started_at, e.finished_at, e.duration_ms, e.rows_affected`
+       e.started_at, e.finished_at, e.duration_ms, e.rows_affected,
+       e.batch_key, e.batch_size, e.committed_batches, e.committed_rows, e.total_batches,
+       COALESCE(e.cursor_last, '')`
 
 const executionJoins = `
       FROM migration_executions e
@@ -219,6 +230,8 @@ func scanExecution(row pgx.Row) (Execution, error) {
 		&e.SQL, &e.Status, &e.ErrorStage, &e.Error,
 		&e.SQLState, &e.Attempt, &e.JobID, &e.ExecutedBy, &e.ExecutedByName,
 		&e.StartedAt, &e.FinishedAt, &e.DurationMS, &e.RowsAffected,
+		&e.BatchKey, &e.BatchSize, &e.CommittedBatches, &e.CommittedRows, &e.TotalBatches,
+		&e.CursorLast,
 	)
 	return e, err
 }
@@ -263,5 +276,23 @@ func getExecution(ctx context.Context, q pgxQuerier, id int64) (Execution, error
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Execution{}, ErrExecutionNotFound
 	}
-	return e, err
+	if err != nil || e.BatchKey == nil {
+		return e, err
+	}
+	// Detail eksekusi batch menyertakan checkpoint yang dicatat attempt ini.
+	rows, err := q.Query(ctx,
+		`SELECT batch_number, cursor_start, cursor_end, rows_affected
+		   FROM migration_batch_checkpoints WHERE execution_id = $1 ORDER BY id`, id)
+	if err != nil {
+		return e, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cp BatchCheckpoint
+		if err := rows.Scan(&cp.Number, &cp.CursorStart, &cp.CursorEnd, &cp.Rows); err != nil {
+			return e, err
+		}
+		e.Checkpoints = append(e.Checkpoints, cp)
+	}
+	return e, rows.Err()
 }

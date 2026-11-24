@@ -45,6 +45,8 @@ type MigrationInput struct {
 	DownSQL            string `json:"down_sql"`
 	Irreversible       bool   `json:"irreversible"`
 	IrreversibleReason string `json:"irreversible_reason"`
+	// Batch diisi untuk migration per batch; nil = migration biasa.
+	Batch *BatchConfig `json:"batch,omitempty"`
 }
 
 // Normalize merapikan spasi lalu memeriksa aturan statis definisi.
@@ -56,6 +58,14 @@ func (in MigrationInput) Normalize() (MigrationInput, error) {
 
 	if in.UpSQL == "" {
 		return in, ErrEmptySQL
+	}
+	batch, err := in.Batch.Normalize()
+	if err != nil {
+		return in, err
+	}
+	in.Batch = batch
+	if batch != nil && !hasBatchPlaceholders(in.UpSQL) {
+		return in, ErrBatchPlaceholders
 	}
 	if len([]rune(in.Name)) > maxNameLength {
 		return in, ErrNameTooLong
@@ -72,6 +82,9 @@ func (in MigrationInput) Normalize() (MigrationInput, error) {
 		}
 		return in, nil
 	}
+	if in.Batch != nil && in.DownSQL != "" && !hasBatchPlaceholders(in.DownSQL) {
+		return in, ErrBatchPlaceholders
+	}
 	in.IrreversibleReason = ""
 	if in.DownSQL == "" {
 		return in, ErrMissingDown
@@ -84,26 +97,29 @@ func (in MigrationInput) Normalize() (MigrationInput, error) {
 
 // Migration = definisi migration beserta posisi turunannya.
 type Migration struct {
-	ID                 int64      `json:"id"`
-	ConnectionID       int64      `json:"connection_id"`
-	Version            int64      `json:"version"`
-	Name               string     `json:"name"`
-	UpSQL              string     `json:"up_sql,omitempty"`
-	DownSQL            string     `json:"down_sql,omitempty"`
-	IrreversibleReason string     `json:"irreversible_reason,omitempty"`
-	Revision           int        `json:"revision"`
-	Checksum           string     `json:"checksum"`
-	LockedAt           *time.Time `json:"locked_at,omitempty"`
-	Validation         Validation `json:"validation"`
-	CreatedBy          *int64     `json:"created_by,omitempty"`
-	CreatedByName      string     `json:"created_by_name,omitempty"`
-	CreatedAt          time.Time  `json:"created_at"`
-	UpdatedAt          time.Time  `json:"updated_at"`
+	ID                 int64        `json:"id"`
+	ConnectionID       int64        `json:"connection_id"`
+	Version            int64        `json:"version"`
+	Name               string       `json:"name"`
+	UpSQL              string       `json:"up_sql,omitempty"`
+	DownSQL            string       `json:"down_sql,omitempty"`
+	IrreversibleReason string       `json:"irreversible_reason,omitempty"`
+	Batch              *BatchConfig `json:"batch,omitempty"`
+	Revision           int          `json:"revision"`
+	Checksum           string       `json:"checksum"`
+	LockedAt           *time.Time   `json:"locked_at,omitempty"`
+	Validation         Validation   `json:"validation"`
+	CreatedBy          *int64       `json:"created_by,omitempty"`
+	CreatedByName      string       `json:"created_by_name,omitempty"`
+	CreatedAt          time.Time    `json:"created_at"`
+	UpdatedAt          time.Time    `json:"updated_at"`
 
 	// Diisi dari riwayat eksekusi dan pengajuan.
-	State             string      `json:"state"`
-	ActiveExecutionID int64       `json:"active_execution_id,omitempty"`
-	OpenRequest       *RequestRef `json:"open_request,omitempty"`
+	State             string `json:"state"`
+	ActiveExecutionID int64  `json:"active_execution_id,omitempty"`
+	// PartialExecutionID = eksekusi batch yang berhenti sebagian (state partial).
+	PartialExecutionID int64       `json:"partial_execution_id,omitempty"`
+	OpenRequest        *RequestRef `json:"open_request,omitempty"`
 }
 
 // Validation = hasil validasi terakhir; berlaku hanya untuk checksum yang sama.
@@ -147,6 +163,22 @@ func (m Migration) CreatedAtLabel() string {
 func DefinitionChecksum(up, down, reason string) string {
 	sum := sha256.Sum256([]byte(up + "\x1e" + down + "\x1e" + reason))
 	return hex.EncodeToString(sum[:])
+}
+
+// InputChecksum = DefinitionChecksum ditambah konfigurasi batch bila ada,
+// sehingga migration biasa tetap memakai checksum lama.
+func InputChecksum(in MigrationInput) string {
+	if !in.Batch.Enabled() {
+		return DefinitionChecksum(in.UpSQL, in.DownSQL, in.IrreversibleReason)
+	}
+	return DefinitionChecksum(in.UpSQL, in.DownSQL, in.IrreversibleReason+
+		"\x1ebatch\x1e"+in.Batch.Table+"\x1e"+in.Batch.Column+"\x1e"+strconv.Itoa(in.Batch.Size))
+}
+
+// Input mengembalikan definisi migration dalam bentuk input (untuk checksum/validasi).
+func (m Migration) Input() MigrationInput {
+	return MigrationInput{Name: m.Name, UpSQL: m.UpSQL, DownSQL: m.DownSQL,
+		Irreversible: !m.Reversible(), IrreversibleReason: m.IrreversibleReason, Batch: m.Batch}
 }
 
 // VersionNow menghasilkan versi migration berbentuk YYYYMMDDHHMM.
@@ -234,7 +266,10 @@ const migrationColumns = `
        m.validated_at, m.created_by, COALESCE(u.username, ''), m.created_at, m.updated_at,
        EXISTS (SELECT 1 FROM migration_executions e WHERE e.migration_id = m.id),
        COALESCE(last_ok.id, 0), COALESCE(last_ok.action, ''),
-       COALESCE(open_req.id, 0), COALESCE(open_req.action, ''), COALESCE(open_req.status, '')`
+       COALESCE(open_req.id, 0), COALESCE(open_req.action, ''), COALESCE(open_req.status, ''),
+       COALESCE(m.batch_table, ''), COALESCE(m.batch_column, ''), COALESCE(m.batch_size, 0),
+       COALESCE(last_out.id, 0), COALESCE(last_out.action, ''), COALESCE(last_out.status, ''),
+       COALESCE(last_out.reverts_execution_id, 0)`
 
 const migrationJoins = `
       FROM migrations m
@@ -243,6 +278,10 @@ const migrationJoins = `
             SELECT e.id, e.action FROM migration_executions e
              WHERE e.migration_id = m.id AND e.status = 'success'
              ORDER BY e.id DESC LIMIT 1) last_ok ON TRUE
+      LEFT JOIN LATERAL (
+            SELECT e.id, e.action, e.status, e.reverts_execution_id FROM migration_executions e
+             WHERE e.migration_id = m.id AND e.status IN ('success', 'partial')
+             ORDER BY e.id DESC LIMIT 1) last_out ON TRUE
       LEFT JOIN LATERAL (
             SELECT r.id, r.action, r.status FROM migration_requests r
              WHERE r.migration_id = m.id
@@ -257,12 +296,16 @@ func scanMigration(row pgx.Row) (Migration, error) {
 	var hasAttempts bool
 	var lastOKID, openID int64
 	var lastOKAction, openAction, openStatus string
+	var batch BatchConfig
+	var outID, outReverts int64
+	var outAction, outStatus string
 	err := row.Scan(
 		&m.ID, &m.ConnectionID, &m.Version, &m.Name, &m.UpSQL, &m.DownSQL,
 		&m.IrreversibleReason, &m.Revision, &m.Checksum, &lockedAt,
 		&validationOK, &m.Validation.Message, &m.Validation.Checksum,
 		&validatedAt, &createdBy, &m.CreatedByName, &m.CreatedAt, &m.UpdatedAt,
 		&hasAttempts, &lastOKID, &lastOKAction, &openID, &openAction, &openStatus,
+		&batch.Table, &batch.Column, &batch.Size, &outID, &outAction, &outStatus, &outReverts,
 	)
 	if err != nil {
 		return Migration{}, err
@@ -279,6 +322,9 @@ func scanMigration(row pgx.Row) (Migration, error) {
 	m.Validation.Checked = validationOK.Valid
 	m.Validation.OK = validationOK.Valid && validationOK.Bool
 	m.Validation.Current = m.Validation.Checked && m.Validation.Checksum == m.Checksum
+	if batch.Table != "" {
+		m.Batch = &batch
+	}
 
 	state := MigrationState{
 		MigrationID:       m.ID,
@@ -287,8 +333,10 @@ func scanMigration(row pgx.Row) (Migration, error) {
 		LastSuccessID:     lastOKID,
 		LastSuccessAction: lastOKAction,
 	}
+	state.setOutcome(outID, outAction, outStatus, outReverts)
 	m.State = state.State()
 	m.ActiveExecutionID = state.ActiveExecutionID()
+	m.PartialExecutionID = state.PartialID
 	if openID != 0 {
 		m.OpenRequest = &RequestRef{ID: openID, Action: openAction, Status: openStatus}
 	}
@@ -328,6 +376,14 @@ func (s *PGMigrationStore) Get(ctx context.Context, id int64) (Migration, error)
 	return m, nil
 }
 
+// batchColumns memetakan konfigurasi batch ke kolom (NULL untuk migration biasa).
+func batchColumns(b *BatchConfig) (table, column, size any) {
+	if !b.Enabled() {
+		return nil, nil, nil
+	}
+	return b.Table, b.Column, b.Size
+}
+
 func nullable(s string) any {
 	if s == "" {
 		return nil
@@ -342,19 +398,21 @@ func (s *PGMigrationStore) Create(ctx context.Context, connID int64, in Migratio
 	if err != nil {
 		return Migration{}, err
 	}
-	checksum := DefinitionChecksum(in.UpSQL, in.DownSQL, in.IrreversibleReason)
+	checksum := InputChecksum(in)
+	bt, bc, bs := batchColumns(in.Batch)
 	// Versi minimal versi terakhir + 1, agar banyak create dalam satu menit tetap unik.
 	for attempt := 0; attempt < 5; attempt++ {
 		var id int64
 		err := s.platform.QueryRow(ctx,
 			`INSERT INTO migrations (connection_id, version, name, up_sql, down_sql,
-			                         irreversible_reason, checksum, created_by)
-			 SELECT $1, GREATEST($2::bigint, COALESCE(max(version), 0) + 1), $3, $4, $5, $6, $7, $8
+			                         irreversible_reason, checksum, created_by,
+			                         batch_table, batch_column, batch_size)
+			 SELECT $1, GREATEST($2::bigint, COALESCE(max(version), 0) + 1), $3, $4, $5, $6, $7, $8, $9, $10, $11
 			   FROM migrations WHERE connection_id = $1
 			 ON CONFLICT (connection_id, version) DO NOTHING
 			 RETURNING id`,
 			connID, VersionNow(time.Now()), in.Name, in.UpSQL, nullable(in.DownSQL),
-			nullable(in.IrreversibleReason), checksum, userID).Scan(&id)
+			nullable(in.IrreversibleReason), checksum, userID, bt, bc, bs).Scan(&id)
 		if err == nil {
 			return s.Get(ctx, id)
 		}
@@ -382,7 +440,8 @@ func (s *PGMigrationStore) Update(ctx context.Context, id int64, in MigrationInp
 	if current.OpenRequest != nil {
 		return Migration{}, ErrMigrationInReview
 	}
-	checksum := DefinitionChecksum(in.UpSQL, in.DownSQL, in.IrreversibleReason)
+	checksum := InputChecksum(in)
+	bt, bc, bs := batchColumns(in.Batch)
 	if checksum == current.Checksum && in.Name == current.Name {
 		return current, nil
 	}
@@ -394,6 +453,7 @@ func (s *PGMigrationStore) Update(ctx context.Context, id int64, in MigrationInp
 		`UPDATE migrations
 		    SET name = $2, up_sql = $3, down_sql = $4, irreversible_reason = $5,
 		        checksum = $6, revision = $7, updated_at = now(),
+		        batch_table = $8, batch_column = $9, batch_size = $10,
 		        validation_ok = CASE WHEN $6 = checksum THEN validation_ok END,
 		        validation_message = CASE WHEN $6 = checksum THEN validation_message END,
 		        validated_checksum = CASE WHEN $6 = checksum THEN validated_checksum END,
@@ -403,7 +463,7 @@ func (s *PGMigrationStore) Update(ctx context.Context, id int64, in MigrationInp
 		                     WHERE r.migration_id = $1
 		                       AND r.status IN ('pending_review', 'approved', 'queued', 'running'))`,
 		id, in.Name, in.UpSQL, nullable(in.DownSQL), nullable(in.IrreversibleReason),
-		checksum, revision)
+		checksum, revision, bt, bc, bs)
 	if err != nil {
 		return Migration{}, err
 	}
@@ -435,12 +495,18 @@ func loadStates(ctx context.Context, q pgxQuerier, connID int64) ([]MigrationSta
 	rows, err := q.Query(ctx,
 		`SELECT m.id, m.down_sql IS NOT NULL,
 		        EXISTS (SELECT 1 FROM migration_executions e WHERE e.migration_id = m.id),
-		        COALESCE(last_ok.id, 0), COALESCE(last_ok.action, '')
+		        COALESCE(last_ok.id, 0), COALESCE(last_ok.action, ''),
+		        COALESCE(last_out.id, 0), COALESCE(last_out.action, ''), COALESCE(last_out.status, ''),
+		        COALESCE(last_out.reverts_execution_id, 0)
 		   FROM migrations m
 		   LEFT JOIN LATERAL (
 		         SELECT e.id, e.action FROM migration_executions e
 		          WHERE e.migration_id = m.id AND e.status = 'success'
 		          ORDER BY e.id DESC LIMIT 1) last_ok ON TRUE
+		   LEFT JOIN LATERAL (
+		         SELECT e.id, e.action, e.status, e.reverts_execution_id FROM migration_executions e
+		          WHERE e.migration_id = m.id AND e.status IN ('success', 'partial')
+		          ORDER BY e.id DESC LIMIT 1) last_out ON TRUE
 		  WHERE m.connection_id = $1`, connID)
 	if err != nil {
 		return nil, err
@@ -449,9 +515,13 @@ func loadStates(ctx context.Context, q pgxQuerier, connID int64) ([]MigrationSta
 	var out []MigrationState
 	for rows.Next() {
 		var s MigrationState
-		if err := rows.Scan(&s.MigrationID, &s.Reversible, &s.HasAttempts, &s.LastSuccessID, &s.LastSuccessAction); err != nil {
+		var outID, outReverts int64
+		var outAction, outStatus string
+		if err := rows.Scan(&s.MigrationID, &s.Reversible, &s.HasAttempts, &s.LastSuccessID, &s.LastSuccessAction,
+			&outID, &outAction, &outStatus, &outReverts); err != nil {
 			return nil, err
 		}
+		s.setOutcome(outID, outAction, outStatus, outReverts)
 		out = append(out, s)
 	}
 	return out, rows.Err()

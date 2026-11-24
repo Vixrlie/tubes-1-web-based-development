@@ -13,7 +13,18 @@ import (
 type Metrics struct {
 	mu                                sync.Mutex
 	running, completed, failed, locks int64
+	batches, batchRows                int64
 	duration, lockDuration            time.Duration
+}
+
+// ObserveBatch mencatat satu batch migration yang committed.
+func (m *Metrics) ObserveBatch(rows int64) {
+	if m != nil {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		m.batches++
+		m.batchRows += rows
+	}
 }
 
 func (m *Metrics) StartMigration() func(bool) {
@@ -51,12 +62,15 @@ func (m *Metrics) Handler(pool *pgxpool.Pool, targetStats func() sql.DBStats) ht
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 		m.mu.Lock()
 		running, completed, failed, locks := m.running, m.completed, m.failed, m.locks
+		batches, batchRows := m.batches, m.batchRows
 		duration, lockDuration := m.duration, m.lockDuration
 		m.mu.Unlock()
 		fmt.Fprintf(w, "# TYPE pathgres_migration_running gauge\npathgres_migration_running %d\n", running)
 		fmt.Fprintf(w, "# TYPE pathgres_migrations_total counter\npathgres_migrations_total{outcome=\"completed\"} %d\npathgres_migrations_total{outcome=\"failed\"} %d\n", completed, failed)
 		fmt.Fprintf(w, "# TYPE pathgres_migration_duration_seconds summary\npathgres_migration_duration_seconds_sum %g\npathgres_migration_duration_seconds_count %d\n", duration.Seconds(), completed+failed)
 		fmt.Fprintf(w, "# TYPE pathgres_migration_lock_duration_seconds summary\npathgres_migration_lock_duration_seconds_sum %g\npathgres_migration_lock_duration_seconds_count %d\n", lockDuration.Seconds(), locks)
+		fmt.Fprintf(w, "# TYPE pathgres_migration_batches_total counter\npathgres_migration_batches_total %d\n", batches)
+		fmt.Fprintf(w, "# TYPE pathgres_migration_batch_rows_total counter\npathgres_migration_batch_rows_total %d\n", batchRows)
 		stat := pool.Stat()
 		target := targetStats()
 		fmt.Fprintf(w, "# TYPE pathgres_db_connections gauge\npathgres_db_connections{pool=\"platform\",state=\"active\"} %d\npathgres_db_connections{pool=\"platform\",state=\"idle\"} %d\n", stat.AcquiredConns(), stat.IdleConns())
