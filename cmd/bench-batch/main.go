@@ -86,17 +86,21 @@ func main() {
 
 	fmt.Printf("Menyiapkan tabel %s dengan %d row...\n", tableName, *rows)
 	seedStart := time.Now()
+	if _, err := target.DB.ExecContext(ctx, fmt.Sprintf(`DROP TABLE IF EXISTS %s`, tableName)); err != nil {
+		log.Fatalf("gagal drop tabel lama: %v", err)
+	}
 	if _, err := target.DB.ExecContext(ctx, fmt.Sprintf(`
-		DROP TABLE IF EXISTS %s;
 		CREATE TABLE %s (
 			id      BIGSERIAL PRIMARY KEY,
 			payload TEXT NOT NULL,
 			status  TEXT NOT NULL DEFAULT 'initial'
-		);
+		)`, tableName)); err != nil {
+		log.Fatalf("gagal membuat tabel: %v", err)
+	}
+	if _, err := target.DB.ExecContext(ctx, fmt.Sprintf(`
 		INSERT INTO %s (payload)
 		SELECT 'item-' || i || '-' || repeat('a', 32)
-		  FROM generate_series(1, $1) i;
-	`, tableName, tableName, tableName), *rows); err != nil {
+		  FROM generate_series(1, $1) i`, tableName), *rows); err != nil {
 		log.Fatalf("gagal seed dataset: %v", err)
 	}
 	fmt.Printf("Seed selesai dalam %v\n\n", time.Since(seedStart).Round(time.Millisecond))
