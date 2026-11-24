@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Alert, Badge, Button, Card, EmptyState, Spinner, SqlPreview } from '../../design-system'
 import { paths } from '../../app/routes'
-import { executionAction, executionStatus, withMigrationSearch } from './migration-source'
+import { executionAction, executionStatus, executionTone, withMigrationSearch } from './migration-source'
 import { useMigrations } from './useMigrations'
 import RecoveryActions from './RecoveryActions'
 import './migrations.css'
@@ -32,7 +32,7 @@ function ExecutionDetail({ executionId }: { executionId: string }) {
     {row.rollbackTarget && <Alert title={`Rollback ${row.rollbackTarget}`}>Eksekusi ini membatalkan perubahan pada <Link to={withMigrationSearch(paths.migration(database.id, row.rollbackTarget), params)}>{row.rollbackTarget}</Link>.</Alert>}
     <dl className="migration-execution-metadata">{[
       { label: 'Versi', value: row.version },
-      { label: 'Execution Status', value: <Badge tone={row.status === 'success' ? 'success' : 'error'}>{executionStatus(row.status)}</Badge> },
+      { label: 'Execution Status', value: <Badge tone={executionTone(row)}>{executionStatus(row.status, row.partial)}</Badge> },
       { label: 'Pelaksana', value: row.actor },
       { label: 'Waktu eksekusi', value: row.executedAt },
       { label: 'Durasi', value: row.duration },

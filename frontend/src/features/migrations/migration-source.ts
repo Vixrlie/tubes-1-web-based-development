@@ -8,6 +8,8 @@ export type Execution = {
   id: string; version: string; name: string; action: 'UP' | 'ROLLBACK' | 'FORWARD'
   actor: string; executedAt: string; status: ExecutionStatus; duration: string; sql: string
   rollbackTarget?: string; irreversible?: boolean; error?: string
+  /** Eksekusi batch yang berhenti setelah sebagian batch tersimpan. */
+  partial?: 'applied' | 'reverted'
 }
 export type MigrationSource = {
   list: (connectionId: string, signal: AbortSignal) => Promise<Execution[]>
@@ -27,7 +29,11 @@ const shopHistory: readonly Execution[] = [
 export function executionAction(execution: Execution) {
   return execution.action === 'ROLLBACK' ? `ROLLBACK ${execution.rollbackTarget ?? ''}`.trim() : execution.action
 }
-export function executionStatus(status: ExecutionStatus) { return status === 'success' ? 'Sukses' : 'Gagal' }
+export function executionStatus(status: ExecutionStatus, partial?: Execution['partial']) {
+  if (partial) return partial === 'reverted' ? 'Partially reverted' : 'Partial'
+  return status === 'success' ? 'Sukses' : 'Gagal'
+}
+export function executionTone(row: Pick<Execution, 'status' | 'partial'>) { return row.partial ? 'warning' as const : row.status === 'success' ? 'success' as const : 'error' as const }
 export function parseExecutionStatus(value: string | null): 'all' | ExecutionStatus {
   return value === 'success' || value === 'failed' ? value : 'all'
 }

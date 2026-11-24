@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { Alert, Badge, Button, Choice, DataTable, Dropdown, EmptyState, Spinner } from '../../design-system'
 import { paths } from '../../app/routes'
-import { executionAction, executionStatus, filterExecutions, parseExecutionStatus, withMigrationSearch } from './migration-source'
+import { executionAction, executionStatus, executionTone, filterExecutions, parseExecutionStatus, withMigrationSearch } from './migration-source'
 import type { Execution } from './migration-source'
 import { useMigrations } from './useMigrations'
 import { useDrafts } from './useDrafts'
@@ -38,14 +38,14 @@ export default function MigrationHistoryPage() {
       {query.isPending ? <div className="schema-state"><Spinner label="Memuat riwayat migrasi" /><p>Memuat riwayat migrasi.</p></div>
         : query.isError ? <div className="schema-state"><Alert tone="error" title="Riwayat migrasi belum dapat dimuat">{query.error?.message}</Alert><Button variant="secondary" loading={query.isFetching} onClick={() => { void query.refetch() }}>Coba lagi</Button></div>
         : !rows.length ? <EmptyState title={query.data?.length ? 'Tidak ada eksekusi yang sesuai' : 'Belum ada riwayat migrasi'} action={query.data?.length ? <Button variant="secondary" onClick={() => setParams(previous => { const next = new URLSearchParams(previous); next.delete('hideRollback'); next.delete('status'); return next })}>Reset filter</Button> : undefined}>{query.data?.length ? 'Ubah filter untuk melihat eksekusi lainnya.' : `Eksekusi migrasi pada ${database.name} akan muncul di sini.`}</EmptyState>
-        : <><p className="sr-only" role="status">{rows.length} eksekusi ditampilkan</p><div className="migration-execution-cards">{rows.map(row => <Link key={row.id} to={detailPath(row)} className="migration-execution-card"><span><strong>{row.id} · {row.version} · {row.name}</strong><span>{executionAction(row)} · {row.actor} · {row.executedAt} · {row.irreversible ? 'Irreversible' : executionStatus(row.status)}</span></span><span aria-hidden="true">›</span></Link>)}</div>
+        : <><p className="sr-only" role="status">{rows.length} eksekusi ditampilkan</p><div className="migration-execution-cards">{rows.map(row => <Link key={row.id} to={detailPath(row)} className="migration-execution-card"><span><strong>{row.id} · {row.version} · {row.name}</strong><span>{executionAction(row)} · {row.actor} · {row.executedAt} · {row.partial ? executionStatus(row.status, row.partial) : row.irreversible ? 'Irreversible' : executionStatus(row.status)}</span></span><span aria-hidden="true">›</span></Link>)}</div>
           <div className="migration-execution-table"><DataTable rows={rows} rowKey={row => row.id} caption="Daftar eksekusi migrasi" columns={[
             { key: 'id', label: 'Execution ID', render: row => <strong>{row.id}</strong> },
             { key: 'version', label: 'Versi', render: row => row.version },
             { key: 'migration', label: 'Nama Migrasi', render: row => row.name },
             { key: 'actor', label: 'Actor', render: row => row.actor },
             { key: 'time', label: 'Executed at', render: row => <time dateTime={row.executedAt.replace(' ', 'T')}>{row.executedAt}</time> },
-            { key: 'status', label: 'Status', render: row => <Badge tone={row.status === 'success' ? 'success' : 'error'}>{executionStatus(row.status)}</Badge> },
+            { key: 'status', label: 'Status', render: row => <Badge tone={executionTone(row)}>{executionStatus(row.status, row.partial)}</Badge> },
             { key: 'action', label: 'Tindakan', render: row => <Link className="ds-button ds-button--secondary ds-button--sm" aria-label={`Lihat detail ${row.id}`} to={detailPath(row)}>Lihat Detail</Link> },
           ]} /></div></>}
     </section>

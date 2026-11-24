@@ -1,10 +1,10 @@
 import type { MigrationDraft } from './draft-source.ts'
 import type { Execution } from './migration-source.ts'
 
-export type WorkflowStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'queued' | 'running' | 'success' | 'failed'
+export type WorkflowStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'queued' | 'running' | 'success' | 'failed' | 'partial' | 'partially_reverted'
 export type ReviewGroup = { id: string; name: string; permission: 'view' | 'edit'; status: 'pending' | 'approved' | 'rejected'; actor?: string; reason?: string; decidedAt?: string }
 export type ReviewRound = { id: string; revision: number; submittedAt: string; groups: ReviewGroup[] }
-export type MigrationJob = { id: string; executionId: string; status: 'queued' | 'running' | 'success' | 'failed' | 'canceled'; queuedAt: string; scheduledAt: string; startedAt?: string; finishedAt?: string; actor: string; totalBatches: number; completedBatches: number; startBatch?: number; failAfter?: number; outcome: 'success' | 'failed'; attempt: number; error?: string }
+export type MigrationJob = { id: string; executionId: string; status: 'queued' | 'running' | 'success' | 'failed' | 'canceled'; queuedAt: string; scheduledAt: string; startedAt?: string; finishedAt?: string; actor: string; totalBatches: number; completedBatches: number; startBatch?: number; failAfter?: number; outcome: 'success' | 'failed'; attempt: number; error?: string; partial?: PartialKind }
 export type WorkflowAction = { type: 'submit' } | { type: 'decide'; reviewId: string; groupId: string; decision: 'approved' | 'rejected'; reason: string } | { type: 'enqueue' | 'retry' } | { type: 'cancel'; jobId: string }
 export const reviewGroups = [
   { id: 'backend', name: 'Backend Team', permission: 'edit' },
@@ -16,7 +16,16 @@ export const workflowStates = {
   approved: { label: 'Disetujui', tone: 'success' }, rejected: { label: 'Ditolak', tone: 'error' },
   queued: { label: 'Antrean', tone: 'warning' }, running: { label: 'Berjalan', tone: 'info' },
   success: { label: 'Selesai', tone: 'success' }, failed: { label: 'Gagal', tone: 'error' },
+  partial: { label: 'Partial', tone: 'warning' }, partially_reverted: { label: 'Partially reverted', tone: 'warning' },
 } as const
+/** Batch berhenti di tengah: `applied` = sebagian batch up tersimpan, `reverted` = kompensasi berhenti sebagian. */
+export type PartialKind = 'applied' | 'reverted'
+export function partialStatus(kind: PartialKind): WorkflowStatus { return kind === 'reverted' ? 'partially_reverted' : 'partial' }
+/** Status badge job: job gagal dengan batch tersimpan ditampilkan sebagai partial, bukan gagal. */
+export function jobBadgeStatus(job: MigrationJob): WorkflowStatus | 'canceled' {
+  if (job.partial) return partialStatus(job.partial)
+  return job.status === 'failed' && job.completedBatches > 0 && job.totalBatches > 1 ? 'partial' : job.status
+}
 export const batchDurationMs = 250
 export const failureBatch = 42
 export function shortJobId(id: string) { return id.slice(0, 12).toUpperCase() }

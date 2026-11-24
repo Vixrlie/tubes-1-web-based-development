@@ -7,7 +7,8 @@ import { createApiDatabaseSource, createApiSchemaSource, createApiTableSource } 
 import { SchemaSourceError } from '../src/features/databases/schema-source.ts'
 import { boardExecutions, boardRows, createApiDraftSource, executedAtLabel } from '../src/features/migrations/api-workflow-source.ts'
 import { explainPlan } from '../src/features/migrations/api-schema-tools.ts'
-import { filterExecutions } from '../src/features/migrations/migration-source.ts'
+import { executionStatus, filterExecutions } from '../src/features/migrations/migration-source.ts'
+import { jobBadgeStatus } from '../src/features/migrations/workflow-model.ts'
 import { operationEligibility } from '../src/features/migrations/operation-model.ts'
 import { validateDraft } from '../src/features/migrations/draft-source.ts'
 import { parseAdminGroupDetail } from '../src/features/admin/admin-api.ts'
@@ -65,7 +66,7 @@ const execution = (id, requestId, extra = {}) => ({ id, request_id: requestId, m
 
 const board = {
   can_edit: true, leader_group_ids: [1],
-  migrations: [migration(1), migration(2, { batch: { table: 't', column: 'id', size: 10 } }), migration(3, { irreversible_reason: 'drop', down_sql: '' })],
+  migrations: [migration(1), migration(2, { state: 'partial', batch: { table: 't', column: 'id', size: 10 } }), migration(3, { irreversible_reason: 'drop', down_sql: '' })],
   requests: [
     { id: 13, migration_id: 2, action: 'rollback', target_execution_id: 21, revision: 1, status: 'pending_review', created_at: '2026-11-24T10:10:00Z', reviewers: reviewers('pending'), executions: [], can_approve: true, can_cancel: true },
     { id: 12, migration_id: 2, action: 'up', revision: 1, status: 'partial', created_at: '2026-11-24T10:01:00Z', queued_at: '2026-11-24T10:01:01Z', requested_by_name: 'editor', reviewers: reviewers('approved'),
@@ -83,23 +84,28 @@ test('board backend dipetakan ke baris workflow SPA', () => {
   assert.equal(byId['draft-m1'].status, 'pending_review')
   assert.equal(byId['draft-m1'].reviews[0].groups[0].status, 'pending')
   const partial = byId['draft-m2']
-  assert.equal(partial.status, 'failed')
+  assert.equal(partial.status, 'partial', 'partial tampil sebagai status sendiri, bukan gagal')
+  assert.equal(partial.jobs[0].status, 'failed', 'logika recovery tetap memakai job gagal + checkpoint')
+  assert.equal(partial.jobs[0].partial, 'applied')
+  assert.equal(jobBadgeStatus(partial.jobs[0]), 'partial')
   assert.deepEqual(partial.batch, { table: 't', column: 'id', size: 10 })
   assert.equal(partial.jobs[0].completedBatches, 2)
   assert.equal(partial.jobs[0].totalBatches, 5)
   assert.equal(partial.jobs[0].executionId, 'E21')
   const rollback = byId['draft-r13']
-  assert.equal(rollback.intent.kind, 'rollback')
+  assert.equal(rollback.intent.kind, 'compensation', 'rollback atas eksekusi partial = kompensasi per batch')
   assert.equal(rollback.intent.targetExecutionId, 'E21')
   assert.equal(rollback.intent.targetDraftId, 'draft-m2')
   assert.equal(rollback.sqlUp, migration(2).down_sql)
   assert.ok(rows.every(row => row.ownerId === 'u9'), 'ownerId = user sesi agar hasil mutasi diterapkan')
 })
 
-test('execution backend menjadi riwayat; partial ditampilkan gagal dengan pesan checkpoint', () => {
+test('execution backend menjadi riwayat; partial diberi label sendiri dengan pesan checkpoint', () => {
   const rows = boardExecutions(board)
   assert.equal(rows.length, 1)
   assert.equal(rows[0].status, 'failed')
+  assert.equal(rows[0].partial, 'applied')
+  assert.equal(executionStatus(rows[0].status, rows[0].partial), 'Partial')
   assert.equal(rows[0].error, 'gagal di batch 3')
   const withRollback = boardExecutions({ ...board, requests: [
     { ...board.requests[1], status: 'success', executions: [execution(21, 12)] },
@@ -168,4 +174,36 @@ test('detail grup admin memuat leader', () => {
 test('waktu eksekusi ditampilkan sebagai YYYY-MM-DD HH:mm', () => {
   assert.match(executedAtLabel('2026-11-24T10:00:05Z'), /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)
   assert.equal(executedAtLabel('bukan tanggal'), 'bukan tanggal')
+})
+
+test('rollback batch yang berhenti di tengah tampil sebagai partially reverted', () => {
+  const reverted = { ...board, requests: [
+    { ...board.requests[0], status: 'partial', executions: [execution(22, 13, { action: 'rollback', status: 'partial', reverts_execution_id: 21, committed_batches: 1, total_batches: 2, batch_size: 10 })] },
+    { ...board.requests[1], status: 'partial' },
+  ] }
+  const rows = boardRows(reverted, '1', 'u9')
+  const rollback = rows.find(row => row.id === 'draft-r13')
+  assert.equal(rollback.status, 'partially_reverted')
+  assert.equal(jobBadgeStatus(rollback.jobs[0]), 'partially_reverted')
+  const history = boardExecutions(reverted).find(row => row.id === 'E22')
+  assert.equal(executionStatus(history.status, history.partial), 'Partially reverted')
+})
+
+test('migration partial yang sudah di-resume sampai selesai tidak lagi berlabel partial', () => {
+  const resumed = { ...board, migrations: board.migrations.map(m => m.id === 2 ? { ...m, state: 'active' } : m) }
+  const row = boardRows(resumed, '1', 'u9').find(item => item.id === 'draft-m2')
+  assert.equal(row.status, 'success')
+  assert.equal(row.jobs[0].partial, 'applied', 'job lama tetap tercatat partial di riwayat')
+})
+
+test('kompensasi yang berhenti sebagian dapat dilanjutkan, bukan di-resume', () => {
+  const reverted = { ...board, requests: [
+    { ...board.requests[0], status: 'partial', executions: [execution(22, 13, { action: 'rollback', status: 'partial', reverts_execution_id: 21, committed_batches: 1, total_batches: 2, batch_size: 10 })] },
+    { ...board.requests[1], status: 'partial' },
+  ] }
+  const rows = boardRows(reverted, '1', 'u9')
+  assert.equal(rows.find(row => row.id === 'draft-r13').intent.kind, 'compensation')
+  assert.equal(operationEligibility(rows, 'E22', 'compensation').allowed, true)
+  assert.equal(operationEligibility(rows, 'E22', 'resume').allowed, false)
+  assert.equal(operationEligibility(rows, 'E21', 'resume').allowed, false, 'hanya eksekusi terbaru yang dapat dipulihkan')
 })

@@ -5,7 +5,8 @@ import type { DraftInput, MigrationDraft } from './draft-source.ts'
 import type { Execution } from './migration-source.ts'
 import { operationLabels } from './operation-model.ts'
 import type { OperationIntent, OperationKind } from './operation-model.ts'
-import type { MigrationJob, ReviewGroup, ReviewRound, WorkflowAction, WorkflowStatus } from './workflow-model.ts'
+import { partialStatus } from './workflow-model.ts'
+import type { MigrationJob, PartialKind, ReviewGroup, ReviewRound, WorkflowAction, WorkflowStatus } from './workflow-model.ts'
 
 type Api = ReturnType<typeof createApiClient>
 
@@ -57,6 +58,12 @@ function reviewRound(request: ApiRequest, revision: number): ReviewRound {
 
 const queuedStatuses = new Set(['queued', 'running', 'success', 'failed', 'partial'])
 
+/** Request partial: rollback yang berhenti di tengah berarti batch sudah sebagian dikembalikan. */
+function partialKind(request: Pick<ApiRequest, 'status' | 'action'>): PartialKind | undefined {
+  if (request.status !== 'partial') return undefined
+  return request.action === 'rollback' ? 'reverted' : 'applied'
+}
+
 function jobFor(request: ApiRequest, attempt: number): MigrationJob | undefined {
   const executions = request.executions ?? []
   const last = executions.at(-1)
@@ -73,12 +80,26 @@ function jobFor(request: ApiRequest, attempt: number): MigrationJob | undefined 
     actor: request.requested_by_name ?? '-', totalBatches: total, completedBatches: completed,
     outcome: status === 'success' ? 'success' : 'failed', attempt,
     ...(request.error || last?.error ? { error: request.error || last?.error } : {}),
+    ...(partialKind(request) ? { partial: partialKind(request) } : {}),
   }
 }
 
 function requestStatus(request: ApiRequest | undefined): WorkflowStatus {
   if (!request || request.status === 'canceled') return 'draft'
-  return request.status === 'partial' ? 'failed' : request.status
+  const partial = partialKind(request)
+  return partial ? partialStatus(partial) : request.status
+}
+
+/**
+ * Status kartu migration. Request up yang partial tetap tercatat partial
+ * sebagai riwayat; setelah di-resume sampai selesai posisi migration menjadi
+ * active, jadi kartu mengikuti posisi migration, bukan request lamanya.
+ */
+function migrationStatus(m: ApiMigration, latest: ApiRequest | undefined): WorkflowStatus {
+  if (latest?.status !== 'partial') return requestStatus(latest)
+  if (m.state === 'active') return 'success'
+  if (m.state === 'partial') return 'partial'
+  return 'failed'
 }
 
 function draftInput(m: ApiMigration): DraftInput {
@@ -101,7 +122,7 @@ export function boardRows(board: ApiBoard, connectionId: string, ownerId: string
     for (const r of ups) for (const e of r.executions ?? []) executionOwner.set(e.id, { row: migrationRowId(m.id), job: jobRef(r.id) })
     const latest = ups.at(-1)
     rows.push({ ...draftInput(m), id: migrationRowId(m.id), connectionId, ownerId, author: m.created_by_name ?? '-', version: versionLabel(m.version),
-      status: requestStatus(latest), createdAt: m.created_at, updatedAt: latest?.finished_at ?? latest?.created_at ?? m.updated_at,
+      status: migrationStatus(m, latest), createdAt: m.created_at, updatedAt: latest?.finished_at ?? latest?.created_at ?? m.updated_at,
       ...(ups.length ? { reviews: ups.map((r, index) => reviewRound(r, index + 1)) } : {}), ...(jobs.length ? { jobs } : {}) })
   }
   for (const r of chronological.filter(item => item.action !== 'up')) {
@@ -109,9 +130,11 @@ export function boardRows(board: ApiBoard, connectionId: string, ownerId: string
     if (!m) continue
     const target = r.target_execution_id ? board.requests.flatMap(item => item.executions ?? []).find(e => e.id === r.target_execution_id) : undefined
     const owner = target ? executionOwner.get(target.id) : undefined
-    const kind: OperationKind = r.action === 'rollback' ? 'rollback' : r.action === 'resume' ? 'resume' : 'forward'
+    // Rollback atas eksekusi partial (up yang berhenti, atau kompensasi yang berhenti) = kompensasi per batch.
+    const compensation = r.action === 'rollback' && (target?.status === 'partial' || target?.action === 'rollback')
+    const kind: OperationKind = compensation ? 'compensation' : r.action === 'rollback' ? 'rollback' : r.action === 'resume' ? 'resume' : 'forward'
     const input = draftInput(m)
-    const reverse = kind === 'rollback'
+    const reverse = kind === 'rollback' || kind === 'compensation'
     const job = jobFor(r, 1)
     const intent: OperationIntent = { kind, originDraftId: migrationRowId(m.id), targetDraftId: owner?.row ?? migrationRowId(m.id), targetJobId: owner?.job ?? '', targetExecutionId: target ? executionRef(target.id) : '',
       checkpoint: target?.committed_batches ?? 0, totalBatches: Math.max(target?.total_batches ?? 1, 1) }
@@ -144,7 +167,8 @@ export function boardExecutions(board: ApiBoard): Execution[] {
       ...(e.reverts_execution_id ? { rollbackTarget: executionRef(e.reverts_execution_id) } : {}),
       actor: e.executed_by_name ?? '-', executedAt: executedAtLabel(e.finished_at ?? e.started_at), status: e.status === 'success' ? 'success' : 'failed',
       duration: durationLabel(e.duration_ms), sql: e.sql_executed ?? '', irreversible: !!m?.irreversible_reason,
-      ...(e.error ? { error: e.error } : e.status === 'partial' ? { error: `Berhenti setelah ${e.committed_batches} batch tersimpan; lanjutkan dengan Resume atau batalkan dengan Rollback.` } : {}) }
+      ...(e.status === 'partial' ? { partial: e.action === 'rollback' ? 'reverted' as const : 'applied' as const } : {}),
+      ...(e.error ? { error: e.error } : e.status === 'partial' ? { error: e.action === 'rollback' ? `Pembatalan berhenti setelah ${e.committed_batches} batch dikembalikan; lanjutkan rollback untuk menyelesaikannya.` : `Berhenti setelah ${e.committed_batches} batch tersimpan; lanjutkan dengan Resume atau batalkan dengan Rollback.` } : {}) }
   }).sort((a, b) => Number(b.id.slice(1)) - Number(a.id.slice(1)))
 }
 

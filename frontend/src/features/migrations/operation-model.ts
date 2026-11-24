@@ -32,7 +32,9 @@ export function operationEligibility(rows: MigrationDraft[], executionId: string
   } else if (kind === 'forward') {
     if (job.status !== 'success' || !['rollback', 'compensation'].includes(row.intent?.kind ?? '') || activeExecutions(rows).some(entry => originId(entry.row) === root)) return fail('Forward tersedia setelah rollback atau compensation selesai.')
   } else {
-    if (job.status !== 'failed' || job.completedBatches <= 0 || job.completedBatches >= job.totalBatches || ['rollback', 'compensation'].includes(row.intent?.kind ?? '')) return fail('Recovery memerlukan eksekusi gagal sebagian dengan checkpoint tersimpan.')
+    if (job.status !== 'failed' || job.completedBatches <= 0 || job.completedBatches >= job.totalBatches) return fail('Recovery memerlukan eksekusi gagal sebagian dengan checkpoint tersimpan.')
+    // Compensation yang berhenti sebagian (partially reverted) hanya boleh dilanjutkan dengan compensation lagi.
+    if (row.intent?.kind === 'rollback' || (row.intent?.kind === 'compensation' && kind === 'resume')) return fail('Recovery memerlukan eksekusi gagal sebagian dengan checkpoint tersimpan.')
     if (kind === 'compensation' && (row.irreversible || !row.sqlDown.trim())) return fail('Compensation memerlukan SQL Down asli.')
   }
   return { allowed: true, reason: '' }
