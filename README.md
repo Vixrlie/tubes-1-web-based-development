@@ -90,6 +90,18 @@ Saat berhasil, aplikasi hanya mencetak `admin awal dibuat: <username>` pada star
 
 Seed admin aman dijalankan berulang: kalau username sudah ada, tidak ada yang diubah, termasuk password yang sudah diganti.
 
+Worker migration berjalan di proses yang sama secara default. Untuk memisahkannya, jalankan satu proses `go run .` (server + worker) dan proses lain `go run . -worker-only` (hanya worker, tanpa HTTP server). Beberapa worker aman berjalan bersamaan karena eksekusi per database dikunci.
+
+SPA (React) ada di `frontend/` dan mem-proxy `/api` ke `localhost:8080`:
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:5173
+```
+
+SPA membaca JSON API backend. Fixture mock hanya dipakai untuk pratinjau state saat development (tambahkan `?preview=error`, `?preview=empty`, dan sejenisnya di URL) atau bila `VITE_DATA_SOURCE=mock`.
+
 ### 4. Cek hasilnya
 
 ```bash
@@ -216,6 +228,8 @@ Batasan yang perlu diketahui (dijelaskan apa adanya di UI):
 docker compose down -v
 docker compose up -d
 ```
+
+Database lokal yang pernah menjalankan `migrations/0004_async_jobs.sql` dari branch `feat/async` lama wajib di-reset: file itu sudah digantikan `0004_migration_workflow.sql` dan `0005_batch_migration.sql`, sementara runner tidak mengulang versi yang sudah tercatat.
 
 `-v` menghapus volume, jadi semua data development hilang (termasuk akun admin, yang dibuat ulang saat start berikutnya). Reset wajib dilakukan setelah file migration yang **sudah pernah dijalankan** diubah, karena runner tidak mengulang file yang sudah tercatat. Menambah file migration baru tidak perlu reset: file itu dijalankan otomatis saat start berikutnya.
 
@@ -382,7 +396,9 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 - [x] M2: checkbox Hide rollback (pasangan execution ID), detail per eksekusi
 - [x] M2: workflow Draft → Pending Review → Approved → Queue → Running → Success/Failed, approval leader setiap group
 - [x] M2: queue + worker asynchronous dengan retry, lease, dan pemulihan crash
-- [x] M2: JSON API untuk SPA (`/api/...`, kontrak di `docs/api-migration-workflow.md`)
+- [x] M2: JSON API untuk SPA (`/api/...`, kontrak di `docs/api-migration-workflow.md`), termasuk database, schema, data tabel, snapshot diff, EXPLAIN, board workflow, dan leader group
+- [x] M2: SPA tersambung ke API backend (database, schema, tabel, draft, review, antrean, riwayat, schema diff, EXPLAIN, leader group)
+- [x] M2: migration per batch dengan checkpoint, status `partial`, resume, dan rollback per batch; lihat [Migration per Batch](#migration-per-batch)
 - [x] M2 bonus: stress test k6 (`k6/`), hasil di bagian [Stress Test k6](#stress-test-k6)
 
 Alur minimum (GEN-07) berjalan end-to-end: Login → Access Control → Pilih Database → Lihat Schema/Data → Buat Migration → Execute → Commit/Rollback → Riwayat Migration ter-update.
@@ -427,6 +443,24 @@ Halaman Platform Admin (route utama: `/` untuk beranda, `/admin` untuk dashboard
 | `/admin/connections`, `/admin/connections/new`, `/admin/connections/{id}`, `/admin/connections/{id}/edit` | Daftar koneksi, form tambah/ubah, uji koneksi, hapus |
 | `/admin/access` | Dialihkan ke `/admin/groups` (editor akses berada di detail group) |
 
+## Migration per Batch
+
+Migration yang mengubah banyak row dapat dijalankan per batch: isi tabel, kolom kursor, dan ukuran batch di form migration (atau field `batch` di API), lalu pakai `$1` dan `$2` sebagai batas rentang di SQL, misalnya `UPDATE orders SET status = 'done' WHERE id BETWEEN $1 AND $2`.
+
+- Rentang kursor dikunci saat eksekusi dimulai; setiap batch berjalan dalam transaksi sendiri bersama checkpoint di tabel target `_pathgres_batch_checkpoints` (disembunyikan dari schema dan diff).
+- Progres (`committed_batches` dari `total_batches`) terlihat di halaman antrean dan detail eksekusi.
+- Bila gagal di tengah, status menjadi `partial` dan database ditahan sampai diselesaikan dengan **Resume** (lanjut dari checkpoint) atau **Rollback** (membalik batch yang sudah tersimpan). Keduanya melewati approval seperti aksi lain.
+- Worker yang mati di tengah eksekusi melanjutkan dari checkpoint terakhir pada attempt berikutnya.
+
+Perbandingan dengan satu UPDATE tanpa batch pada dataset yang sama (`go run ./cmd/bench-batch`, 2.000.000 row, PostgreSQL Docker lokal):
+
+| Cara | Hasil |
+|------|-------|
+| Satu `UPDATE` (satu transaksi) | 24,1 detik; seluruh tabel terkunci sampai selesai, gagal = semua diulang |
+| Per batch, 50.000 row | 40 batch, total 33,2 detik; rata-rata 830 ms per batch, terlama 3,4 detik |
+
+Batch sedikit lebih lambat secara total, tetapi lock hanya ditahan selama satu batch (di bawah 1 detik rata-rata), progres terlihat, dan kegagalan tidak membuang batch yang sudah tersimpan. Seed dataset memakan 10,8 detik.
+
 ## Stress Test k6
 
 Skrip: `k6/migration-workflow.js`. Dua skenario berjalan bersamaan:
@@ -461,6 +495,8 @@ Temuan dan perbaikannya:
 1. **Versi migration bentrok.** Run awal (sebelum dua run di atas) gagal membuat migration setelah 20 create dalam satu menit, karena versi `YYYYMMDDHHMM` beresolusi menit dan hanya dicoba naik 20 kali. Versi kini dihitung atomik: `GREATEST(waktu sekarang, versi tertinggi + 1)`. Regresi diuji di `TestCreateManyMigrationsInSameMinute`.
 2. **Validasi langsung menolak saat database sibuk.** Dry-run memakai `pg_try_advisory_xact_lock`, sehingga validasi yang bertepatan dengan eksekusi lain langsung gagal. Kini dry-run menunggu lock maksimal 5 detik (`lock_timeout`) sebelum menyatakan database sibuk.
 3. **Respons daftar terlalu besar.** Daftar migration dan riwayat mengirim isi SQL setiap baris (rata-rata 160 KB per respons saat data bertambah). Isi SQL kini hanya ada di endpoint detail; p95 baca turun dari 895 ms ke 34 ms.
+
+Run ulang setelah integrasi SPA dan mode batch (30 detik, 10 VU workflow, 100 baca/detik): 5.793 request, 0% HTTP error, 0 workflow gagal, p95 baca 57 ms, p95 approve 25 ms, approve → selesai median 532 ms / p95 1,58 s.
 
 Batas yang masih terlihat: eksekusi pada satu database diserialisasi (by design), sehingga 10 workflow paralel pada database yang sama mengantre. Waktu tunggu maksimum 4,9 detik berasal dari antrean ini, ditambah interval polling worker 500 ms. Database berbeda tetap diproses paralel (4 slot worker per proses).
 
