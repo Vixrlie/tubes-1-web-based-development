@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { Spinner } from '../design-system'
-import RoutePlaceholder from '../pages/RoutePlaceholder'
 import NotFoundPage from '../pages/NotFoundPage'
 import AppLayout from './layouts/AppLayout'
 import AuthLayout from './layouts/AuthLayout'
@@ -20,6 +19,9 @@ import AdminUserDetailPage from '../features/admin/AdminUserDetailPage'
 import AdminGroupsPage from '../features/admin/AdminGroupsPage'
 import AdminGroupCreatePage from '../features/admin/AdminGroupCreatePage'
 import AdminGroupDetailPage from '../features/admin/AdminGroupDetailPage'
+import AdminConnectionsPage from '../features/admin/AdminConnectionsPage'
+import AdminConnectionDetailPage from '../features/admin/AdminConnectionDetailPage'
+import AdminConnectionFormPage from '../features/admin/AdminConnectionFormPage'
 import DatabaseListPage from '../features/databases/DatabaseListPage'
 import SchemaExplorerPage from '../features/databases/SchemaExplorerPage'
 import TableDetailPage from '../features/databases/TableDetailPage'
@@ -83,10 +85,10 @@ export function AppRouter() {
         <Route path="groups" element={<AdminGroupsPage />} />
         <Route path="groups/new" element={<AdminGroupCreatePage />} />
         <Route path="groups/:groupId" element={<AdminGroupDetailPage />} />
-        <Route path="connections" element={<RoutePlaceholder title="Koneksi Database" />} />
-        <Route path="connections/new" element={<RoutePlaceholder title="Tambah koneksi" />} />
-        <Route path="connections/:connectionId" element={<RoutePlaceholder title="Detail koneksi" />} />
-        <Route path="connections/:connectionId/edit" element={<RoutePlaceholder title="Edit koneksi" />} />
+        <Route path="connections" element={<AdminConnectionsPage />} />
+        <Route path="connections/new" element={<AdminConnectionFormPage />} />
+        <Route path="connections/:connectionId" element={<AdminConnectionDetailPage />} />
+        <Route path="connections/:connectionId/edit" element={<AdminConnectionFormPage />} />
       </Route></Route>
     </Route></Route>
     <Route path="*" element={<NotFoundPage />} />
