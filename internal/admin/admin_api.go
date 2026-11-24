@@ -66,6 +66,7 @@ func RegisterAdminJSONRoutes(r chi.Router, cfg AdminAPIConfig) {
 			r.Post("/groups/{id}/members", api.addGroupMembers)
 			r.Delete("/groups/{id}/members/{userID}", api.removeGroupMember)
 			r.Put("/groups/{id}/access", api.updateGroupAccess)
+			r.Put("/groups/{id}/leader", api.setGroupLeader)
 		}
 
 		if cfg.Connections != nil {

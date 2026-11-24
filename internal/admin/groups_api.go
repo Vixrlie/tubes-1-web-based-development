@@ -47,6 +47,8 @@ type adminGroupDetailDTO struct {
 	CandidateUsers       []adminMemberDTO      `json:"candidateUsers"`
 	Grants               []adminGroupAccessDTO `json:"grants"`
 	AvailableConnections []adminConnRefDTO     `json:"availableConnections"`
+	// LeaderID = anggota yang mewakili grup saat approval migration (null bila kosong).
+	LeaderID *string `json:"leaderId"`
 }
 
 func (a *adminAPI) listGroups(w http.ResponseWriter, r *http.Request) {
@@ -199,7 +201,21 @@ func (a *adminAPI) getGroup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var leaderID *string
+	if ls, ok := a.cfg.Groups.(LeaderStore); ok {
+		leader, err := ls.GroupLeader(r.Context(), id)
+		if err != nil {
+			writeAdminError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Gagal memuat leader grup.")
+			return
+		}
+		if leader != nil {
+			v := formatID(*leader)
+			leaderID = &v
+		}
+	}
+
 	writeAdminJSON(w, http.StatusOK, adminGroupDetailDTO{
+		LeaderID:             leaderID,
 		ID:                   formatID(grp.ID),
 		Name:                 grp.Name,
 		CreatedAt:            grp.CreatedAt.UTC().Format(time.RFC3339),
@@ -429,4 +445,55 @@ func (a *adminAPI) updateGroupAccess(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeAdminJSON(w, http.StatusOK, map[string]any{"updated": true})
+}
+
+type setLeaderRequest struct {
+	// UserID kosong atau null mengosongkan leader.
+	UserID *string `json:"userId"`
+}
+
+// setGroupLeader menetapkan leader grup (PUT /groups/{id}/leader).
+func (a *adminAPI) setGroupLeader(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseParamID(r, "id")
+	if !ok {
+		writeAdminError(w, http.StatusNotFound, "GROUP_NOT_FOUND", "Grup tidak ditemukan.")
+		return
+	}
+	ls, ok := a.cfg.Groups.(LeaderStore)
+	if !ok {
+		writeAdminError(w, http.StatusNotImplemented, "NOT_SUPPORTED", "Leader grup tidak didukung.")
+		return
+	}
+	var req setLeaderRequest
+	if err := decodeAdminJSON(w, r, &req); err != nil {
+		writeAdminError(w, http.StatusBadRequest, "INVALID_JSON", "Format JSON tidak valid.")
+		return
+	}
+	var userID *int64
+	if req.UserID != nil && strings.TrimSpace(*req.UserID) != "" {
+		v, err := strconv.ParseInt(strings.TrimSpace(*req.UserID), 10, 64)
+		if err != nil || v <= 0 {
+			writeAdminError(w, http.StatusBadRequest, "VALIDATION_ERROR", "ID user tidak valid.")
+			return
+		}
+		userID = &v
+	}
+	err := ls.SetLeader(r.Context(), id, userID)
+	switch {
+	case errors.Is(err, ErrGroupNotFound):
+		writeAdminError(w, http.StatusNotFound, "GROUP_NOT_FOUND", "Grup tidak ditemukan.")
+		return
+	case errors.Is(err, ErrLeaderNotMember):
+		writeAdminError(w, http.StatusUnprocessableEntity, "LEADER_NOT_MEMBER", "Leader harus anggota aktif grup.")
+		return
+	case err != nil:
+		writeAdminError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Gagal menetapkan leader.")
+		return
+	}
+	var out *string
+	if userID != nil {
+		v := formatID(*userID)
+		out = &v
+	}
+	writeAdminJSON(w, http.StatusOK, map[string]any{"leaderId": out})
 }
