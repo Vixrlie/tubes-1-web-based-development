@@ -13,6 +13,10 @@ import LoginPage from '../features/auth/LoginPage'
 import HomePage from '../features/home/HomePage'
 import ActivityLogsPage from '../features/admin/ActivityLogsPage'
 import ObservabilityPage from '../features/admin/ObservabilityPage'
+import AdminDashboardPage from '../features/admin/AdminDashboardPage'
+import AdminUsersPage from '../features/admin/AdminUsersPage'
+import AdminUserCreatePage from '../features/admin/AdminUserCreatePage'
+import AdminUserDetailPage from '../features/admin/AdminUserDetailPage'
 import DatabaseListPage from '../features/databases/DatabaseListPage'
 import SchemaExplorerPage from '../features/databases/SchemaExplorerPage'
 import TableDetailPage from '../features/databases/TableDetailPage'
@@ -67,12 +71,12 @@ export function AppRouter() {
         <Route path="migrations/:migrationId/preview" element={<SqlPreviewPage />} />
       </Route>
       <Route element={<AdminGate />}><Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<Navigate to={paths.activity} replace />} />
+        <Route index element={<AdminDashboardPage />} />
         <Route path="activity-logs" element={<ActivityLogsPage />} />
         <Route path="observability" element={<ObservabilityPage />} />
-        <Route path="users" element={<RoutePlaceholder title="Pengguna" />} />
-        <Route path="users/new" element={<RoutePlaceholder title="Tambah pengguna" />} />
-        <Route path="users/:userId" element={<RoutePlaceholder title="Edit pengguna" />} />
+        <Route path="users" element={<AdminUsersPage />} />
+        <Route path="users/new" element={<AdminUserCreatePage />} />
+        <Route path="users/:userId" element={<AdminUserDetailPage />} />
         <Route path="groups" element={<RoutePlaceholder title="Grup" />} />
         <Route path="groups/new" element={<RoutePlaceholder title="Tambah grup" />} />
         <Route path="groups/:groupId" element={<RoutePlaceholder title="Detail grup" />} />
