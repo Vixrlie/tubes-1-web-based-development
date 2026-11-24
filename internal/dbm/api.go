@@ -22,7 +22,9 @@ func (h *Handlers) APIRoutes(r chi.Router) {
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/me", h.apiMe)
 		r.Get("/approvals", h.apiInbox)
+		h.databaseAPIRoutes(r)
 		r.Route("/databases/{connID}", func(r chi.Router) {
+			h.databaseScopedRoutes(r)
 			r.Get("/migrations", h.apiListMigrations)
 			r.Post("/migrations", h.apiCreateMigration)
 			r.Get("/migrations/{mID}", h.apiGetMigration)
@@ -85,8 +87,13 @@ func apiStatus(err error) (int, string) {
 		return http.StatusNotFound, "not_found"
 	case errors.Is(err, ErrEmptySQL), errors.Is(err, ErrMissingDown), errors.Is(err, ErrMissingReason),
 		errors.Is(err, ErrIrreversibleDown), errors.Is(err, ErrDownSameAsUp), errors.Is(err, ErrNameTooLong),
-		errors.Is(err, ErrRejectNoteRequired), errors.Is(err, ErrUnknownAction):
+		errors.Is(err, ErrRejectNoteRequired), errors.Is(err, ErrUnknownAction),
+		errors.Is(err, ErrBatchConfig), errors.Is(err, ErrBatchPlaceholders), errors.Is(err, ErrBatchIdentifier):
 		return http.StatusUnprocessableEntity, "invalid_input"
+	case errors.Is(err, ErrPartialPending), errors.Is(err, ErrNotPartial):
+		return http.StatusConflict, "partial_pending"
+	case errors.Is(err, ErrDatabasePartial):
+		return http.StatusConflict, "database_held"
 	case errors.Is(err, ErrValidationRequired):
 		return http.StatusConflict, "validation_required"
 	case errors.Is(err, ErrNotReversible):
