@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/access"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/activity"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/admin"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/config"
@@ -32,21 +33,31 @@ func run() error {
 	if err := config.LoadDotEnv(".env"); err != nil {
 		return err
 	}
-
 	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"); endpoint != "" {
+		shutdown, err := activity.StartTracing(ctx, endpoint)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			flushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := shutdown(flushCtx); err != nil {
+				log.Printf("flush traces: %v", err)
+			}
+		}()
+	}
 
 	pool, err := db.NewPool(ctx, cfg.PlatformDBURL)
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
-
 	if err := db.Migrate(ctx, pool, migrations.FS); err != nil {
 		return err
 	}
@@ -72,10 +83,10 @@ func run() error {
 	}
 
 	authHandlers := auth.NewHandlers(userStore, sessions, renderer, cfg.CookieSecure)
+	activityLogger := activity.New()
+	authHandlers.SetLogger(activityLogger)
 
 	adminUsers := admin.NewPGUserStore(pool)
-
-	// Akses database per group + registry pool target untuk route /databases/*.
 	accessPolicy := access.NewPolicy(access.NewPGLevelSource(pool))
 	registry := dbm.NewURLRegistry(pool)
 	defer registry.Close()
@@ -83,40 +94,39 @@ func run() error {
 	groupStore := admin.NewPGGroupStore(pool)
 	connLister := admin.NewPGConnectionLister(pool)
 	migrationStore := dbm.NewPGMigrationStore(pool)
+	metrics := &activity.Metrics{}
 	dbmHandlers := dbm.NewHandlers(dbm.Config{
 		Platform:   pool,
 		Policy:     accessPolicy,
 		Registry:   registry,
 		Renderer:   renderer,
 		Migrations: migrationStore,
+		Metrics:    metrics,
 	})
 
-	// Mode developing
 	devMode := os.Getenv("DEV_COMPONENTS") == "1"
 	r := web.NewRouter()
-
+	if os.Getenv("OBSERVABILITY_METRICS") == "1" {
+		r.Get("/metrics", metrics.Handler(pool, registry.PoolStats))
+	}
 	authHandlers.PublicRoutes(r)
-
 	if devMode {
 		web.DevRoutes{R: renderer}.Routes(r)
 	}
-
-	// Rute protected
 	r.Group(func(r chi.Router) {
 		r.Use(auth.AuthMiddleware(auth.NewSessionValidator(sessions), cfg.CookieSecure))
 		r.Use(auth.CSRFProtect)
-
 		authHandlers.ProtectedRoutes(r)
 		dbmHandlers.Routes(r)
 
 		adminOpts := []admin.Option{
+			admin.WithActivityLogger(activityLogger),
 			admin.WithUserAdmin(adminUsers, sessions, renderer),
 			admin.WithGroupAdmin(groupStore, adminUsers, connLister, sessions, renderer),
 			admin.WithDashboard(adminUsers, groupStore, connLister, renderer),
 		}
 		if !devMode {
-			adminOpts = append(adminOpts,
-				admin.WithConnectionAdmin(connStore, renderer, registry, sessions))
+			adminOpts = append(adminOpts, admin.WithConnectionAdmin(connStore, renderer, registry, sessions))
 		}
 		admin.NewHandlers(adminOpts...).Routes(r)
 	})
@@ -126,16 +136,13 @@ func run() error {
 		Handler:           r,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
-
 	select {
 	case err := <-errCh:
 		return err
 	case <-ctx.Done():
 	}
-
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	return srv.Shutdown(shutdownCtx)

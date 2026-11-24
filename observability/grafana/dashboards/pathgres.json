@@ -1,0 +1,139 @@
+{
+  "uid": "pathgres-observability",
+  "title": "Pathgres Observability",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Migration berjalan",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pathgres-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "pathgres_migration_running"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Migration selesai dan gagal",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pathgres-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "pathgres_migrations_total"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Rata-rata durasi migration (detik)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pathgres-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(pathgres_migration_duration_seconds_sum[5m]) / rate(pathgres_migration_duration_seconds_count[5m])"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Rata-rata waktu memperoleh lock (detik)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pathgres-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(pathgres_migration_lock_duration_seconds_sum[5m]) / rate(pathgres_migration_lock_duration_seconds_count[5m])"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Koneksi aktif dan idle",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pathgres-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "pathgres_db_connections"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Total waktu tunggu connection pool (detik)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pathgres-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "pathgres_db_pool_wait_seconds_total"
+        }
+      ]
+    }
+  ]
+}

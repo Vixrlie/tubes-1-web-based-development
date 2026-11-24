@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/activity"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -58,7 +59,6 @@ func (m Migration) CreatedAtLabel() string {
 	return m.CreatedAt.Format("02 Jan 2006 15:04")
 }
 
-// ExecutedAtLabel waktu eksekusi migration, atau keterangan bila belum dijalankan.
 func (m Migration) ExecutedAtLabel() string {
 	if m.ExecutedAt == nil {
 		return "belum dijalankan"
@@ -71,7 +71,6 @@ func Checksum(sqlText string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// VersionNow menghasilkan versi migration berbentuk YYYYMMDDHHMM.
 func VersionNow(now time.Time) int64 {
 	version, _ := strconv.ParseInt(now.Format("200601021504"), 10, 64)
 	return version
@@ -90,7 +89,6 @@ func InjectName(sqlText, name string) string {
 			continue
 		}
 		if strings.HasPrefix(trimmed, "--") {
-			// Ganti komentar pertama, pertahankan baris kosong/indentasi sebelumnya.
 			if i == 0 || (i > 0 && strings.TrimSpace(lines[i-1]) == "") {
 				body = append(body, "-- "+name)
 				body = append(body, lines[i+1:]...)
@@ -102,7 +100,6 @@ func InjectName(sqlText, name string) string {
 	return "-- " + name + "\n" + sqlText
 }
 
-// DeriveName mengambil nama migration dari SQL: komentar pertama, atau statement pertama bila tidak ada komentar.
 func DeriveName(sqlText string) string {
 	var comment string
 	for _, line := range strings.Split(sqlText, "\n") {
@@ -225,8 +222,6 @@ func (s *PGMigrationStore) Get(ctx context.Context, id int64) (Migration, error)
 	return m, nil
 }
 
-// CreateDraft menyimpan SQL sebagai draft baru dengan versi YYYYMDDHHMM.
-// Bila versi sudah dipakai connection yang sama, versi naik satu langkah.
 func (s *PGMigrationStore) CreateDraft(ctx context.Context, connID int64, sqlText string, userID int64) (Migration, error) {
 	checksum := Checksum(sqlText)
 	version := VersionNow(time.Now())
@@ -249,8 +244,6 @@ func (s *PGMigrationStore) CreateDraft(ctx context.Context, connID int64, sqlTex
 	return Migration{}, ErrVersionConflict
 }
 
-// UpdateDraft mengganti SQL draft dan menghitung ulang checksum-nya.
-// Migration yang sudah applied atau failed tidak bisa diubah.
 func (s *PGMigrationStore) UpdateDraft(ctx context.Context, id int64, sqlText string) error {
 	tag, err := s.platform.Exec(ctx,
 		`UPDATE migration_history
@@ -265,22 +258,18 @@ func (s *PGMigrationStore) UpdateDraft(ctx context.Context, id int64, sqlText st
 	return nil
 }
 
-// MigrationRunner menjalankan SQL migration pada database target dalam satu
-// transaksi, lalu mencatat hasilnya di database platform.
 type MigrationRunner struct {
 	platform *pgxpool.Pool
 	registry Registry
+	metrics  *activity.Metrics
 }
 
 func NewMigrationRunner(platform *pgxpool.Pool, registry Registry) *MigrationRunner {
 	return &MigrationRunner{platform: platform, registry: registry}
 }
 
-// credentialPattern menangkap password di dalam connection string PostgreSQL.
 var credentialPattern = regexp.MustCompile(`(?i)(postgres(?:ql)?://[^:\s/@]+:)[^@\s]+(@)`)
 
-// sanitizePGError membersihkan pesan error PostgreSQL dari kredensial sebelum
-// disimpan di riwayat, dan memotongnya agar tidak membanjiri halaman.
 func sanitizePGError(err error) string {
 	message := credentialPattern.ReplaceAllString(err.Error(), "${1}***${2}")
 	message = strings.Join(strings.Fields(message), " ")
@@ -290,7 +279,12 @@ func sanitizePGError(err error) string {
 	return message
 }
 
-func (r *MigrationRunner) Execute(ctx context.Context, connID, migrationID, userID int64) (string, error) {
+func (r *MigrationRunner) Execute(ctx context.Context, connID, migrationID, userID int64) (status string, err error) {
+	ctx, span := activity.StartSpan(ctx, "migration.execute")
+	defer func() { activity.EndSpan(span, err != nil || status != StatusApplied) }()
+	finish := r.metrics.StartMigration()
+	defer func() { finish(err == nil && status == StatusApplied) }()
+	ctx = activity.WithMigrationID(activity.WithActor(ctx, userID), migrationID)
 	platformTx, err := r.platform.Begin(ctx)
 	if err != nil {
 		return "", err
@@ -325,7 +319,7 @@ func (r *MigrationRunner) Execute(ctx context.Context, connID, migrationID, user
 		return "", err
 	}
 
-	if targetErr := runOnTarget(ctx, pool, connID, m.SQL); targetErr != nil {
+	if targetErr := runOnTarget(ctx, pool, connID, m.SQL, r.metrics); targetErr != nil {
 		message := sanitizePGError(targetErr)
 		if _, err := platformTx.Exec(ctx,
 			`UPDATE migration_history
@@ -350,12 +344,7 @@ func (r *MigrationRunner) Execute(ctx context.Context, connID, migrationID, user
 	}
 	return StatusApplied, nil
 }
-
-// runOnTarget menjalankan SQL di database target dalam satu transaksi.
-// Advisory lock mencegah dua eksekusi bersamaan pada koneksi yang sama.
-func runOnTarget(ctx context.Context, pool *Target, connID int64, sqlText string) error {
-	// Kunci dan eksekusi harus pada koneksi yang sama (MySQL GET_LOCK per sesi),
-	// jadi ambil satu Conn dari pool dan jalankan transaksi di atasnya.
+func runOnTarget(ctx context.Context, pool *Target, connID int64, sqlText string, metrics *activity.Metrics) error {
 	conn, err := pool.DB.Conn(ctx)
 	if err != nil {
 		return err
@@ -369,7 +358,12 @@ func runOnTarget(ctx context.Context, pool *Target, connID int64, sqlText string
 	defer tx.Rollback()
 
 	if lock := pool.Dialect.LockSQL(connID); lock != "" {
-		if _, err := tx.ExecContext(ctx, lock); err != nil {
+		lockCtx, span := activity.StartSpan(ctx, "migration.lock")
+		start := time.Now()
+		_, err := tx.ExecContext(lockCtx, lock)
+		activity.EndSpan(span, err != nil)
+		metrics.ObserveLock(time.Since(start))
+		if err != nil {
 			return err
 		}
 	}
@@ -380,7 +374,6 @@ func runOnTarget(ctx context.Context, pool *Target, connID int64, sqlText string
 		return err
 	}
 	if unlock := pool.Dialect.UnlockSQL(connID); unlock != "" {
-		// Lepas kunci setelah transaksi; bila gagal, kunci lepas saat koneksi ditutup.
 		_, _ = conn.ExecContext(ctx, unlock)
 	}
 	return nil

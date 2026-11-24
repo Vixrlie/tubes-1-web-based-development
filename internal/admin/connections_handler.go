@@ -17,7 +17,6 @@ import (
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 )
 
-// PoolEvictor menutup pool target saat koneksi diubah/dihapus (dipakai dbm).
 type PoolEvictor interface {
 	Evict(connID int64)
 }
@@ -34,7 +33,6 @@ type connectionHandlers struct {
 	revoker session.Revoker
 }
 
-// WithConnectionAdmin mengaktifkan halaman kelola koneksi (/admin/connections).
 func WithConnectionAdmin(store ConnectionStore, view connectionView, evictor PoolEvictor, revoker session.Revoker) Option {
 	return func(h *Handlers) {
 		h.connections = &connectionHandlers{store: store, view: view, evictor: evictor, revoker: revoker}
@@ -47,7 +45,6 @@ func (h *Handlers) connectionsRoutes(r chi.Router) {
 	}
 	c := h.connections
 	r.Get("/connections", c.list)
-	// Form "Tambah Koneksi"/"Edit Koneksi": tampilan (GET) + simpan (POST).
 	r.Get("/connections/new", c.createForm)
 	r.Post("/connections", c.create)
 	r.Post("/connections/test", c.testForm)
@@ -58,7 +55,6 @@ func (h *Handlers) connectionsRoutes(r chi.Router) {
 	r.Post("/connections/{id}/delete", c.remove)
 }
 
-// shell membangun data shell FE (layout.html: header + sidebar admin).
 func (c *connectionHandlers) shell(r *http.Request) web.Shell {
 	me, _ := auth.UserFromContext(r.Context())
 	return web.Shell{
@@ -79,7 +75,7 @@ func (c *connectionHandlers) render(w http.ResponseWriter, status int, name stri
 }
 
 func (c *connectionHandlers) serverError(w http.ResponseWriter, what string, err error) {
-	log.Printf("admin connections: %s: %v", what, err) // jangan log kredensial
+	log.Printf("admin connections: %s: %T", what, err)
 	http.Error(w, "terjadi kesalahan", http.StatusInternalServerError)
 }
 
@@ -107,7 +103,6 @@ func (c *connectionHandlers) evict(connID int64) {
 	}
 }
 
-// list menampilkan tabel kelola koneksi format fe-components.
 func (c *connectionHandlers) list(w http.ResponseWriter, r *http.Request) {
 	rows, err := c.store.List(r.Context())
 	if err != nil {
@@ -145,7 +140,6 @@ func (c *connectionHandlers) list(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// detail menampilkan halaman detail koneksi (kartu parameter + kartu group).
 func (c *connectionHandlers) detail(w http.ResponseWriter, r *http.Request) {
 	row, ok := c.load(w, r)
 	if !ok {
@@ -186,7 +180,6 @@ func (c *connectionHandlers) detail(w http.ResponseWriter, r *http.Request) {
 	c.render(w, http.StatusOK, "admin/connection_detail.html", page)
 }
 
-// test menjalankan uji koneksi (SELECT 1) ke database target.
 func (c *connectionHandlers) test(w http.ResponseWriter, r *http.Request) {
 	row, ok := c.load(w, r)
 	if !ok {
@@ -194,15 +187,13 @@ func (c *connectionHandlers) test(w http.ResponseWriter, r *http.Request) {
 	}
 	code := "test_ok"
 	if err := c.store.Test(r.Context(), row.ID); err != nil {
-		log.Printf("admin connections: uji koneksi %d gagal: %v", row.ID, err)
+		markActivityFailed(r)
+		log.Printf("admin connections: uji koneksi %d gagal: %T", row.ID, err)
 		code = "test_failed"
 	}
-	// Hasil uji kembali ke halaman detail (FE belum punya slot flash terpisah).
 	http.Redirect(w, r, "/admin/connections/"+strconv.FormatInt(row.ID, 10)+"?status="+code, http.StatusSeeOther)
 }
 
-// testForm menguji isi form koneksi tanpa menyimpannya. Jawaban berupa
-// potongan HTML tombol tes + hasil untuk diganti htmx di halaman form.
 func (c *connectionHandlers) testForm(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "permintaan tidak valid", http.StatusBadRequest)
@@ -212,6 +203,7 @@ func (c *connectionHandlers) testForm(w http.ResponseWriter, r *http.Request) {
 	in, errMsg := connectionInput(r, id == 0)
 	panel := web.ConnectionTestPanel{Action: "/admin/connections/test"}
 	if errMsg != "" {
+		markActivityFailed(r)
 		panel.Result = &web.ConnectionTestResult{
 			Title:  "Koneksi belum bisa diuji.",
 			Detail: errMsg,
@@ -222,7 +214,8 @@ func (c *connectionHandlers) testForm(w http.ResponseWriter, r *http.Request) {
 
 	start := time.Now()
 	if err := c.store.TestInput(r.Context(), id, in); err != nil {
-		log.Printf("admin connections: uji koneksi dari form: %v", err)
+		markActivityFailed(r)
+		log.Printf("admin connections: uji koneksi dari form: %T", err)
 		result := &web.ConnectionTestResult{
 			Title: "Koneksi gagal diuji.",
 			Detail: "Tidak dapat terhubung ke " + net.JoinHostPort(in.Host, in.Port) +
@@ -243,8 +236,6 @@ func (c *connectionHandlers) testForm(w http.ResponseWriter, r *http.Request) {
 	c.view.RenderConnectionTest(w, panel)
 }
 
-// remove menghapus koneksi. Konfirmasi memakai dialog browser (onsubmit di
-// template fe-components), sehingga server menerima POST langsung.
 func (c *connectionHandlers) remove(w http.ResponseWriter, r *http.Request) {
 	row, ok := c.load(w, r)
 	if !ok {
@@ -275,7 +266,6 @@ func (c *connectionHandlers) remove(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/connections", http.StatusSeeOther)
 }
 
-// revokeUsers cabut session affected users, kecuali current admin
 func (c *connectionHandlers) revokeUsers(ctx context.Context, ids []int64) error {
 	me, _ := auth.UserFromContext(ctx)
 	for _, id := range ids {

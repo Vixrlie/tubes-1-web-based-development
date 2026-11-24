@@ -2,6 +2,7 @@ package dbm
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"sync"
 	"time"
@@ -40,10 +41,24 @@ const connectTimeout = 5 * time.Second
 // lalu dipakai ulang, lalu Evict menutup saat koneksi diubah/dihapus, dan Close
 // menutup semua saat aplikasi berhenti.
 type URLRegistry struct {
-	mu       sync.Mutex
-	targets  map[int64]*Target
-	platform *pgxpool.Pool
-	closed   bool
+	mu          sync.Mutex
+	targets     map[int64]*Target
+	platform    *pgxpool.Pool
+	closed      bool
+	retiredWait time.Duration
+}
+
+func (r *URLRegistry) PoolStats() sql.DBStats {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	stats := sql.DBStats{WaitDuration: r.retiredWait}
+	for _, target := range r.targets {
+		s := target.DB.Stats()
+		stats.InUse += s.InUse
+		stats.Idle += s.Idle
+		stats.WaitDuration += s.WaitDuration
+	}
+	return stats
 }
 
 var _ Registry = (*URLRegistry)(nil)
@@ -105,6 +120,7 @@ func (r *URLRegistry) Evict(connID int64) {
 	if target, ok := r.targets[connID]; ok {
 		delete(r.targets, connID)
 		target.Close()
+		r.retiredWait += target.DB.Stats().WaitDuration
 	}
 }
 

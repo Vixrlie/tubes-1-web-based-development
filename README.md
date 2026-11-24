@@ -430,3 +430,19 @@ Pull request yang mengubah skema (`migrations/`) atau kontrak antar anggota haru
 - `db_connections.connection_url` berisi kredensial database target: jangan tampilkan ulang di UI dan jangan tulis ke log.
 - Pengecekan izin selalu di backend. Menyembunyikan tombol di UI tidak cukup.
 - Hash password (`Account.PasswordHash`) tidak pernah masuk ke `auth.User` di context, dan tidak boleh dikirim ke template.
+## Activity logging PostgreSQL
+
+Backend menulis log JSON ke stdout. Gunakan `request_id` untuk menghubungkan
+event HTTP dan SQL, serta `migration_id` untuk SQL dalam eksekusi migration.
+Log memuat operasi dan fingerprint SQL. Teks SQL mentah, nilai parameter, dan
+pesan error mentah disamarkan. SQLSTATE tetap tersedia untuk error PostgreSQL.
+
+Contoh field pada hasil eksekusi SQL:
+
+```json
+{"level":"ERROR","action":"sql.result","status":"failed","request_id":"req-1","user_id":"42","database":"target","migration_id":"7","query":"SELECT","parameter_count":"1","parameters":"[redacted]","duration_us":"124","sqlstate":"22000","error":"operation failed"}
+```
+
+`sql.start` menandai awal eksekusi. Hasil COMMIT dan ROLLBACK muncul sebagai
+`sql.commit` dan `sql.rollback`. Untuk batch, posisi query dan hasil batch
+dicatat terpisah.
