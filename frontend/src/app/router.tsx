@@ -17,6 +17,9 @@ import AdminDashboardPage from '../features/admin/AdminDashboardPage'
 import AdminUsersPage from '../features/admin/AdminUsersPage'
 import AdminUserCreatePage from '../features/admin/AdminUserCreatePage'
 import AdminUserDetailPage from '../features/admin/AdminUserDetailPage'
+import AdminGroupsPage from '../features/admin/AdminGroupsPage'
+import AdminGroupCreatePage from '../features/admin/AdminGroupCreatePage'
+import AdminGroupDetailPage from '../features/admin/AdminGroupDetailPage'
 import DatabaseListPage from '../features/databases/DatabaseListPage'
 import SchemaExplorerPage from '../features/databases/SchemaExplorerPage'
 import TableDetailPage from '../features/databases/TableDetailPage'
@@ -77,9 +80,9 @@ export function AppRouter() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="users/new" element={<AdminUserCreatePage />} />
         <Route path="users/:userId" element={<AdminUserDetailPage />} />
-        <Route path="groups" element={<RoutePlaceholder title="Grup" />} />
-        <Route path="groups/new" element={<RoutePlaceholder title="Tambah grup" />} />
-        <Route path="groups/:groupId" element={<RoutePlaceholder title="Detail grup" />} />
+        <Route path="groups" element={<AdminGroupsPage />} />
+        <Route path="groups/new" element={<AdminGroupCreatePage />} />
+        <Route path="groups/:groupId" element={<AdminGroupDetailPage />} />
         <Route path="connections" element={<RoutePlaceholder title="Koneksi Database" />} />
         <Route path="connections/new" element={<RoutePlaceholder title="Tambah koneksi" />} />
         <Route path="connections/:connectionId" element={<RoutePlaceholder title="Detail koneksi" />} />
