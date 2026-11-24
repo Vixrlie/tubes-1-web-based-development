@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -31,6 +32,9 @@ func main() {
 }
 
 func run() error {
+	workerOnly := flag.Bool("worker-only", false, "jalankan hanya worker migration asynchronous tanpa HTTP server")
+	flag.Parse()
+
 	if err := config.LoadDotEnv(".env"); err != nil {
 		return err
 	}
@@ -138,6 +142,12 @@ func run() error {
 			log.Printf("abandon request %d: %v", job.RequestID, abandonErr)
 		}
 	}
+	// -worker-only: proses ini hanya menjalankan worker (tanpa HTTP), sehingga
+	// worker dapat diskalakan terpisah; lock per database berlaku lintas proses.
+	if *workerOnly {
+		worker.Run(ctx)
+		return nil
+	}
 	workerDone := make(chan struct{})
 	go func() {
 		defer close(workerDone)
@@ -205,12 +215,17 @@ func run() error {
 	}
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
+
+	var serveErr error
 	select {
-	case err := <-errCh:
-		return err
+	case serveErr = <-errCh:
 	case <-ctx.Done():
 	}
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return srv.Shutdown(shutdownCtx)
+	shutdownErr := srv.Shutdown(shutdownCtx)
+	if serveErr != nil {
+		return serveErr
+	}
+	return shutdownErr
 }
