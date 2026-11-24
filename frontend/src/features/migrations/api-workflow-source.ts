@@ -124,6 +124,14 @@ export function boardRows(board: ApiBoard, connectionId: string, ownerId: string
   return rows.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 }
 
+/** ISO → "YYYY-MM-DD HH:mm" waktu lokal, format yang sama dengan riwayat mock (tetap urut leksikografis). */
+export function executedAtLabel(iso: string) {
+  const date = new Date(iso)
+  if (!Number.isFinite(date.getTime())) return iso
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 function durationLabel(ms?: number) { return ms === undefined ? '-' : `${(ms / 1000).toLocaleString('id-ID')} detik` }
 
 /** Execution backend → baris riwayat SPA (terbaru dulu). */
@@ -134,10 +142,10 @@ export function boardExecutions(board: ApiBoard): Execution[] {
     const action = e.action === 'rollback' ? 'ROLLBACK' as const : e.action === 'forward' ? 'FORWARD' as const : 'UP' as const
     return { id: executionRef(e.id), version: versionLabel(e.migration_version), name: e.migration_name, action,
       ...(e.reverts_execution_id ? { rollbackTarget: executionRef(e.reverts_execution_id) } : {}),
-      actor: e.executed_by_name ?? '-', executedAt: e.finished_at ?? e.started_at, status: e.status === 'success' ? 'success' : 'failed',
+      actor: e.executed_by_name ?? '-', executedAt: executedAtLabel(e.finished_at ?? e.started_at), status: e.status === 'success' ? 'success' : 'failed',
       duration: durationLabel(e.duration_ms), sql: e.sql_executed ?? '', irreversible: !!m?.irreversible_reason,
       ...(e.error ? { error: e.error } : e.status === 'partial' ? { error: `Berhenti setelah ${e.committed_batches} batch tersimpan; lanjutkan dengan Resume atau batalkan dengan Rollback.` } : {}) }
-  }).sort((a, b) => b.executedAt.localeCompare(a.executedAt))
+  }).sort((a, b) => Number(b.id.slice(1)) - Number(a.id.slice(1)))
 }
 
 function friendly(error: unknown): never {

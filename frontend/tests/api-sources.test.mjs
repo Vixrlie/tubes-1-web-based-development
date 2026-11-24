@@ -5,7 +5,7 @@ import { ApiError } from '../src/shared/api/api-error.ts'
 import { usesMockData } from '../src/shared/api/data-mode.ts'
 import { createApiDatabaseSource, createApiSchemaSource, createApiTableSource } from '../src/features/databases/api-source.ts'
 import { SchemaSourceError } from '../src/features/databases/schema-source.ts'
-import { boardExecutions, boardRows, createApiDraftSource } from '../src/features/migrations/api-workflow-source.ts'
+import { boardExecutions, boardRows, createApiDraftSource, executedAtLabel } from '../src/features/migrations/api-workflow-source.ts'
 import { explainPlan } from '../src/features/migrations/api-schema-tools.ts'
 import { filterExecutions } from '../src/features/migrations/migration-source.ts'
 import { operationEligibility } from '../src/features/migrations/operation-model.ts'
@@ -163,4 +163,9 @@ test('hasil EXPLAIN backend dipetakan ke metrik halaman', () => {
 test('detail grup admin memuat leader', () => {
   assert.equal(parseAdminGroupDetail({ id: '1', name: 'tim', leaderId: '5' }).leaderId, '5')
   assert.equal(parseAdminGroupDetail({ id: '1', name: 'tim', leaderId: null }).leaderId, null)
+})
+
+test('waktu eksekusi ditampilkan sebagai YYYY-MM-DD HH:mm', () => {
+  assert.match(executedAtLabel('2026-11-24T10:00:05Z'), /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)
+  assert.equal(executedAtLabel('bukan tanggal'), 'bukan tanggal')
 })
