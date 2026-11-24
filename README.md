@@ -463,42 +463,82 @@ Batch sedikit lebih lambat secara total, tetapi lock hanya ditahan selama satu b
 
 ## Stress Test k6
 
-Skrip: `k6/migration-workflow.js`. Dua skenario berjalan bersamaan:
+Skrip: `k6/migration-workflow.js`. Beban dinaikkan bertahap di atas beban normal lalu diturunkan kembali untuk melihat pemulihan. Ada empat tingkat; setiap tingkat terdiri dari ramp 20 detik lalu tahan `STEP` (default 1 menit):
 
-- `reads`: 100 request/detik ke riwayat (`hide_rollback=1`), daftar migration, dan inbox approval.
-- `workflow`: 10 VU yang masing-masing menjalankan alur penuh secara berulang: create → validate (dry-run) → submit → approve → polling sampai worker selesai.
+| Tingkat | Baca (request/detik) | VU workflow |
+|---------|----------------------|-------------|
+| normal | 50 | 4 |
+| stress (2×) | 100 | 8 |
+| peak (4×) | 200 | 16 |
+| recovery (kembali normal) | 50 | 4 |
 
-Menjalankan (user harus punya akses View + Edit dan menjadi leader satu-satunya group yang punya akses ke `DB_ID`, supaya satu approval cukup):
+Dua skenario berjalan bersamaan:
+
+- `reads` (`ramping-arrival-rate`): riwayat (`hide_rollback=1`), daftar migration, board workflow SPA, dan inbox approval.
+- `workflow` (`ramping-vus`): create → validate (dry-run) → submit → approve → polling sampai worker selesai. VU dibagi ke beberapa database (`DB_IDS`), sehingga beberapa VU berebut database yang sama (eksekusi diserialisasi) sementara database lain diproses paralel.
+
+Respons approve (`202` + `job_id`) tidak dihitung sebagai keberhasilan migration; sebuah job baru dihitung selesai setelah polling melihat status `success`. Metrik tambahan:
+
+| Metrik | Arti |
+|--------|------|
+| `job_queue_wait_ms` | `started_at − queued_at` dari server: lama job menunggu di antrean (termasuk menunggu lock database) |
+| `job_run_ms` | `finished_at − started_at`: lama worker mengeksekusi |
+| `job_approve_to_done_ms` | dari respons approve sampai polling melihat `success` |
+| `jobs_completed` | jumlah job selesai (throughput penyelesaian) |
+| `workflow_failed`, `workflow_poll_timeout` | workflow gagal, atau tidak selesai dalam 60 detik |
+
+Setiap request diberi tag `level` (normal/stress/peak/recovery) dan `db`, sehingga ringkasan k6 menampilkan angka per tingkat beban. Threshold utama: error rate baca < 1%, p95 baca < 300 ms, p95 approve < 500 ms, dan `workflow_failed == 0`.
+
+Menjalankan (user harus punya akses View + Edit ke semua `DB_IDS` dan menjadi leader satu-satunya group yang punya akses ke database tersebut, supaya satu approval cukup):
 
 ```bash
 docker run --rm --network host -v "$PWD/k6:/scripts:ro" \
-  -e BASE_URL=http://localhost:8080 -e USERNAME=admin -e PASSWORD=... -e DB_ID=1 \
-  -e DURATION=1m -e READ_RATE=100 -e WORKFLOW_VUS=10 \
+  -e BASE_URL=http://localhost:8080 -e USERNAME=... -e PASSWORD=... \
+  -e DB_IDS=3,4,5 -e STEP=1m -e READ_RATE=50 -e WORKFLOW_VUS=4 \
   grafana/k6:0.54.0 run /scripts/migration-workflow.js
 ```
 
-Hasil pada satu mesin lokal (aplikasi, PostgreSQL Docker, dan k6 di host yang sama), durasi 1 menit:
+### Hasil
 
-| Metrik | Run pertama | Setelah perbaikan |
-|--------|-------------|-------------------|
-| Request total | 9.928 (160/detik) | 11.407 (176/detik) |
-| HTTP error | 0% | 0% |
-| p95 request baca | 895 ms | 34 ms |
-| p95 approve | 114 ms | 25 ms |
-| Workflow gagal | 89 dari 559 (validasi "database sibuk") | 0 dari 630 |
-| Approve → selesai (median / p95 / maks) | 525 ms / 2,36 s / 12,3 s | 541 ms / 1,57 s / 4,9 s |
+Satu mesin lokal (aplikasi, PostgreSQL Docker, dan k6 di host yang sama), tiga database target kosong, total 5 menit 20 detik. Throughput dihitung per tingkat (jumlah request atau job dibagi 80 detik).
 
-Setelah run kedua, isi database konsisten: 630 pengajuan sukses, 630 eksekusi sukses, 630 job selesai, 630 tabel di target, tanpa eksekusi ganda dan tanpa versi duplikat.
+**Run 1 (sebelum perbaikan):**
+
+| Tingkat | Baca p50 / p95 | Throughput | Error | Job selesai | Antre p50 / p95 | Approve → selesai p95 |
+|---------|----------------|------------|-------|-------------|-----------------|-----------------------|
+| normal | 7,5 ms / 321 ms | 86 req/s | 0% | 6,1/s | 320 ms / 1,22 s | 1,30 s |
+| stress | 313 ms / 35,1 s | 74 req/s | 0% | 3,5/s | 344 ms / 1,24 s | 1,60 s |
+| peak | 384 ms / 51,9 s | 59 req/s | 1,13% | 4,4/s | 508 ms / 1,41 s | 1,91 s |
+| recovery | 319 ms / 49,0 s | 41 req/s | 1,41% | 1,8/s | 428 ms / 993 ms | 1,65 s |
+
+Request baca runtuh sejak tingkat stress dan **tidak pulih** saat beban turun: 100 request `GET /workflow` timeout (60 detik), dan k6 kehabisan VU (300) karena request menggantung. Penyebabnya query N+1 pada board workflow: reviewer, execution, dan izin edit dimuat per pengajuan, sehingga ratusan pengajuan berarti ribuan query per panggilan (316 ms tanpa beban untuk 516 pengajuan). Di bawah beban, pool koneksi platform habis dan endpoint lain ikut menunggu. Perbaikannya memuat reviewer dan execution dalam satu query masing-masing dan menghitung izin sekali; respons tetap sama, waktu tanpa beban turun ke 30 ms.
+
+**Run 2 (setelah perbaikan, kondisi awal sama):**
+
+| Tingkat | Baca p50 / p95 | Throughput | Error | Job selesai | Antre p50 / p95 | Approve → selesai p95 |
+|---------|----------------|------------|-------|-------------|-----------------|-----------------------|
+| normal | 4,4 ms / 20 ms | 86 req/s | 0% | 5,8/s | 337 ms / 1,33 s | 1,52 s |
+| stress | 13,6 ms / 104 ms | 172 req/s | 0% | 11,1/s | 284 ms / 1,35 s | 1,52 s |
+| peak | 1,50 s / 3,54 s | 160 req/s | 0% | 2,2/s | 922 ms / 3,30 s | 5,73 s |
+| recovery | 48 ms / 2,87 s | 107 req/s | 0% | 6,0/s | 279 ms / 1,26 s | 1,35 s |
+
+Total 42.004 request tanpa error, 2.007 job selesai, 0 workflow gagal. Eksekusi worker sendiri singkat (`job_run_ms` p50 28 ms, p95 225 ms).
+
+Analisis:
+
+- **Normal dan stress (2×)** memenuhi semua threshold. Throughput naik dua kali lipat sesuai beban, dan job selesai naik ke 11/detik karena tiga database diproses paralel.
+- **Peak (4×)** melewati kapasitas satu mesin: p95 baca 3,5 detik dan job yang selesai turun ke 2,2/detik. k6 sempat mencapai batas 300 VU (3.446 iterasi baca dibuang), artinya server tidak bisa menyelesaikan request secepat request datang. Tidak ada request yang gagal; semuanya hanya lebih lambat. Threshold p95 baca dan p95 approve sengaja dibiarkan gagal di tingkat ini sebagai batas yang terukur.
+- **Recovery** pulih: p50 baca kembali ke 48 ms dan job kembali ~6/detik. p95 2,9 detik berasal dari detik-detik awal saat antrean dari tingkat peak masih dikuras.
+- **Waktu antre** naik di peak (p95 3,3 detik) karena 16 VU berebut tiga database; eksekusi pada satu database diserialisasi lewat lock (by design), sedangkan database berbeda tetap paralel.
+- **Batas berikutnya**: k6 menerima 8,4 GB selama 5 menit (26 MB/detik), terutama dari board workflow yang mengirim SQL setiap migration. Ukuran respons tumbuh seiring jumlah migration; langkah lanjutan adalah paginasi board atau memisahkan SQL ke endpoint detail, seperti yang sudah dilakukan pada daftar migration dan riwayat.
+
+### Riwayat run sebelumnya (beban konstan, satu database)
 
 Temuan dan perbaikannya:
 
-1. **Versi migration bentrok.** Run awal (sebelum dua run di atas) gagal membuat migration setelah 20 create dalam satu menit, karena versi `YYYYMMDDHHMM` beresolusi menit dan hanya dicoba naik 20 kali. Versi kini dihitung atomik: `GREATEST(waktu sekarang, versi tertinggi + 1)`. Regresi diuji di `TestCreateManyMigrationsInSameMinute`.
+1. **Versi migration bentrok.** Run beban konstan paling awal gagal membuat migration setelah 20 create dalam satu menit, karena versi `YYYYMMDDHHMM` beresolusi menit dan hanya dicoba naik 20 kali. Versi kini dihitung atomik: `GREATEST(waktu sekarang, versi tertinggi + 1)`. Regresi diuji di `TestCreateManyMigrationsInSameMinute`.
 2. **Validasi langsung menolak saat database sibuk.** Dry-run memakai `pg_try_advisory_xact_lock`, sehingga validasi yang bertepatan dengan eksekusi lain langsung gagal. Kini dry-run menunggu lock maksimal 5 detik (`lock_timeout`) sebelum menyatakan database sibuk.
 3. **Respons daftar terlalu besar.** Daftar migration dan riwayat mengirim isi SQL setiap baris (rata-rata 160 KB per respons saat data bertambah). Isi SQL kini hanya ada di endpoint detail; p95 baca turun dari 895 ms ke 34 ms.
-
-Run ulang setelah integrasi SPA dan mode batch (30 detik, 10 VU workflow, 100 baca/detik): 5.793 request, 0% HTTP error, 0 workflow gagal, p95 baca 57 ms, p95 approve 25 ms, approve → selesai median 532 ms / p95 1,58 s.
-
-Batas yang masih terlihat: eksekusi pada satu database diserialisasi (by design), sehingga 10 workflow paralel pada database yang sama mengantre. Waktu tunggu maksimum 4,9 detik berasal dari antrean ini, ditambah interval polling worker 500 ms. Database berbeda tetap diproses paralel (4 slot worker per proses).
 
 ## Alur Kerja Git
 
