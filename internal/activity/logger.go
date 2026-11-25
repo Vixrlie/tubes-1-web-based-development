@@ -51,8 +51,8 @@ func (l *Logger) Log(ctx context.Context, e Event) {
 
 	attrs := []any{
 		"action", sanitizeLogString(e.Action),
-		"status", sanitizeLogString(string(e.Status)),
-		"user_id", e.UserID,
+		"status", sanitizeLogString(e.Status),
+		"user_id", sanitizeLogString(e.UserID),
 		"request_id", sanitizeLogString(RequestIDFromContext(ctx)),
 	}
 	if span := trace.SpanContextFromContext(ctx); span.IsValid() {
@@ -63,7 +63,7 @@ func (l *Logger) Log(ctx context.Context, e Event) {
 		if isSensitive(k) {
 			continue
 		}
-		attrs = append(attrs, sanitizeLogString(k), sanitizeLogValue(v))
+		attrs = append(attrs, sanitizeLogString(k), sanitizeLogString(v))
 	}
 
 	switch e.Status {
@@ -101,15 +101,8 @@ func isSensitive(key string) bool {
 	return false
 }
 
-var logLineReplacer = strings.NewReplacer("\r", "", "\n", "")
-
 func sanitizeLogString(s string) string {
-	return logLineReplacer.Replace(s)
-}
-
-func sanitizeLogValue(v any) any {
-	if s, ok := v.(string); ok {
-		return logLineReplacer.Replace(s)
-	}
-	return v
+	s = strings.ReplaceAll(s, "\n", "")
+	s = strings.ReplaceAll(s, "\r", "")
+	return s
 }
