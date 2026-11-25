@@ -350,19 +350,21 @@ type TableDescription struct {
 var errTableNotFound = errors.New("tabel tidak ditemukan")
 
 func describeTable(ctx context.Context, target *Target, schema, table string) (TableDescription, error) {
-	d := TableDescription{Schema: schema, Name: table, Columns: []TableColumn{}, Constraints: []TableConstraint{}, Indexes: []TableIndex{}}
-	ok, err := validateTable(ctx, target, schema, table)
+	d := TableDescription{Columns: []TableColumn{}, Constraints: []TableConstraint{}, Indexes: []TableIndex{}}
+	canonSchema, canonTable, ok, err := resolveTable(ctx, target, schema, table)
 	if err != nil {
 		return d, err
 	}
 	if !ok {
 		return d, errTableNotFound
 	}
-	cols, err := ListColumns(ctx, target, schema, table)
+	d.Schema = canonSchema
+	d.Name = canonTable
+	cols, err := ListColumns(ctx, target, canonSchema, canonTable)
 	if err != nil {
 		return d, err
 	}
-	cons, err := ListConstraints(ctx, target, schema, table)
+	cons, err := ListConstraints(ctx, target, canonSchema, canonTable)
 	if err != nil {
 		return d, err
 	}
@@ -389,14 +391,14 @@ func describeTable(ctx context.Context, target *Target, schema, table string) (T
 		d.Columns = append(d.Columns, TableColumn{Name: c.Name, DataType: c.Type, Nullable: c.Nullable, Default: c.Default,
 			PrimaryKey: pk[c.Name], References: refs[c.Name]})
 	}
-	if idx, err := ListIndexes(ctx, target, schema, table); err == nil {
+	if idx, err := ListIndexes(ctx, target, canonSchema, canonTable); err == nil {
 		for _, i := range idx {
 			unique := ""
 			if i.Unique {
 				unique = "UNIQUE "
 			}
 			d.Indexes = append(d.Indexes, TableIndex{Name: i.Name, Columns: csvList(i.Columns), Unique: i.Unique,
-				Definition: fmt.Sprintf("CREATE %sINDEX %s ON %s USING %s (%s)", unique, i.Name, target.QuoteTable(schema, table), i.Method, i.Columns)})
+				Definition: fmt.Sprintf("CREATE %sINDEX %s ON %s USING %s (%s)", unique, i.Name, target.QuoteTable(canonSchema, canonTable), i.Method, i.Columns)})
 		}
 	}
 	return d, nil
