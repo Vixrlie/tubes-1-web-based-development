@@ -400,6 +400,7 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 - [x] M2: SPA tersambung ke API backend (database, schema, tabel, draft, review, antrean, riwayat, schema diff, EXPLAIN, leader group)
 - [x] M2: migration per batch dengan checkpoint, status `partial`, resume, dan rollback per batch; lihat [Migration per Batch](#migration-per-batch)
 - [x] M2 bonus: stress test k6 (`k6/`), hasil di bagian [Stress Test k6](#stress-test-k6)
+- [x] M2 bonus: Security SAST dengan CodeQL (`.github/workflows/codeql.yml`), hasil di bagian [Security: SAST dengan CodeQL](#security-sast-dengan-codeql)
 
 Alur minimum (GEN-07) berjalan end-to-end: Login → Access Control → Pilih Database → Lihat Schema/Data → Buat Migration → Execute → Commit/Rollback → Riwayat Migration ter-update.
 
@@ -571,6 +572,35 @@ Pull request yang mengubah skema (`migrations/`) atau kontrak antar anggota haru
 - `db_connections.connection_url` berisi kredensial database target: jangan tampilkan ulang di UI dan jangan tulis ke log.
 - Pengecekan izin selalu di backend. Menyembunyikan tombol di UI tidak cukup.
 - Hash password (`Account.PasswordHash`) tidak pernah masuk ke `auth.User` di context, dan tidak boleh dikirim ke template.
+
+## Security: SAST dengan CodeQL
+
+Static Application Security Testing (SAST) diaktifkan pada repository melalui GitHub Actions workflow [`.github/workflows/codeql.yml`](.github/workflows/codeql.yml) menggunakan `github/codeql-action/init@v3` dan `analyze@v3`.
+
+- **Cakupan analisis:**
+  - **`go`** (`build-mode: autobuild`): `main.go`, `internal/**`, `cmd/**`.
+  - **`javascript-typescript`** (`build-mode: none`): `frontend/src/**`, `frontend/tests/**`, `internal/web/templates/**` (inline script), `k6/**`.
+- **Query suite:** `security-extended`.
+- **Trigger:** `push` dan `pull_request` ke branch `main` dan `dev`, serta `workflow_dispatch`.
+- **Hasil scan awal:** commit `6fdac12` (25 November 2026) — ditemukan **8 alert** (4 `High`, 4 `Medium`).
+
+### Daftar Temuan dan Keputusan
+
+| Alert | Bahasa | Rule | Severity | Lokasi Kode | Potensi Dampak (OWASP Top 10) | Keputusan | Alasan / Referensi Perbaikan |
+| :---: | :--- | :--- | :---: | :--- | :--- | :--- | :--- |
+| #1 | JS/HTML | `js/xss-through-dom` (DOM text reinterpreted as HTML) | High | `internal/web/templates/admin/group_detail.html:121` | **A03: Injection (DOM XSS)** — atribut `data-form-action` disalin langsung ke `form.action` tanpa validasi skema/path. | **Diperbaiki** | Validasi `action` dengan regex ketat `^/admin/groups/\d+/members/\d+/delete$` sebelum mengeset `form.action`. Commit: `83bcc5b`. |
+| #2 | Go | `go/sql-injection` (Database query built from user-controlled sources) | High | `internal/dbm/database_api.go:509` | **A03: Injection (SQL Injection)** — nama schema, tabel, dan kolom PK disusun ke query `SELECT * FROM ... ORDER BY ...`. | **False Positive** | Identifier SQL tidak bisa menggunakan bound parameter (`$1`). Nama schema/tabel/kolom sudah divalidasi eksistensinya di `information_schema` (`describeTable`) dan di-escape lewat `QuoteTable`/`QuoteIdent` (`pgx.Identifier.Sanitize()`). Nilai `LIMIT`/`OFFSET` tetap parameterized (`$1`, `$2`). |
+| #3 | Go | `go/sql-injection` (Database query built from user-controlled sources) | High | `internal/dbm/introspect.go:103` | **A03: Injection (SQL Injection)** — `SELECT COUNT(*) FROM %s` dengan identifier tabel dinamis. | **False Positive** | Semua pemanggil memvalidasi tabel terhadap `information_schema` (`ValidateTable`/`describeTable`) sebelum memanggil `CountRows`, dan identifier di-escape melalui `t.QuoteTable(schema, table)`. |
+| #4 | Go | `go/sql-injection` (Database query built from user-controlled sources) | High | `internal/dbm/introspect.go:109` | **A03: Injection (SQL Injection)** — query `ListRows` menyusun nama tabel ke string SQL. | **False Positive** | Sama seperti #3: nama schema/tabel sudah tervalidasi di `information_schema` dan dikutip aman oleh `t.QuoteTable(schema, table)`, sementara `limit` dan `offset` tetap parameterized. |
+| #5 | Go | `go/log-injection` (Log entries created from user input) | Medium | `internal/activity/logger.go:74` | **A09: Security Logging and Monitoring Failures (Log Forging)** — karakter newline (`\r`/`\n`) dari input user pada atribut `slog.Error` berpotensi memalsukan baris log. | **Diperbaiki** | Menambahkan sanitasi `sanitizeLogString`/`sanitizeLogValue` yang menghapus `\r` dan `\n` pada atribut string sebelum ditulis ke `slog`. Commit: `83bcc5b`. |
+| #6 | Go | `go/log-injection` (Log entries created from user input) | Medium | `internal/activity/logger.go:76` | **A09: Security Logging and Monitoring Failures (Log Forging)** — sama seperti #5 pada cabang `slog.Warn`. | **Diperbaiki** | Disanitasi melalui `sanitizeLogString`/`sanitizeLogValue`. Commit: `83bcc5b`. |
+| #7 | Go | `go/log-injection` (Log entries created from user input) | Medium | `internal/activity/logger.go:78` | **A09: Security Logging and Monitoring Failures (Log Forging)** — sama seperti #5 pada cabang `slog.Info`. | **Diperbaiki** | Disanitasi melalui `sanitizeLogString`/`sanitizeLogValue`. Commit: `83bcc5b`. |
+| #8 | Go | `go/log-injection` (Log entries created from user input) | Medium | `internal/dbm/api.go:126` | **A09: Security Logging and Monitoring Failures (Log Forging)** — `r.Method` dan `r.URL.Path` dicatat langsung lewat `log.Printf`. | **Diperbaiki** | Menghapus karakter `\r` dan `\n` dari `r.Method` dan `r.URL.Path` sebelum dicatat ke `log.Printf`. Commit: `83bcc5b`. |
+
+### Hasil Scan Ulang & Keterbatasan SAST
+
+- Setelah commit perbaikan `83bcc5b` di-push ke `dev`, jalankan ulang workflow **CodeQL SAST** di GitHub Actions dan verifikasi bahwa alert **#1, #5, #6, #7, #8** berstatus *closed/fixed* di tab **Security → Code scanning** (menyisakan 3 false positive #2–#4 yang telah didokumentasikan alasannya di atas).
+- **Keterbatasan SAST:** Hasil scan CodeQL yang bersih atau seluruh alert valid yang telah diperbaiki **tidak menjamin** aplikasi sepenuhnya bebas dari kerentanan. SAST menganalisis kode secara statis dan tidak menggantikan pengujian runtime (DAST), konfigurasi infrastruktur, maupun *manual security review* terhadap *business logic flaws*.
 ## Activity logging PostgreSQL
 
 Backend menulis log JSON ke stdout. Gunakan `request_id` untuk menghubungkan
