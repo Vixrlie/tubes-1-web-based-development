@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/config"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/db"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/dbm"
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/queue"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/web"
 	"github.com/Vixrlie/tubes-1-web-based-development/migrations"
@@ -30,6 +32,9 @@ func main() {
 }
 
 func run() error {
+	workerOnly := flag.Bool("worker-only", false, "jalankan hanya worker migration asynchronous tanpa HTTP server")
+	flag.Parse()
+
 	if err := config.LoadDotEnv(".env"); err != nil {
 		return err
 	}
@@ -39,6 +44,15 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	logFile := os.Getenv("ACTIVITY_LOG_FILE")
+	if logFile == "" {
+		logFile = "observability/logs/activity.jsonl"
+	}
+	closeActivityLog, err := activity.ConfigureLogFile(logFile)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = closeActivityLog() }()
 	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"); endpoint != "" {
 		shutdown, err := activity.StartTracing(ctx, endpoint)
 		if err != nil {
@@ -95,14 +109,54 @@ func run() error {
 	connLister := admin.NewPGConnectionLister(pool)
 	migrationStore := dbm.NewPGMigrationStore(pool)
 	metrics := &activity.Metrics{}
+	jobs := queue.New(pool)
+	workflow := dbm.NewWorkflow(dbm.WorkflowConfig{
+		Pool:     pool,
+		Policy:   accessPolicy,
+		Store:    migrationStore,
+		Registry: registry,
+		Queue:    jobs,
+		Logger:   activityLogger,
+	})
 	dbmHandlers := dbm.NewHandlers(dbm.Config{
 		Platform:   pool,
 		Policy:     accessPolicy,
 		Registry:   registry,
 		Renderer:   renderer,
 		Migrations: migrationStore,
-		Metrics:    metrics,
+		Workflow:   workflow,
 	})
+
+	// Worker eksekusi migration berjalan di proses yang sama, terpisah dari
+	// request HTTP. Ganti dengan worker eksternal cukup lewat tabel migration_jobs.
+	executor := dbm.NewExecutor(pool, registry, activityLogger, metrics)
+	runJob := executor.QueueHandler(queue.Busy, queue.Retry)
+	worker := queue.NewWorker(pool, func(ctx context.Context, job queue.Job) error {
+		return runJob(ctx, dbm.ExecJob{
+			JobID: job.ID, RequestID: job.RequestID,
+			Attempt: job.Attempts, MaxAttempts: job.MaxAttempts,
+		})
+	}, activityLogger)
+	worker.OnGiveUp = func(ctx context.Context, job queue.Job, err error) {
+		if abandonErr := executor.Abandon(ctx, job.RequestID, err); abandonErr != nil {
+			log.Printf("abandon request %d: %v", job.RequestID, abandonErr)
+		}
+	}
+	// -worker-only: proses ini hanya menjalankan worker (tanpa HTTP), sehingga
+	// worker dapat diskalakan terpisah; lock per database berlaku lintas proses.
+	if *workerOnly {
+		worker.Run(ctx)
+		return nil
+	}
+	workerDone := make(chan struct{})
+	go func() {
+		defer close(workerDone)
+		worker.Run(ctx)
+	}()
+	defer func() {
+		stop()
+		<-workerDone
+	}()
 
 	devMode := os.Getenv("DEV_COMPONENTS") == "1"
 	r := web.NewRouter()
@@ -110,6 +164,27 @@ func run() error {
 		r.Get("/metrics", metrics.Handler(pool, registry.PoolStats))
 	}
 	authHandlers.PublicRoutes(r)
+	authHandlers.JSONRoutes(r, auth.NewSessionValidator(sessions))
+	lokiURL := os.Getenv("LOKI_URL")
+	if lokiURL == "" {
+		lokiURL = "http://127.0.0.1:3100"
+	}
+	activityReader, err := activity.NewLokiReader(lokiURL)
+	if err != nil {
+		return err
+	}
+	admin.ActivityJSONRoutes(r, activityReader, auth.NewSessionValidator(sessions), cfg.CookieSecure)
+	admin.RegisterAdminJSONRoutes(r, admin.AdminAPIConfig{
+		Users:        adminUsers,
+		Groups:       groupStore,
+		Connections:  connStore,
+		ConnLister:   connLister,
+		Revoker:      sessions,
+		Evictor:      registry,
+		Validator:    auth.NewSessionValidator(sessions),
+		CookieSecure: cfg.CookieSecure,
+		Logger:       activityLogger,
+	})
 	if devMode {
 		web.DevRoutes{R: renderer}.Routes(r)
 	}
@@ -118,6 +193,8 @@ func run() error {
 		r.Use(auth.CSRFProtect)
 		authHandlers.ProtectedRoutes(r)
 		dbmHandlers.Routes(r)
+		dbmHandlers.ApprovalRoutes(r)
+		dbmHandlers.APIRoutes(r)
 
 		adminOpts := []admin.Option{
 			admin.WithActivityLogger(activityLogger),
@@ -138,12 +215,17 @@ func run() error {
 	}
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
+
+	var serveErr error
 	select {
-	case err := <-errCh:
-		return err
+	case serveErr = <-errCh:
 	case <-ctx.Done():
 	}
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return srv.Shutdown(shutdownCtx)
+	shutdownErr := srv.Shutdown(shutdownCtx)
+	if serveErr != nil {
+		return serveErr
+	}
+	return shutdownErr
 }

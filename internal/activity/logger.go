@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 	"time"
 
@@ -31,7 +30,7 @@ type Logger struct {
 }
 
 func New() *Logger {
-	return NewWithWriter(os.Stdout)
+	return NewWithWriter(defaultOutput)
 }
 
 func NewWithWriter(w io.Writer) *Logger {

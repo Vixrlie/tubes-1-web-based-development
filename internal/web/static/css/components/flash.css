@@ -1,0 +1,49 @@
+.flash {
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-p3);
+    overflow-wrap: anywhere;
+}
+
+.flash--success {
+    background: var(--color-success-bg);
+    border-color: var(--color-success-border);
+    color: var(--color-success-text);
+}
+
+.flash--error {
+    background: var(--color-error-bg);
+    border-color: var(--color-error-border);
+    color: var(--color-error-text);
+}
+
+/* Blok SQL dan form workflow migration. */
+.sql-block {
+    margin: 0;
+    padding: var(--space-4);
+    max-height: 24rem;
+    overflow: auto;
+    border-radius: var(--radius-md);
+    background: var(--color-surface-muted);
+    white-space: pre;
+}
+
+.inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-3);
+}
+
+.inline-form .input {
+    flex: 1 1 16rem;
+}
+
+.toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-p3);
+}

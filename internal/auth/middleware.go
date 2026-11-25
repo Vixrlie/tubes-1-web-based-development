@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/activity"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
@@ -140,6 +141,14 @@ func CSRFProtect(next http.Handler) http.Handler {
 }
 
 func redirectToLogin(w http.ResponseWriter, r *http.Request) {
+	// Klien JSON API tidak mengikuti redirect HTML; beri 401 agar SPA bisa
+	// mengarahkan user ke halaman login sendiri.
+	if strings.HasPrefix(r.URL.Path, "/api/") {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"error":"sesi tidak valid atau sudah berakhir","code":"unauthenticated"}`))
+		return
+	}
 	if r.Header.Get("HX-Request") == "true" {
 		w.Header().Set("HX-Redirect", "/login")
 		return

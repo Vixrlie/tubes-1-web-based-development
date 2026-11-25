@@ -1,0 +1,10 @@
+{{/*
+Pesan umpan balik satu kali setelah redirect (?notice= / ?error=).
+Data: apa pun yang punya .Notice dan .Error (dbm.Feedback).
+
+{{template `flash` .}}
+*/}}
+{{define "flash"}}
+{{- with .Error}}<p class="flash flash--error" role="alert">{{.}}</p>{{end}}
+{{- with .Notice}}<p class="flash flash--success" role="status">{{.}}</p>{{end}}
+{{end}}

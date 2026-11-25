@@ -1,0 +1,36 @@
+.app-shell { min-height: 100dvh; }
+.app-skip-link { position: fixed; left: 16px; top: -100px; z-index: 100; background: white; padding: 12px 16px; border-radius: 6px; }
+.app-skip-link:focus { top: 16px; }
+.app-content { max-width: 1600px; margin: 0 auto; padding: var(--space-32); }
+.app-status-page { display: grid; justify-items: start; gap: var(--space-16); padding: var(--space-48) var(--space-24); }
+.app-status-page p { color: var(--text-muted); }
+.app-auth-layout { display: grid; place-items: center; min-height: 100dvh; }
+.app-workspace { display: grid; grid-template-columns: 256px minmax(0, 1fr); gap: var(--space-24); }
+.app-workspace > aside { background: var(--surface); border: 1px solid var(--neutral-100); border-radius: var(--radius-panel); }
+.app-section-navigation { display: flex; flex-wrap: wrap; gap: var(--space-16); border-bottom: 1px solid var(--border); padding-bottom: var(--space-16); }
+.app-section-navigation a { display: block; color: var(--text-muted); text-decoration: none; padding: var(--space-12) var(--space-16); }
+.app-section-navigation a.active { color: var(--primary-500); font-weight: 600; }
+.app-shell--admin { background: var(--workspace-background-mobile); }
+.app-shell--admin .app-workspace { grid-template-columns: minmax(0, 1fr); }
+.app-shell--admin .app-workspace > aside { display: none; }
+.app-shell--admin .ds-menu-trigger { display: inline-flex; }
+.app-shell--admin > .ds-header { position: sticky; top: 0; z-index: 35; }
+@media (min-width: 1024px) {
+  .app-shell--admin .app-workspace { grid-template-columns: 256px minmax(0, 1fr); }
+  .app-shell--admin .app-workspace > aside { display: block; }
+  .app-shell--admin .ds-menu-trigger { display: none; }
+  .app-shell--admin { display: flex; flex-direction: column; height: 100dvh; min-height: 0; overflow: hidden; background: var(--workspace-background-desktop); }
+  .app-shell--admin > .ds-header { flex-shrink: 0; position: relative; z-index: 35; }
+  .app-shell--admin .app-content { display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%; max-width: none; padding-right: 0; overflow: hidden; }
+  .app-shell--admin .app-content > .ds-alert { flex-shrink: 0; margin-bottom: 16px; }
+  .app-shell--admin .app-workspace { flex: 1; min-height: 0; }
+  .app-shell--admin .app-workspace > aside { min-height: 0; overflow: clip; }
+  .app-shell--admin .app-admin-content { min-width: 0; min-height: 0; padding-right: var(--space-32); overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; }
+  .app-shell--admin .app-status-page { overflow-y: auto; min-height: 0; }
+}
+@media (max-width: 767px) {
+  .app-content { padding: var(--space-16) var(--space-16) calc(104px + env(safe-area-inset-bottom)); }
+  .app-workspace { grid-template-columns: 1fr; }
+}
+
+.app-shell > .ds-header { position: sticky; top: 0; z-index: 35; }

@@ -11,18 +11,32 @@ import (
 	"fmt"
 	"strings"
 	"unicode"
-
 )
 
 // ExplainItem = hasil analisa satu statement.
 type ExplainItem struct {
-	N       int        
-	Stmt    string     
-	Kind    string     
-	Note    string     
+	N       int
+	Stmt    string
+	Kind    string
+	Note    string
 	Summary PlanSummary
-	Tree    string     
-	Analyze bool       
+	Tree    string
+	Analyze bool
+	// Root = node teratas plan (kosong bila statement tidak punya plan).
+	Root PlanRoot
+	// PlanningMs/ExecutionMs diisi PostgreSQL bila tersedia (ANALYZE).
+	PlanningMs  *float64
+	ExecutionMs *float64
+}
+
+// PlanRoot = angka estimasi node teratas execution plan.
+type PlanRoot struct {
+	Node        string
+	Relation    string
+	StartupCost float64
+	TotalCost   float64
+	Rows        float64
+	Width       float64
 }
 
 // PlanSummary = ringkasan execution plan
@@ -79,7 +93,9 @@ func Explain(ctx context.Context, pool *Target, n int, stmt string, analyze bool
 	}
 
 	var payload []struct {
-		Plan map[string]any `json:"Plan"`
+		Plan      map[string]any `json:"Plan"`
+		Planning  *float64       `json:"Planning Time"`
+		Execution *float64       `json:"Execution Time"`
 	}
 	if !pool.Dialect.ExplainIsJSON(analyze) ||
 		json.Unmarshal(raw, &payload) != nil ||
@@ -91,6 +107,8 @@ func Explain(ctx context.Context, pool *Target, n int, stmt string, analyze bool
 		return item
 	}
 	root := payload[0].Plan
+	item.Root = planRoot(root)
+	item.PlanningMs, item.ExecutionMs = payload[0].Planning, payload[0].Execution
 	item.Tree = formatPlan(root, 0)
 	item.Summary = extractSummary(root, analyze)
 	return item
@@ -381,4 +399,21 @@ func numField(v any) float64 {
 func strField(v any) string {
 	s, _ := v.(string)
 	return s
+}
+
+func planRoot(node map[string]any) PlanRoot {
+	num := func(key string) float64 {
+		v, _ := node[key].(float64)
+		return v
+	}
+	str := func(key string) string {
+		v, _ := node[key].(string)
+		return v
+	}
+	rel := str("Relation Name")
+	if schema := str("Schema"); schema != "" && rel != "" {
+		rel = schema + "." + rel
+	}
+	return PlanRoot{Node: str("Node Type"), Relation: rel, StartupCost: num("Startup Cost"),
+		TotalCost: num("Total Cost"), Rows: num("Plan Rows"), Width: num("Plan Width")}
 }

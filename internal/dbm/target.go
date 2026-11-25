@@ -175,12 +175,12 @@ func (Postgres) Queries() Queries {
 		JOIN pg_namespace n ON n.oid = t.relnamespace
 		JOIN pg_am am ON am.oid = ic.relam
 		JOIN LATERAL unnest(ix.indkey) WITH ORDINALITY AS k(attnum, ordinal) ON true
-		JOIN pg_attribute a ON a.attrelid = ix.indexrelid AND a.attnum = k.attnum
+		JOIN pg_attribute a ON a.attrelid = ix.indrelid AND a.attnum = k.attnum
 		WHERE n.nspname = $1 AND t.relname = $2 AND ix.indisprimary = false AND a.attnum > 0
 		GROUP BY ic.oid, ic.relname, ix.indisunique, am.amname
 		ORDER BY name`,
 		Constraints: `
-		SELECT tc.constraint_name, tc.constraint_type, kcu.columns,
+		SELECT tc.constraint_name, tc.constraint_type, COALESCE(kcu.columns, ''),
 		       COALESCE(fk.ref, '') AS reference
 		FROM information_schema.table_constraints tc
 		LEFT JOIN (
@@ -198,13 +198,15 @@ func (Postgres) Queries() Queries {
 			JOIN pg_class cl ON cl.oid = con.conrelid
 			JOIN pg_namespace ns ON ns.oid = cl.relnamespace
 			LEFT JOIN pg_class clref ON clref.oid = con.confrelid
-			LEFT JOIN pg_namespace nsref ON nsref.oid = clref.connamespace
+			LEFT JOIN pg_namespace nsref ON nsref.oid = clref.relnamespace
 			LEFT JOIN pg_attribute atref ON atref.attrelid = con.confrelid AND atref.attnum = ANY(con.confkey)
 			WHERE con.contype = 'f'
 		) fk ON fk.conname = tc.constraint_name
 		   AND fk.nspname = tc.table_schema
 		   AND fk.relname = tc.table_name
 		WHERE tc.table_schema = $1 AND tc.table_name = $2
+		  -- CHECK otomatis untuk kolom NOT NULL sudah tampil sebagai nullable.
+		  AND NOT (tc.constraint_type = 'CHECK' AND tc.constraint_name LIKE '%\_not\_null')
 		ORDER BY tc.constraint_type, tc.constraint_name`,
 		ForeignKeys: `
 		SELECT con.conname,
@@ -234,7 +236,8 @@ func (Postgres) Queries() Queries {
 		CountTables: `
 		SELECT COUNT(*) FROM information_schema.tables
 		  WHERE table_type = 'BASE TABLE'
-		    AND table_schema NOT IN ('pg_catalog', 'information_schema')`,
+		    AND table_schema NOT IN ('pg_catalog', 'information_schema')
+		    AND table_name NOT LIKE '\_pathgres\_%'`,
 		Rows: `SELECT * FROM %s LIMIT $1 OFFSET $2`,
 	}
 }
@@ -369,7 +372,8 @@ func (MySQL) Queries() Queries {
 		CountTables: `
 		SELECT COUNT(*) FROM information_schema.TABLES
 		  WHERE TABLE_TYPE = 'BASE TABLE'
-		    AND TABLE_SCHEMA NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys')`,
+		    AND TABLE_SCHEMA NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys')
+		    AND TABLE_NAME NOT LIKE '\_pathgres\_%'`,
 		Rows: `SELECT * FROM %s LIMIT ? OFFSET ?`,
 	}
 }

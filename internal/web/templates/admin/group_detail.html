@@ -72,6 +72,20 @@ Data: web.GroupDetailPage (lihat groups.go)
         {{- end}}
     </div>
 
+    {{- with .Leader}}
+    <section class="card">
+        {{template `card-head` (dict `Title` `Leader Group`)}}
+        <p class="card__note">Leader wajib menyetujui setiap migration pada database yang dapat diakses
+            group ini. Saat ini: {{or .CurrentLabel `belum ditetapkan`}}.</p>
+        <form method="post" action="{{.FormAction}}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            {{template `dropdown` (dict `Label` `Leader` `Name` `leader_id` `ID` `leader-id`
+                `Value` .Current `Options` .Options)}}
+            {{template `button` (dict `Label` `Simpan Leader` `Type` `submit`)}}
+        </form>
+    </section>
+    {{- end}}
+
     {{- with .AddMembers}}
     {{template `add-members-modal` .}}
     {{- end}}

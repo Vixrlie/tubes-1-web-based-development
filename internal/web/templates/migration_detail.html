@@ -1,23 +1,66 @@
 {{/*
-Halaman Detail Migration: status eksekusi + SQL lengkap + detail pelaksana.
-Data: dbm.migrationDetailPage (lihat dbm/migration_pages.go):
-.Shell, .Title, .Crumbs, .StatusText, .StatusNote, .SQL, .Detail (web.DetailCard),
-.Actions (tombol aksi, mis. Preview utk draft)
+Halaman Detail Migration: SQL up/down, posisi, validasi, aksi yang sah
+(ajukan up/forward/rollback), pengajuan, dan riwayat eksekusi migration ini.
+Data: dbm.migrationDetailPage (lihat dbm/migration_pages.go).
 */}}
 {{define "content"}}
 {{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs `Actions` .Actions)}}
 
 <div class="stack">
+    {{template `flash` .}}
+
     <section class="card">
-        {{template `card-head` (dict `Title` .StatusText)}}
-        <p>{{.StatusNote}}</p>
+        {{template `card-head` (dict `Title` `Posisi`)}}
+        <p>{{template `table-cell` .StateCell}}</p>
+        {{with .OpenRequest}}<p class="card__note">Migration ini punya pengajuan yang sedang berjalan.
+            <a href="{{.}}">Lihat pengajuan</a>.</p>{{end}}
     </section>
 
     <section class="card">
-        {{template `card-head` (dict `Title` `SQL`)}}
-        <pre>{{.SQL}}</pre>
+        {{template `card-head` (dict `Title` `SQL Up`)}}
+        <pre class="sql-block">{{.Migration.UpSQL}}</pre>
     </section>
+
+    <section class="card">
+        {{template `card-head` (dict `Title` `SQL Down`)}}
+        {{if .Migration.Reversible}}
+        <pre class="sql-block">{{.Migration.DownSQL}}</pre>
+        {{else}}
+        <p class="card__note">Irreversible: {{.Migration.IrreversibleReason}}</p>
+        {{end}}
+    </section>
+
+    {{if .CanEdit}}
+    <section class="card">
+        {{template `card-head` (dict `Title` `Validasi & Pengajuan`)}}
+        <p class="card__note">Validasi menjalankan SQL di database target dalam transaksi yang selalu
+            di-rollback. Up pertama wajib lolos validasi untuk revisi terbaru.</p>
+        <form method="post" action="{{.ValidateURL}}">
+            <input type="hidden" name="csrf_token" value="{{$.User.CSRFToken}}">
+            {{template `button` (dict `Label` `Jalankan Validasi` `Type` `submit` `Variant` `outline`)}}
+        </form>
+        {{range .SubmitActions}}
+        <form method="post" action="{{$.SubmitURL}}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{$.User.CSRFToken}}">
+            <input type="hidden" name="action" value="{{.Action}}">
+            <div class="input">
+                <label class="input__label" for="note-{{.Action}}">{{.Hint}}</label>
+                <div class="input__box">
+                    <input class="input__control" id="note-{{.Action}}" name="note" placeholder="Catatan untuk reviewer (opsional)">
+                </div>
+            </div>
+            {{if .Danger}}
+            {{template `button` (dict `Label` .Label `Type` `submit` `Variant` `soft-danger`)}}
+            {{else}}
+            {{template `button` (dict `Label` .Label `Type` `submit`)}}
+            {{end}}
+        </form>
+        {{end}}
+    </section>
+    {{end}}
 
     {{template `detail-card` .Detail}}
+    {{template `table` .Requests}}
+    {{template `table` .Executions}}
 </div>
 {{end}}
