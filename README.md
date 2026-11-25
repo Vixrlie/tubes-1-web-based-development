@@ -1,24 +1,24 @@
 # tubes-1-web-based-development: Pathgres
 
-Tugas Besar IF3110 Pengembangan Aplikasi Web, Milestone 1.
-Platform web untuk mengatur akses, menjelajahi, dan mencatat perubahan schema database PostgreSQL.
+Tugas Besar IF3110 Pengembangan Aplikasi Web, Milestone 1 & Milestone 2.
+Platform web untuk mengatur akses, menjelajahi, memvalidasi, meninjau, dan menjalankan perubahan schema/data database PostgreSQL secara asynchronous (termasuk batching, rollback, dan forward).
 
-- Backend: Go (`chi`, `pgx`)
-- Frontend: Go template (server-rendered) dengan htmx dan CodeMirror
+- Backend & Worker: Go (`chi`, `pgx`, OpenTelemetry, Prometheus)
+- Frontend: React + Vite + TypeScript (Single-Page Application / SPA) di `frontend/`
 - Database platform dan database target: PostgreSQL 16; bonus MySQL/MariaDB untuk database target
-- Deadline Milestone 1: 25 Oktober 2026, 13.10 WIB
 
 ## Prasyarat
 
 | Alat | Keterangan |
 |------|------------|
 | Go | versi sesuai `go.mod` |
+| Node.js & npm | Node 24+ (untuk build/dev/test SPA di `frontend/`) |
 | Docker Engine + Compose plugin (atau Docker Desktop) | daemon harus berjalan sebelum `docker compose` |
 | `make` | opsional (di Windows biasanya tidak ada, perintah alternatifnya ada di bawah) |
 
 ## Quick Start dari Nol
 
-Satu rentetan perintah dari clone sampai server jalan:
+Satu rentetan perintah dari clone sampai backend + SPA berjalan:
 
 ```bash
 git clone https://github.com/Vixrlie/tubes-1-web-based-development.git
@@ -28,11 +28,20 @@ cp .env.example .env
 # lalu buka .env, isi ADMIN_PASSWORD minimal 8 karakter
 # (ADMIN_USERNAME sudah default "admin")
 
-docker compose up -d      # 4 container: PostgreSQL platform :5432, target :5433, test :5434 + MySQL :5435
-go run .                  # server + migrasi skema + seed admin; atau: make run
+docker compose up -d              # 4 container: PostgreSQL platform :5432, target :5433, test :5434 + MySQL :5435
+npm --prefix frontend ci          # install dependency SPA
+npm --prefix frontend run build   # build produksi SPA ke frontend/dist
+go run .                          # server API + worker + static SPA (:8080); atau: make run
 ```
 
 Buka **http://localhost:8080**, login dengan `admin` / password dari `.env`.
+
+Untuk mode development frontend dengan hot-reload (Vite mem-proxy `/api` ke `:8080`):
+```bash
+npm --prefix frontend run dev     # buka http://localhost:5173
+```
+
+*(Catatan: tampilan Go template HTML lama dari Milestone 1 dinonaktifkan secara default sesuai ketentuan SPA Milestone 2; hanya aktif bila `LEGACY_HTML=1` disetel.)*
 
 Dari sini database platform masih kosong (belum ada koneksi, grup, tabel),
 lanjut ke langkah **"Siapkan data awal"** di bawah supaya semua fitur
@@ -462,6 +471,15 @@ Perbandingan dengan satu UPDATE tanpa batch pada dataset yang sama (`go run ./cm
 
 Batch sedikit lebih lambat secara total, tetapi lock hanya ditahan selama satu batch (di bawah 1 detik rata-rata), progres terlihat, dan kegagalan tidak membuang batch yang sudah tersimpan. Seed dataset memakan 10,8 detik.
 
+### Pemulihan Lock saat Worker Gagal
+
+Untuk menjamin maksimal **satu migration aktif per database target** lintas worker dan tetap pulih jika worker crash di tengah eksekusi:
+
+1. **Lease & Heartbeat pada `migration_jobs`:** Saat worker mengambil job melalui `claimSQL` (`internal/queue/queue.go`), job diberi *lease* 30 detik (`lease_expires_at`). Selama job berjalan, goroutine *heartbeat* memperpanjang lease setiap `lease / 3` (10 detik).
+2. **Pengambilalihan Lease Kedaluwarsa:** Jika proses worker mati mendadak (*crash*/SIGKILL), *heartbeat* berhenti dan lease kedaluwarsa. Worker lain yang memanggil `claimSQL` otomatis mengambil alih job tersebut untuk attempt berikutnya (dibatasi `max_attempts` dengan jeda *backoff*).
+3. **Advisory Lock Target DB:** Lock eksekusi pada database target menggunakan PostgreSQL advisory lock yang terikat pada sesi koneksi; ketika koneksi worker yang crash terputus, PostgreSQL melepaskan advisory lock secara otomatis sehingga tidak terjadi *deadlock* permanen.
+4. **Pencegahan Double Commit & Penahanan Status `partial`:** Sebelum mengeksekusi batch pada retry/resume, worker memeriksa tabel checkpoint `_pathgres_batch_checkpoints` di database target (ditulis dalam transaksi yang sama dengan perubahan batch) sehingga batch yang sudah ter-commit tidak pernah dijalankan ulang. Selama ada migration berstatus `partial` atau hasil commit belum pasti, migration baru pada database yang sama ditahan sampai diselesaikan lewat **Resume** atau **Rollback**.
+
 ## Stress Test k6
 
 Skrip: `k6/migration-workflow.js`. Beban dinaikkan bertahap di atas beban normal lalu diturunkan kembali untuk melihat pemulihan. Ada empat tingkat; setiap tingkat terdiri dari ramp 20 detik lalu tahan `STEP` (default 1 menit):
@@ -617,3 +635,45 @@ Contoh field pada hasil eksekusi SQL:
 `sql.start` menandai awal eksekusi. Hasil COMMIT dan ROLLBACK muncul sebagai
 `sql.commit` dan `sql.rollback`. Untuk batch, posisi query dan hasil batch
 dicatat terpisah.
+
+### Contoh Output Span OpenTelemetry
+
+Trace context dipropagasikan dari HTTP API → `migration_jobs.trace_context` → worker (`queue.job`) → `migration.execute` → `migration.lock` → query SQL (`sql.exec`), sehingga seluruh rantai berbagi `trace_id` yang sama dengan log JSON di atas:
+
+```json
+[
+  {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "span_id": "00f067aa0ba902b7",
+    "parent_span_id": "",
+    "name": "POST /api/migration-requests/{id}/approve",
+    "duration_ms": 18.4,
+    "status": "OK"
+  },
+  {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "span_id": "53995c3f42cd8ad8",
+    "parent_span_id": "00f067aa0ba902b7",
+    "name": "queue.job",
+    "duration_ms": 412.7,
+    "status": "OK"
+  },
+  {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "span_id": "8a3c60f7d188f8fa",
+    "parent_span_id": "53995c3f42cd8ad8",
+    "name": "migration.execute",
+    "duration_ms": 405.1,
+    "status": "OK",
+    "attributes": { "migration_id": "7", "execution_id": "12", "mode": "batch" }
+  },
+  {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "span_id": "b7ad6b7169203331",
+    "parent_span_id": "8a3c60f7d188f8fa",
+    "name": "migration.lock",
+    "duration_ms": 3.2,
+    "status": "OK"
+  }
+]
+```
