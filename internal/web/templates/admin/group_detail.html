@@ -118,9 +118,12 @@ Data: web.GroupDetailPage (lihat groups.go)
                 var t = e.target.closest('[data-form-action]');
                 if (!t) return;
                 var form = document.getElementById('remove-member-form');
-                if (form) form.setAttribute('action', t.getAttribute('data-form-action'));
+                var action = t.getAttribute('data-form-action') || '';
+                if (form && /^\/admin\/groups\/\d+\/members\/\d+\/delete$/.test(action)) {
+                    form.action = action;
+                }
                 var subj = document.getElementById('rm-subject');
-                if (subj) subj.textContent = t.getAttribute('data-subject');
+                if (subj) subj.textContent = t.getAttribute('data-subject') || '';
             }, true);
         })();
     </script>

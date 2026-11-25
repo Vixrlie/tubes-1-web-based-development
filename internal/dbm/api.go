@@ -123,7 +123,9 @@ func (h *Handlers) apiFail(w http.ResponseWriter, r *http.Request, err error) {
 	status, code := apiStatus(err)
 	msg := err.Error()
 	if status == http.StatusInternalServerError {
-		log.Printf("dbm api %s %s: %v", r.Method, r.URL.Path, err)
+		safeMethod := strings.NewReplacer("\r", "", "\n", "").Replace(r.Method)
+		safePath := strings.NewReplacer("\r", "", "\n", "").Replace(r.URL.Path)
+		log.Printf("dbm api %s %s: %v", safeMethod, safePath, err)
 		msg = "terjadi kesalahan pada server"
 	}
 	writeAPIError(w, status, code, msg)
