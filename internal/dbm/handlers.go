@@ -474,7 +474,7 @@ func (h *Handlers) renderTable(w http.ResponseWriter, r *http.Request, tab strin
 		http.NotFound(w, r)
 		return
 	}
-	valid, err := validateTable(r.Context(), pool, schemaName, tableName)
+	canonSchema, canonTable, valid, err := resolveTable(r.Context(), pool, schemaName, tableName)
 	if err != nil {
 		h.serverError(w, "validasi tabel", err)
 		return
@@ -483,6 +483,7 @@ func (h *Handlers) renderTable(w http.ResponseWriter, r *http.Request, tab strin
 		http.NotFound(w, r)
 		return
 	}
+	schemaName, tableName = canonSchema, canonTable
 	if tab != "constraints" && tab != "data" {
 		tab = "columns"
 	}
