@@ -159,11 +159,14 @@ func run() error {
 	}()
 
 	devMode := os.Getenv("DEV_COMPONENTS") == "1"
+	legacyHTML := os.Getenv("LEGACY_HTML") == "1"
 	r := web.NewRouter()
 	if os.Getenv("OBSERVABILITY_METRICS") == "1" {
 		r.Get("/metrics", metrics.Handler(pool, registry.PoolStats))
 	}
-	authHandlers.PublicRoutes(r)
+	if legacyHTML {
+		authHandlers.PublicRoutes(r)
+	}
 	authHandlers.JSONRoutes(r, auth.NewSessionValidator(sessions))
 	lokiURL := os.Getenv("LOKI_URL")
 	if lokiURL == "" {
@@ -191,22 +194,33 @@ func run() error {
 	r.Group(func(r chi.Router) {
 		r.Use(auth.AuthMiddleware(auth.NewSessionValidator(sessions), cfg.CookieSecure))
 		r.Use(auth.CSRFProtect)
-		authHandlers.ProtectedRoutes(r)
-		dbmHandlers.Routes(r)
-		dbmHandlers.ApprovalRoutes(r)
 		dbmHandlers.APIRoutes(r)
 
-		adminOpts := []admin.Option{
-			admin.WithActivityLogger(activityLogger),
-			admin.WithUserAdmin(adminUsers, sessions, renderer),
-			admin.WithGroupAdmin(groupStore, adminUsers, connLister, sessions, renderer),
-			admin.WithDashboard(adminUsers, groupStore, connLister, renderer),
+		if legacyHTML {
+			authHandlers.ProtectedRoutes(r)
+			dbmHandlers.Routes(r)
+			dbmHandlers.ApprovalRoutes(r)
+
+			adminOpts := []admin.Option{
+				admin.WithActivityLogger(activityLogger),
+				admin.WithUserAdmin(adminUsers, sessions, renderer),
+				admin.WithGroupAdmin(groupStore, adminUsers, connLister, sessions, renderer),
+				admin.WithDashboard(adminUsers, groupStore, connLister, renderer),
+			}
+			if !devMode {
+				adminOpts = append(adminOpts, admin.WithConnectionAdmin(connStore, renderer, registry, sessions))
+			}
+			admin.NewHandlers(adminOpts...).Routes(r)
 		}
-		if !devMode {
-			adminOpts = append(adminOpts, admin.WithConnectionAdmin(connStore, renderer, registry, sessions))
-		}
-		admin.NewHandlers(adminOpts...).Routes(r)
 	})
+
+	if !legacyHTML {
+		spaDir := os.Getenv("SPA_DIST_DIR")
+		if spaDir == "" {
+			spaDir = "frontend/dist"
+		}
+		r.NotFound(web.SPAHandler(spaDir).ServeHTTP)
+	}
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
