@@ -39,6 +39,22 @@ func validateTable(ctx context.Context, t *Target, schema, table string) (bool, 
 	return ok, nil
 }
 
+// resolveTable mencocokkan nama skema/tabel terhadap katalog database
+// (information_schema) dan mengembalikan identifier kanonis dari DB agar query
+// berikutnya tidak memakai string mentah dari input HTTP.
+func resolveTable(ctx context.Context, t *Target, schema, table string) (string, string, bool, error) {
+	sums, err := ListTableSummaries(ctx, t)
+	if err != nil {
+		return "", "", false, err
+	}
+	for _, s := range sums {
+		if s.Schema == schema && s.Name == table {
+			return s.Schema, s.Name, true, nil
+		}
+	}
+	return "", "", false, nil
+}
+
 func ListColumns(ctx context.Context, t *Target, schema, table string) ([]ColumnInfo, error) {
 	rows, err := t.DB.QueryContext(ctx, t.Dialect.Queries().Columns, schema, table)
 	if err != nil {
