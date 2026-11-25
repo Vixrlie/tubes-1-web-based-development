@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/session"
 )
 
 type jsonTestValidator func(context.Context, string) (SessionInfo, error)
@@ -193,5 +195,36 @@ func TestJSONSessionErrorsRotationAndLogoutFailure(t *testing.T) {
 	router.ServeHTTP(w, r)
 	if w.Code != 500 || w.Result().Cookies()[0].MaxAge != -1 || !strings.Contains(w.Body.String(), "LOGOUT_FAILED") {
 		t.Fatalf("failed revocation: %d %s", w.Code, w.Body)
+	}
+}
+
+func TestCSRFProtectReturnsJSONForAPI(t *testing.T) {
+	handler := CSRFProtect(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// /api/* route should receive 403 JSON with CSRF_INVALID code.
+	req := httptest.NewRequest(http.MethodPost, "/api/databases/1/migrations", nil)
+	req = req.WithContext(session.WithCSRFToken(req.Context(), "expected-token"))
+	req.Header.Set("X-CSRF-Token", "wrong-token")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("api csrf: got %d, want 403", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Fatalf("api csrf content-type: got %q, want application/json", ct)
+	}
+	if !strings.Contains(rec.Body.String(), "CSRF_INVALID") {
+		t.Fatalf("api csrf body missing CSRF_INVALID: %s", rec.Body.String())
+	}
+
+	// Non-API route keeps plain text 403.
+	htmlReq := httptest.NewRequest(http.MethodPost, "/databases/1/migrations", nil)
+	htmlReq = htmlReq.WithContext(session.WithCSRFToken(htmlReq.Context(), "expected-token"))
+	htmlRec := httptest.NewRecorder()
+	handler.ServeHTTP(htmlRec, htmlReq)
+	if htmlRec.Code != http.StatusForbidden {
+		t.Fatalf("html csrf: got %d, want 403", htmlRec.Code)
 	}
 }

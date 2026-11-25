@@ -133,6 +133,12 @@ func CSRFProtect(next http.Handler) http.Handler {
 			got = r.PostFormValue("csrf_token")
 		}
 		if want == "" || subtle.ConstantTimeCompare([]byte(got), []byte(want)) != 1 {
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				w.Header().Set("Content-Type", "application/json; charset=utf-8")
+				w.WriteHeader(http.StatusForbidden)
+				_, _ = w.Write([]byte(`{"error":{"code":"CSRF_INVALID","message":"Token keamanan tidak valid. Muat ulang halaman lalu coba lagi."}}`))
+				return
+			}
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
