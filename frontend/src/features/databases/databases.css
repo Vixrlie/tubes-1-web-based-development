@@ -1,0 +1,69 @@
+/* Mobile base: 390px Figma frame, fluid down to 320px. */
+.app-shell--database-list { background: linear-gradient(119deg, var(--primary-50) 13.366%, var(--primary-200) 75.709%); }
+.app-shell--database-list > .ds-header { position: sticky; top: 0; z-index: 35; }
+.app-shell--database-list .ds-logo { width: 128px; height: auto; }
+.app-shell--database-list .ds-profile summary { display: grid; place-items: center; min-width: 44px; min-height: 44px; }
+.app-shell--database-list .ds-avatar { width: 38px; height: 38px; }
+.app-shell--database-list .app-content { max-width: 1728px; padding: 22px 16px calc(96px + env(safe-area-inset-bottom)); }
+.database-list-page { min-width: 0; }
+.database-back { display: flex; align-items: center; gap: 9px; min-height: 44px; padding-left: 3px; color: var(--neutral-700); font-size: 13px; font-weight: 600; text-decoration: none; margin-bottom: 16px; }
+.database-back span { color: var(--primary-500); font-size: 22px; width: 26px; text-align: center; }
+.database-list-heading { margin-bottom: 16px; }
+.database-list-heading h1 { font-size: 23px; line-height: 1.5; }
+.database-list-heading p { font-size: 13px; line-height: 1.5; margin-top: 16px; color: var(--neutral-700); }
+.database-list-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: stretch; }
+.database-list-item { display: flex; flex-direction: column; min-width: 0; }
+.database-list-state { display: grid; justify-items: start; gap: var(--space-16); }
+.ds-card.ds-database-tile { flex: 1; display: flex; flex-direction: column; min-height: 266px; min-width: 0; padding: 22px 18px 28px; border: 0; border-radius: 20px; }
+.ds-database-tile-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; min-height: 40px; }
+.ds-database-tile-icon { display: grid; place-items: center; flex-shrink: 0; width: 33.8px; height: 33.8px; }
+.ds-database-tile-icon picture { display: block; line-height: 0; }
+.ds-database-tile-icon img { display: block; }
+.ds-database-tile-heading .ds-badge { font-size: 11px; min-height: 26px; min-width: 116px; }
+.ds-database-tile-description { margin-top: 10px; }
+.ds-database-tile-description h3 { font-size: 19px; line-height: 1.5; overflow-wrap: anywhere; }
+.ds-database-tile-description p { margin-top: 4px; font-size: 12px; line-height: 1.5; color: var(--text-muted); }
+.ds-database-tile-permission { margin-top: 12px; }
+.ds-database-tile-permission .ds-badge { min-height: 26px; font-size: 11px; }
+.ds-database-tile-permission .ds-tone--info { --tone-bg: var(--primary-100); }
+.ds-database-tile > .ds-alert { margin-top: 8px; padding: 8px 10px; font-size: 11px; line-height: 1.5; border-radius: 10px; }
+.ds-database-tile-action { margin-top: auto; padding-top: 16px; }
+.ds-database-tile-action::before { content: ''; display: block; height: 1px; background: var(--neutral-100); margin-bottom: 16px; }
+.ds-database-tile-action .ds-button { width: 100%; min-height: 46px; font-size: 15px; }
+.ds-database-tile:has(> .ds-alert) { min-height: 320px; }
+.app-mobile-drawer-links { display: grid; gap: var(--space-8); }
+.app-mobile-drawer-links a { display: flex; align-items: center; min-height: 44px; padding: 12px 16px; border-radius: var(--radius-control); color: var(--text); text-decoration: none; }
+.app-mobile-drawer-links a:hover, .app-mobile-drawer-links a[aria-current=page] { background: var(--primary-50); color: var(--primary-500); }
+@media (min-width: 600px) {
+  .database-list-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 768px) {
+  .app-shell--database-list { background: linear-gradient(152deg, var(--primary-50) 13.366%, var(--primary-200) 75.709%); }
+  .app-shell--database-list > .ds-header { position: static; }
+  .app-shell--database-list .ds-logo { width: 191px; height: 44px; }
+  .app-shell--database-list .ds-avatar { width: 48px; height: 48px; }
+  .app-shell--database-list .app-content { padding: 48px 32px; }
+  .database-back, .database-list-heading p { display: none; }
+  .database-list-heading { margin-bottom: 24px; }
+  .database-list-heading h1 { font-size: 40px; color: #0a1933; }
+  .database-list-grid { gap: 24px; }
+  .ds-card.ds-database-tile { min-height: 392px; padding: 28px; border-radius: 28px; box-shadow: 0 4px 12px rgb(40 90 200 / 8%); }
+  .ds-database-tile-heading { align-items: center; min-height: 52px; }
+  .ds-database-tile-icon { width: 52px; height: 52px; }
+  .ds-database-tile-heading .ds-badge { font-size: 12px; min-width: 0; }
+  .ds-database-tile-description { margin-top: 10px; }
+  .ds-database-tile-description h3 { font-size: 20px; }
+  .ds-database-tile-description p { font-size: 13px; }
+  .ds-database-tile-permission { margin-top: 12px; }
+  .ds-database-tile-permission .ds-badge { font-size: 12px; }
+  .ds-database-tile > .ds-alert { margin-top: auto; padding: 8px 12px; font-size: 12px; }
+  .ds-database-tile-action { padding-top: 14px; }
+  .ds-database-tile-action::before { margin-bottom: 14px; }
+  .ds-database-tile-action .ds-button { min-height: 47px; font-size: 14px; }
+}
+@media (min-width: 1360px) {
+  .app-shell--database-list .app-content { padding: 64px clamp(48px, 10.42vw, 180px); }
+  .database-list-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(16px, 1.67vw, 29px); }
+  .ds-card.ds-database-tile { padding: 24px; }
+}
+@media (min-width: 1600px) { .ds-card.ds-database-tile { padding: 28px; } }

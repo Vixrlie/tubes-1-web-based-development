@@ -34,7 +34,7 @@ CSRF: .User.CSRFToken (dari Shell).
         <input type="hidden" name="sql" value="{{.DraftSQL}}">
         <section class="card">
             {{template `card-head` (dict `Title` (printf `Kandidat SQL Migration (%d selisih)` .Count)
-                `Actions` (list (dict `Label` `Buat Draft Migration` `Type` `submit`
+                `Actions` (list (dict `Label` `Lanjut ke Editor Migration` `Type` `submit`
                     `State` $draft)))}}
             <p class="card__note">{{.SQLNote}}</p>
             {{if not .CanDraft}}<p class="card__note">Anda hanya memiliki izin view pada database ini;

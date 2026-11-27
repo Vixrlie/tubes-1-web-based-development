@@ -1,0 +1,21 @@
+{{/*
+Halaman Detail Eksekusi: salinan SQL yang benar-benar dijalankan dan hasilnya.
+Data: dbm.executionDetailPage (lihat dbm/migration_pages.go).
+*/}}
+{{define "content"}}
+{{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs `Actions` .Actions)}}
+
+<div class="stack">
+    <section class="card">
+        {{template `card-head` (dict `Title` `Status`)}}
+        <p>{{template `table-cell` .StatusCell}}</p>
+    </section>
+
+    <section class="card">
+        {{template `card-head` (dict `Title` `SQL yang dijalankan`)}}
+        <pre class="sql-block">{{.Execution.SQL}}</pre>
+    </section>
+
+    {{template `detail-card` .Detail}}
+</div>
+{{end}}

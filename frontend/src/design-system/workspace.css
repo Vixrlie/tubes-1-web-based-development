@@ -1,0 +1,43 @@
+.ds-header-link { border: 0; background: transparent; color: var(--text); min-height: 44px; padding: var(--space-12); font-size: var(--text-section); }
+.ds-header-link:hover { color: var(--primary-500); }
+.ds-header-link[aria-current=page] { font-weight: 600; }
+.ds-schema-branch, .ds-schema-tables { display: flex; flex-direction: column; gap: var(--space-4); }
+.ds-schema-tables[hidden] { display: none; }
+.ds-schema-chevron { display: flex; align-items: center; justify-content: center; flex: 0 0 20px; width: 20px; height: 20px; transform: rotate(-90deg); }
+.ds-schema-chevron.is-expanded { transform: rotate(0); }
+.ds-sidebar-item:disabled { opacity: .5; cursor: not-allowed; }
+.ds-sidebar-item:disabled:hover { color: var(--neutral-700); background: transparent; }
+.ds-sidebar-empty { padding: var(--space-12) var(--space-16); font-size: var(--text-label); color: var(--text-muted); }
+.ds-table-card { display: flex; align-items: center; justify-content: space-between; gap: var(--space-24); width: 100%; min-width: 0; border: 1px solid var(--neutral-100); border-radius: var(--radius-card); background: var(--surface); color: var(--text); padding: var(--space-24); text-align: left; transition: border-color .15s, box-shadow .15s; }
+.ds-table-card strong { font-size: var(--text-title); font-weight: 600; }
+.ds-table-card .ds-stack { gap: var(--space-8); overflow-wrap: anywhere; }
+.ds-table-card > svg { flex-shrink: 0; color: var(--primary-500); }
+.ds-table-card:hover:not(:disabled) { border-color: var(--primary-500); box-shadow: var(--shadow-1); }
+.ds-table-card:disabled { opacity: .5; cursor: not-allowed; }
+.ds-list-toolbar { display: grid; gap: var(--space-12); }
+.ds-toolbar-controls { display: flex; align-items: flex-end; flex-wrap: wrap; gap: var(--space-16); }
+.ds-toolbar-controls > .ds-field { flex: 1 1 240px; }
+.ds-toolbar-controls > .ds-dropdown { flex: 0 1 240px; }
+.ds-toolbar-action { padding-bottom: var(--space-4); margin-left: auto; }
+.ds-metadata-panel dl, .ds-metadata-panel dd { margin: 0; }
+.ds-metadata-panel dd { text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.ds-metadata-panel .ds-metadata:last-child { border-bottom: 0; padding-bottom: 0; }
+.ds-job-card .ds-card { border: 0; border-radius: var(--radius-control); background: var(--neutral-50); padding: var(--space-16); }
+.ds-job-card > .ds-button { margin-top: auto; }
+.ds-job-card .ds-badge { gap: var(--space-8); }
+.ds-approver-list { list-style: none; padding: 0; margin: 0; }
+.ds-approver-list li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-16); padding: var(--space-12) 0; border-bottom: 1px solid var(--neutral-100); }
+.ds-approver-list li:last-child { border-bottom: 0; }
+.ds-product-bottom-nav { display: none; }
+.ds-product-bottom-nav--inline { display: flex; background: var(--surface); border: 1px solid var(--neutral-100); border-radius: var(--radius-panel); padding: var(--space-8); }
+.ds-product-bottom-nav button { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-8); min-height: 64px; padding: var(--space-8); background: transparent; border: 0; border-radius: var(--radius-control); color: var(--text-muted); font-size: var(--text-label); }
+.ds-product-bottom-nav button:hover { background: var(--primary-50); }
+.ds-product-bottom-nav [aria-current=page] { color: var(--primary-500); font-weight: 600; }
+.ds-product-bottom-nav [aria-current=page] .ds-icon { filter: invert(39%) sepia(93%) saturate(3220%) hue-rotate(211deg) brightness(101%); }
+@media (max-width: 767px) {
+  .ds-product-bottom-nav:not(.ds-product-bottom-nav--inline) { display: flex; position: fixed; bottom: 0; inset-inline: 0; z-index: 30; background: var(--surface); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
+  .ds-table-card { padding: var(--space-16); }
+  .ds-toolbar-controls > .ds-dropdown { flex-basis: 100%; }
+}
+
+.ds-sidebar-monitoring { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--neutral-100); }

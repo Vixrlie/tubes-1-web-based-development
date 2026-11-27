@@ -72,6 +72,20 @@ Data: web.GroupDetailPage (lihat groups.go)
         {{- end}}
     </div>
 
+    {{- with .Leader}}
+    <section class="card">
+        {{template `card-head` (dict `Title` `Leader Group`)}}
+        <p class="card__note">Leader wajib menyetujui setiap migration pada database yang dapat diakses
+            group ini. Saat ini: {{or .CurrentLabel `belum ditetapkan`}}.</p>
+        <form method="post" action="{{.FormAction}}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            {{template `dropdown` (dict `Label` `Leader` `Name` `leader_id` `ID` `leader-id`
+                `Value` .Current `Options` .Options)}}
+            {{template `button` (dict `Label` `Simpan Leader` `Type` `submit`)}}
+        </form>
+    </section>
+    {{- end}}
+
     {{- with .AddMembers}}
     {{template `add-members-modal` .}}
     {{- end}}
@@ -104,9 +118,12 @@ Data: web.GroupDetailPage (lihat groups.go)
                 var t = e.target.closest('[data-form-action]');
                 if (!t) return;
                 var form = document.getElementById('remove-member-form');
-                if (form) form.setAttribute('action', t.getAttribute('data-form-action'));
+                var action = t.getAttribute('data-form-action') || '';
+                if (form && /^\/admin\/groups\/\d+\/members\/\d+\/delete$/.test(action)) {
+                    form.action = action;
+                }
                 var subj = document.getElementById('rm-subject');
-                if (subj) subj.textContent = t.getAttribute('data-subject');
+                if (subj) subj.textContent = t.getAttribute('data-subject') || '';
             }, true);
         })();
     </script>

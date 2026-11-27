@@ -1,0 +1,13 @@
+{{/*
+Halaman Approval Inbox: pengajuan lintas database yang menunggu keputusan
+user sebagai leader group.
+Data: dbm.approvalsPage (lihat dbm/migration_pages.go).
+*/}}
+{{define "content"}}
+{{template `page-header` (dict `Title` `Persetujuan Migration`)}}
+
+<div class="stack">
+    {{template `flash` .}}
+    {{template `table` .Table}}
+</div>
+{{end}}

@@ -5,19 +5,24 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/activity"
 	"github.com/Vixrlie/tubes-1-web-based-development/internal/auth"
 )
 
-// Option mengaktifkan satu bagian halaman admin. Tiap pemilik bagian buat
-// Option sendiri di file-nya, jadi NewHandlers tidak perlu diubah lagi
+// Option enables a section of the admin interface or its dependencies.
 type Option func(*Handlers)
 
-// Handle layar administrasi
+// Handlers handles administration screens.
 type Handlers struct {
-	users       *userHandlers       // Arin
-	groups      *groupHandlers      // Vincent
-	connections *connectionHandlers // Majiid
-	dashboard   *dashboardHandlers  // ringkasan /admin
+	users       *userHandlers
+	groups      *groupHandlers
+	connections *connectionHandlers
+	dashboard   *dashboardHandlers
+	logger      *activity.Logger
+}
+
+func WithActivityLogger(logger *activity.Logger) Option {
+	return func(h *Handlers) { h.logger = logger }
 }
 
 func NewHandlers(opts ...Option) *Handlers {
@@ -28,14 +33,16 @@ func NewHandlers(opts ...Option) *Handlers {
 	return h
 }
 
-// Routes dipasang di bawah /admin dan dibungkus RequireAdmin.
 func (h *Handlers) Routes(r chi.Router) {
 	r.Route("/admin", func(r chi.Router) {
 		r.Use(auth.RequireAdmin)
-		h.dashboardRoutes(r)   // ringkasan platform (/admin/)
-		h.usersRoutes(r)       // Arin
-		h.groupsRoutes(r)      // Vincent
-		h.connectionsRoutes(r) // Majiid
+		r.Use(AdminActivityMiddleware(h.logger))
+
+		h.dashboardRoutes(r)
+		h.usersRoutes(r)
+		h.groupsRoutes(r)
+		h.connectionsRoutes(r)
+
 		r.Get("/access", func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/admin/groups", http.StatusSeeOther)
 		})

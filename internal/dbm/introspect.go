@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type ColumnInfo struct {
@@ -36,6 +37,22 @@ func validateTable(ctx context.Context, t *Target, schema, table string) (bool, 
 		return false, err
 	}
 	return ok, nil
+}
+
+// resolveTable mencocokkan nama skema/tabel terhadap katalog database
+// (information_schema) dan mengembalikan identifier kanonis dari DB agar query
+// berikutnya tidak memakai string mentah dari input HTTP.
+func resolveTable(ctx context.Context, t *Target, schema, table string) (string, string, bool, error) {
+	sums, err := ListTableSummaries(ctx, t)
+	if err != nil {
+		return "", "", false, err
+	}
+	for _, s := range sums {
+		if s.Schema == schema && s.Name == table {
+			return s.Schema, s.Name, true, nil
+		}
+	}
+	return "", "", false, nil
 }
 
 func ListColumns(ctx context.Context, t *Target, schema, table string) ([]ColumnInfo, error) {
@@ -186,6 +203,9 @@ func ListTableSummaries(ctx context.Context, t *Target) ([]TableSummary, error) 
 		if err := rows.Scan(&s.Schema, &s.Name, &s.Columns, &s.RowEstimate); err != nil {
 			return nil, err
 		}
+		if IsInternalTable(s.Name) {
+			continue
+		}
 		out = append(out, s)
 	}
 	if err := rows.Err(); err != nil {
@@ -215,9 +235,9 @@ func ListTableSummaries(ctx context.Context, t *Target) ([]TableSummary, error) 
 
 // ForeignKey = satu relasi foreign key untuk kartu "Relasi (Foreign Key)".
 type ForeignKey struct {
-	Name   string
-	From   string // tabel.asal (kolom)
-	ToRef  string // skema.tujuan (kolom)
+	Name  string
+	From  string // tabel.asal (kolom)
+	ToRef string // skema.tujuan (kolom)
 }
 
 func ListForeignKeys(ctx context.Context, t *Target) ([]ForeignKey, error) {
@@ -237,3 +257,9 @@ func ListForeignKeys(ctx context.Context, t *Target) ([]ForeignKey, error) {
 	}
 	return out, rows.Err()
 }
+
+// InternalTablePrefix menandai tabel milik Pathgres di database target
+// (checkpoint batch); tabel ini disembunyikan dari schema, hitungan, dan diff.
+const InternalTablePrefix = "_pathgres_"
+
+func IsInternalTable(name string) bool { return strings.HasPrefix(name, InternalTablePrefix) }

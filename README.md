@@ -1,24 +1,24 @@
 # tubes-1-web-based-development: Pathgres
 
-Tugas Besar IF3110 Pengembangan Aplikasi Web, Milestone 1.
-Platform web untuk mengatur akses, menjelajahi, dan mencatat perubahan schema database PostgreSQL.
+Tugas Besar IF3110 Pengembangan Aplikasi Web, Milestone 1 & Milestone 2.
+Platform web untuk mengatur akses, menjelajahi, memvalidasi, meninjau, dan menjalankan perubahan schema/data database PostgreSQL secara asynchronous (termasuk batching, rollback, dan forward).
 
-- Backend: Go (`chi`, `pgx`)
-- Frontend: Go template (server-rendered) dengan htmx dan CodeMirror
+- Backend & Worker: Go (`chi`, `pgx`, OpenTelemetry, Prometheus)
+- Frontend: React + Vite + TypeScript (Single-Page Application / SPA) di `frontend/`
 - Database platform dan database target: PostgreSQL 16; bonus MySQL/MariaDB untuk database target
-- Deadline Milestone 1: 25 Oktober 2026, 13.10 WIB
 
 ## Prasyarat
 
 | Alat | Keterangan |
 |------|------------|
 | Go | versi sesuai `go.mod` |
+| Node.js & npm | Node 24+ (untuk build/dev/test SPA di `frontend/`) |
 | Docker Engine + Compose plugin (atau Docker Desktop) | daemon harus berjalan sebelum `docker compose` |
 | `make` | opsional (di Windows biasanya tidak ada, perintah alternatifnya ada di bawah) |
 
 ## Quick Start dari Nol
 
-Satu rentetan perintah dari clone sampai server jalan:
+Satu rentetan perintah dari clone sampai backend + SPA berjalan:
 
 ```bash
 git clone https://github.com/Vixrlie/tubes-1-web-based-development.git
@@ -28,11 +28,20 @@ cp .env.example .env
 # lalu buka .env, isi ADMIN_PASSWORD minimal 8 karakter
 # (ADMIN_USERNAME sudah default "admin")
 
-docker compose up -d      # 4 container: PostgreSQL platform :5432, target :5433, test :5434 + MySQL :5435
-go run .                  # server + migrasi skema + seed admin; atau: make run
+docker compose up -d              # 4 container: PostgreSQL platform :5432, target :5433, test :5434 + MySQL :5435
+npm --prefix frontend ci          # install dependency SPA
+npm --prefix frontend run build   # build produksi SPA ke frontend/dist
+go run .                          # server API + worker + static SPA (:8080); atau: make run
 ```
 
 Buka **http://localhost:8080**, login dengan `admin` / password dari `.env`.
+
+Untuk mode development frontend dengan hot-reload (Vite mem-proxy `/api` ke `:8080`):
+```bash
+npm --prefix frontend run dev     # buka http://localhost:5173
+```
+
+*(Catatan: tampilan Go template HTML lama dari Milestone 1 dinonaktifkan secara default sesuai ketentuan SPA Milestone 2; hanya aktif bila `LEGACY_HTML=1` disetel.)*
 
 Dari sini database platform masih kosong (belum ada koneksi, grup, tabel),
 lanjut ke langkah **"Siapkan data awal"** di bawah supaya semua fitur
@@ -89,6 +98,18 @@ Saat berhasil, aplikasi hanya mencetak `admin awal dibuat: <username>` pada star
 2. membuat akun Platform Admin awal dari `ADMIN_USERNAME` dan `ADMIN_PASSWORD` kalau belum ada.
 
 Seed admin aman dijalankan berulang: kalau username sudah ada, tidak ada yang diubah, termasuk password yang sudah diganti.
+
+Worker migration berjalan di proses yang sama secara default. Untuk memisahkannya, jalankan satu proses `go run .` (server + worker) dan proses lain `go run . -worker-only` (hanya worker, tanpa HTTP server). Beberapa worker aman berjalan bersamaan karena eksekusi per database dikunci.
+
+SPA (React) ada di `frontend/` dan mem-proxy `/api` ke `localhost:8080`:
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:5173
+```
+
+SPA membaca JSON API backend. Fixture mock hanya dipakai untuk pratinjau state saat development (tambahkan `?preview=error`, `?preview=empty`, dan sejenisnya di URL) atau bila `VITE_DATA_SOURCE=mock`.
 
 ### 4. Cek hasilnya
 
@@ -217,6 +238,8 @@ docker compose down -v
 docker compose up -d
 ```
 
+Database lokal yang pernah menjalankan `migrations/0004_async_jobs.sql` dari branch `feat/async` lama wajib di-reset: file itu sudah digantikan `0004_migration_workflow.sql` dan `0005_batch_migration.sql`, sementara runner tidak mengulang versi yang sudah tercatat.
+
 `-v` menghapus volume, jadi semua data development hilang (termasuk akun admin, yang dibuat ulang saat start berikutnya). Reset wajib dilakukan setelah file migration yang **sudah pernah dijalankan** diubah, karena runner tidak mengulang file yang sudah tercatat. Menambah file migration baru tidak perlu reset: file itu dijalankan otomatis saat start berikutnya.
 
 ### Masalah yang sering muncul
@@ -274,7 +297,9 @@ internal/
   session/               session manager, cookie, rotasi, CSRF
   access/                policy akses (siapa boleh apa), terpisah dari auth
   admin/                 halaman Platform Admin (users, groups, connections)
-  dbm/                   koneksi database target, schema viewer, migration user
+  dbm/                   koneksi database target, schema viewer, workflow migration
+                         (definisi, approval, executor, JSON API)
+  queue/                 antrian job eksekusi migration (tabel migration_jobs) + worker
   web/                   router, renderer template, templates/, static/
 ```
 
@@ -323,7 +348,11 @@ Kontrak yang dipakai bersama:
 | `db_connections` | koneksi ke database target |
 | `grants` | akses **group** ke database dengan level `view` (View Only) atau `edit` (View + Edit) |
 | `sessions` | session di backend: hash token, idle dan absolute expiration, rotasi, `force_rotate`, grace period, CSRF, `revoked_at` |
-| `migration_history` | riwayat migration per database: versi, SQL, pelaksana, waktu, status |
+| `migrations` | definisi migration per database: versi, SQL up, SQL down atau alasan irreversible, revisi, checksum, hasil validasi. Terkunci (`locked_at`) setelah dieksekusi; trigger menolak perubahan SQL |
+| `migration_requests` | pengajuan up/rollback/forward beserta status workflow (`pending_review` → `queued` → `running` → `success`/`failed`, atau `rejected`/`cancelled`) |
+| `migration_request_reviews` | keputusan leader per group untuk setiap pengajuan |
+| `migration_executions` | setiap attempt eksekusi, termasuk yang gagal: SQL yang dijalankan, pelaksana, durasi, SQLSTATE, `target_txid`. Append-only setelah final |
+| `migration_jobs` | antrian job untuk worker (lease, heartbeat, attempt, trace context) |
 | `schema_migrations` | pencatat file migrasi skema internal yang sudah dijalankan |
 
 Akses database hanya diberikan lewat group, tidak langsung ke user. Platform Admin bukan tingkat akses ke database.
@@ -344,6 +373,14 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 | Mekanisme CSRF | Request terautentikasi: synchronizer token per session (`csrf_secret`), dikirim lewat field form `csrf_token` atau header `X-CSRF-Token` dan dibandingkan dengan `subtle.ConstantTimeCompare`. `POST /login`: pengecekan `Origin` dan `Sec-Fetch-Site` lewat `http.CrossOriginProtection`. `SameSite=Lax` sebagai lapisan tambahan | Login belum punya session sehingga belum ada token. Cek Origin menutup login CSRF tanpa state tambahan. |
 | Akses efektif jika user di banyak group | level tertinggi di antara grant group yang aktif | Konsisten dengan `access.Effective`; user tanpa grant ditolak. |
 | Pembuatan Platform Admin pertama | Seed dari `ADMIN_USERNAME` dan `ADMIN_PASSWORD` saat start, hanya jika username belum ada | Tidak ada pendaftaran publik dan tidak ada password di repo. Seed yang idempotent aman dijalankan di setiap restart. |
+| Model migration | Satu definisi (`migrations`) memiliki banyak pengajuan dan eksekusi. "Draft" = definisi tanpa pengajuan terbuka; definisi bisa direvisi (revisi +1, validasi ulang) sampai eksekusi pertama, lalu immutable | Riwayat tetap utuh: SQL yang dieksekusi disalin ke `migration_executions`, dan trigger DB menolak perubahan SQL setelah terkunci. |
+| SQL down | Wajib untuk migration reversible. Migration tanpa down wajib ditandai irreversible dengan alasan dan tidak dapat di-rollback | Rollback hanya aman bila pembatalannya ditulis eksplisit. Migration M1 (tanpa down) dimigrasikan sebagai irreversible. |
+| Urutan rollback dan forward | Rollback hanya untuk eksekusi aktif dengan ID terbesar pada database tersebut. Forward hanya untuk migration yang terakhir di-rollback (LIFO) | Menjaga riwayat linear: state target selalu sama dengan menjalankan riwayat dari awal. |
+| Approval | Reviewer dihitung dari grant saat ini: leader setiap group yang punya akses (view atau edit) ke database wajib menyetujui; satu penolakan langsung menolak pengajuan. Berlaku juga untuk rollback dan forward | Setiap tim yang terdampak perubahan ikut memutuskan. Group tanpa leader membuat pengajuan tertahan sampai admin menetapkan leader. |
+| Eksekusi | Asynchronous. Approval terakhir memasukkan job ke `migration_jobs` dalam transaksi yang sama, API langsung mengembalikan `job_id` (202). Worker mengeksekusi SQL dalam satu transaksi target, satu job per database pada satu waktu (advisory lock) | Request HTTP tidak menunggu SQL panjang, dan dua migration tidak pernah berjalan bersamaan pada database yang sama. |
+| Bukti commit & pemulihan | `txid_current()` transaksi target dicatat sebelum SQL jalan. Saat worker mati, `txid_status()` menentukan attempt tersebut committed (ditandai sukses), aborted (diantrikan ulang), atau masih berjalan | Mencegah double commit saat job di-retry. |
+| Validasi | Dry-run di database target dalam transaksi yang selalu di-ROLLBACK, dengan `statement_timeout` 15 detik. Up pertama wajib lolos validasi untuk checksum terbaru. Worker memeriksa ulang checksum, approval, dan urutan sebelum eksekusi | Kesalahan SQL ketahuan sebelum review, dan definisi yang berubah setelah approval tidak ikut dieksekusi. |
+| Versi migration | `YYYYMMDDHHMM` saat dibuat, tetapi selalu lebih besar dari versi terakhir database tersebut | Beberapa migration dalam menit yang sama tetap unik dan berurutan (ditemukan lewat stress test k6). |
 | Aturan username dan password | Username dinormalisasi ke huruf kecil lalu harus 3-32 karakter dari `a-z`, `0-9`, `_`, `.`. Password minimal 8 karakter dan maksimal 72 byte | bcrypt hanya memakai 72 byte pertama, jadi password yang lebih panjang ditolak agar tidak terpotong diam-diam. Normalisasi mencegah `Admin` dan `admin` menjadi dua akun. |
 
 ## Status Implementasi
@@ -363,6 +400,16 @@ Spesifikasi meminta tim menentukan dan mendokumentasikan hal berikut.
 - [x] Bonus (BON-04/05): `EXPLAIN` / `EXPLAIN ANALYZE` sebelum eksekusi + ringkasan execution plan
 - [x] Bonus (BON-01): dukungan DBMS tambahan (MySQL/MariaDB): koneksi, viewer, migration,
   EXPLAIN, dan diff bekerja lewat abstraksi dialect per DBMS
+- [x] M2: SQL up/down atau irreversible + alasan, definisi immutable setelah dieksekusi
+- [x] M2: rollback hanya migration aktif terakhir, forward linear, semua attempt (termasuk gagal) tercatat di DB dan log
+- [x] M2: checkbox Hide rollback (pasangan execution ID), detail per eksekusi
+- [x] M2: workflow Draft → Pending Review → Approved → Queue → Running → Success/Failed, approval leader setiap group
+- [x] M2: queue + worker asynchronous dengan retry, lease, dan pemulihan crash
+- [x] M2: JSON API untuk SPA (`/api/...`, kontrak di `docs/api-migration-workflow.md`), termasuk database, schema, data tabel, snapshot diff, EXPLAIN, board workflow, dan leader group
+- [x] M2: SPA tersambung ke API backend (database, schema, tabel, draft, review, antrean, riwayat, schema diff, EXPLAIN, leader group)
+- [x] M2: migration per batch dengan checkpoint, status `partial`, resume, dan rollback per batch; lihat [Migration per Batch](#migration-per-batch)
+- [x] M2 bonus: stress test k6 (`k6/`), hasil di bagian [Stress Test k6](#stress-test-k6)
+- [x] M2 bonus: Security SAST dengan CodeQL (`.github/workflows/codeql.yml`), hasil di bagian [Security: SAST dengan CodeQL](#security-sast-dengan-codeql)
 
 Alur minimum (GEN-07) berjalan end-to-end: Login → Access Control → Pilih Database → Lihat Schema/Data → Buat Migration → Execute → Commit/Rollback → Riwayat Migration ter-update.
 
@@ -375,13 +422,19 @@ Route database management:
 | `/databases/{id}/schema` | Pohon schema/tabel + daftar relasi foreign key |
 | `/databases/{id}/tables/{schema.nama}` | Detail tabel: `?tab=columns\|constraints` (kolom / constraint+index) |
 | `/databases/{id}/tables/{schema.nama}/data` | Data tabel dengan paginasi |
-| `/databases/{id}/migrations` | Riwayat migration + tombol **Migration Baru** dan **Schema Diff** |
-| POST `/databases/{id}/migrations` | Simpan SQL sebagai draft (View + Edit) |
-| `/databases/{id}/migrations/new` | Editor draft (View + Edit) |
-| `/databases/{id}/migrations/{mid}` | Detail migration (status, SQL, pelaksana) |
-| `/databases/{id}/migrations/{mid}/preview` | Pratinjau + tombol analisa EXPLAIN (baca) |
-| POST `/databases/{id}/migrations/{mid}/explain` | `EXPLAIN` / `EXPLAIN ANALYZE` sebelum eksekusi; ANALYZE dijalankan dalam transaksi lalu di-ROLLBACK (View + Edit) |
-| POST `/databases/{id}/migrations/{mid}/execute` | Eksekusi transaksional, commit/rollback (View + Edit) |
+| `/databases/{id}/migrations` | Riwayat eksekusi (checkbox **Hide rollback**), pengajuan berjalan, daftar migration |
+| POST `/databases/{id}/migrations` | Simpan definisi baru: SQL up + SQL down, atau irreversible + alasan (View + Edit) |
+| `/databases/{id}/migrations/new` | Editor migration (View + Edit) |
+| `/databases/{id}/migrations/{mid}` | Detail: posisi, SQL up/down, validasi, aksi yang sah, pengajuan, eksekusi |
+| `/databases/{id}/migrations/{mid}/edit`, POST `/databases/{id}/migrations/{mid}` | Revisi definisi selama belum dieksekusi dan tidak sedang diajukan |
+| POST `/databases/{id}/migrations/{mid}/validate` | Dry-run di target, selalu di-ROLLBACK (View + Edit) |
+| POST `/databases/{id}/migrations/{mid}/requests` | Ajukan `up`, `rollback`, atau `forward` (View + Edit) |
+| `/databases/{id}/migrations/{mid}/preview` | Analisa EXPLAIN SQL up (baca) |
+| POST `/databases/{id}/migrations/{mid}/explain` | `EXPLAIN` / `EXPLAIN ANALYZE`; ANALYZE dijalankan dalam transaksi lalu di-ROLLBACK (View + Edit) |
+| `/databases/{id}/requests/{rid}` | Halaman review: SQL, status approval per group, attempt eksekusi |
+| POST `/databases/{id}/requests/{rid}/approve`, `/reject`, `/cancel` | Keputusan leader; batal oleh pengaju |
+| `/databases/{id}/executions/{eid}` | Detail satu eksekusi |
+| `/approvals` | Inbox pengajuan yang menunggu keputusan user sebagai leader |
 | `/databases/{id}/migrations/diff` (alias `/databases/{id}/diff`) | Schema diff vs koneksi lain + kandidat SQL yang bisa dijadikan draft (baca; draft butuh View + Edit) |
 
 Setiap route memeriksa `access.Policy` di backend; penolakan dirender sebagai halaman 403 dengan level akses efektif. Kegagalan koneksi ke database target menampilkan halaman "koneksi gagal" tanpa kredensial. Pool database target di-cache per koneksi (`PGRegistry`) dan ditutup saat koneksi diubah/dihapus atau aplikasi berhenti.
@@ -394,10 +447,117 @@ Halaman Platform Admin (route utama: `/` untuk beranda, `/admin` untuk dashboard
 | `/admin/users` | Daftar user: status/peran, group, aksi Kelola |
 | `/admin/users/new`, `/admin/users/{id}` | Form buat/ubah user: data akun, peran, status akun, reset password, hapus |
 | POST `/admin/users/{id}/delete` | Hapus user; ditolak untuk diri sendiri, admin aktif terakhir, dan user dengan riwayat migration |
-| `/admin/groups`, `/admin/groups/{id}` | Daftar group; detail: anggota + akses database (mode ubah lewat `?edit=1`) |
+| `/admin/groups`, `/admin/groups/{id}` | Daftar group; detail: anggota + akses database (mode ubah lewat `?edit=1`) + leader |
+| POST `/admin/groups/{id}/leader` | Tetapkan atau kosongkan leader (harus anggota aktif; otomatis dilepas saat dikeluarkan) |
 | `/admin/groups/new` | Form group baru |
 | `/admin/connections`, `/admin/connections/new`, `/admin/connections/{id}`, `/admin/connections/{id}/edit` | Daftar koneksi, form tambah/ubah, uji koneksi, hapus |
 | `/admin/access` | Dialihkan ke `/admin/groups` (editor akses berada di detail group) |
+
+## Migration per Batch
+
+Migration yang mengubah banyak row dapat dijalankan per batch: isi tabel, kolom kursor, dan ukuran batch di form migration (atau field `batch` di API), lalu pakai `$1` dan `$2` sebagai batas rentang di SQL, misalnya `UPDATE orders SET status = 'done' WHERE id BETWEEN $1 AND $2`.
+
+- Rentang kursor dikunci saat eksekusi dimulai; setiap batch berjalan dalam transaksi sendiri bersama checkpoint di tabel target `_pathgres_batch_checkpoints` (disembunyikan dari schema dan diff).
+- Progres (`committed_batches` dari `total_batches`) terlihat di halaman antrean dan detail eksekusi.
+- Bila gagal di tengah, status menjadi `partial` dan database ditahan sampai diselesaikan dengan **Resume** (lanjut dari checkpoint) atau **Rollback** (membalik batch yang sudah tersimpan). Keduanya melewati approval seperti aksi lain.
+- Worker yang mati di tengah eksekusi melanjutkan dari checkpoint terakhir pada attempt berikutnya.
+
+Perbandingan dengan satu UPDATE tanpa batch pada dataset yang sama (`go run ./cmd/bench-batch`, 2.000.000 row, PostgreSQL Docker lokal):
+
+| Cara | Hasil |
+|------|-------|
+| Satu `UPDATE` (satu transaksi) | 24,1 detik; seluruh tabel terkunci sampai selesai, gagal = semua diulang |
+| Per batch, 50.000 row | 40 batch, total 33,2 detik; rata-rata 830 ms per batch, terlama 3,4 detik |
+
+Batch sedikit lebih lambat secara total, tetapi lock hanya ditahan selama satu batch (di bawah 1 detik rata-rata), progres terlihat, dan kegagalan tidak membuang batch yang sudah tersimpan. Seed dataset memakan 10,8 detik.
+
+### Pemulihan Lock saat Worker Gagal
+
+Untuk menjamin maksimal **satu migration aktif per database target** lintas worker dan tetap pulih jika worker crash di tengah eksekusi:
+
+1. **Lease & Heartbeat pada `migration_jobs`:** Saat worker mengambil job melalui `claimSQL` (`internal/queue/queue.go`), job diberi *lease* 30 detik (`lease_expires_at`). Selama job berjalan, goroutine *heartbeat* memperpanjang lease setiap `lease / 3` (10 detik).
+2. **Pengambilalihan Lease Kedaluwarsa:** Jika proses worker mati mendadak (*crash*/SIGKILL), *heartbeat* berhenti dan lease kedaluwarsa. Worker lain yang memanggil `claimSQL` otomatis mengambil alih job tersebut untuk attempt berikutnya (dibatasi `max_attempts` dengan jeda *backoff*).
+3. **Advisory Lock Target DB:** Lock eksekusi pada database target menggunakan PostgreSQL advisory lock yang terikat pada sesi koneksi; ketika koneksi worker yang crash terputus, PostgreSQL melepaskan advisory lock secara otomatis sehingga tidak terjadi *deadlock* permanen.
+4. **Pencegahan Double Commit & Penahanan Status `partial`:** Sebelum mengeksekusi batch pada retry/resume, worker memeriksa tabel checkpoint `_pathgres_batch_checkpoints` di database target (ditulis dalam transaksi yang sama dengan perubahan batch) sehingga batch yang sudah ter-commit tidak pernah dijalankan ulang. Selama ada migration berstatus `partial` atau hasil commit belum pasti, migration baru pada database yang sama ditahan sampai diselesaikan lewat **Resume** atau **Rollback**.
+
+## Stress Test k6
+
+Skrip: `k6/migration-workflow.js`. Beban dinaikkan bertahap di atas beban normal lalu diturunkan kembali untuk melihat pemulihan. Ada empat tingkat; setiap tingkat terdiri dari ramp 20 detik lalu tahan `STEP` (default 1 menit):
+
+| Tingkat | Baca (request/detik) | VU workflow |
+|---------|----------------------|-------------|
+| normal | 50 | 4 |
+| stress (2×) | 100 | 8 |
+| peak (4×) | 200 | 16 |
+| recovery (kembali normal) | 50 | 4 |
+
+Dua skenario berjalan bersamaan:
+
+- `reads` (`ramping-arrival-rate`): riwayat (`hide_rollback=1`), daftar migration, board workflow SPA, dan inbox approval.
+- `workflow` (`ramping-vus`): create → validate (dry-run) → submit → approve → polling sampai worker selesai. VU dibagi ke beberapa database (`DB_IDS`), sehingga beberapa VU berebut database yang sama (eksekusi diserialisasi) sementara database lain diproses paralel.
+
+Respons approve (`202` + `job_id`) tidak dihitung sebagai keberhasilan migration; sebuah job baru dihitung selesai setelah polling melihat status `success`. Metrik tambahan:
+
+| Metrik | Arti |
+|--------|------|
+| `job_queue_wait_ms` | `started_at − queued_at` dari server: lama job menunggu di antrean (termasuk menunggu lock database) |
+| `job_run_ms` | `finished_at − started_at`: lama worker mengeksekusi |
+| `job_approve_to_done_ms` | dari respons approve sampai polling melihat `success` |
+| `jobs_completed` | jumlah job selesai (throughput penyelesaian) |
+| `workflow_failed`, `workflow_poll_timeout` | workflow gagal, atau tidak selesai dalam 60 detik |
+
+Setiap request diberi tag `level` (normal/stress/peak/recovery) dan `db`, sehingga ringkasan k6 menampilkan angka per tingkat beban. Threshold utama: error rate baca < 1%, p95 baca < 300 ms, p95 approve < 500 ms, dan `workflow_failed == 0`.
+
+Menjalankan (user harus punya akses View + Edit ke semua `DB_IDS` dan menjadi leader satu-satunya group yang punya akses ke database tersebut, supaya satu approval cukup):
+
+```bash
+docker run --rm --network host -v "$PWD/k6:/scripts:ro" \
+  -e BASE_URL=http://localhost:8080 -e USERNAME=... -e PASSWORD=... \
+  -e DB_IDS=3,4,5 -e STEP=1m -e READ_RATE=50 -e WORKFLOW_VUS=4 \
+  grafana/k6:0.54.0 run /scripts/migration-workflow.js
+```
+
+### Hasil
+
+Satu mesin lokal (aplikasi, PostgreSQL Docker, dan k6 di host yang sama), tiga database target kosong, total 5 menit 20 detik. Throughput dihitung per tingkat (jumlah request atau job dibagi 80 detik).
+
+**Run 1 (sebelum perbaikan):**
+
+| Tingkat | Baca p50 / p95 | Throughput | Error | Job selesai | Antre p50 / p95 | Approve → selesai p95 |
+|---------|----------------|------------|-------|-------------|-----------------|-----------------------|
+| normal | 7,5 ms / 321 ms | 86 req/s | 0% | 6,1/s | 320 ms / 1,22 s | 1,30 s |
+| stress | 313 ms / 35,1 s | 74 req/s | 0% | 3,5/s | 344 ms / 1,24 s | 1,60 s |
+| peak | 384 ms / 51,9 s | 59 req/s | 1,13% | 4,4/s | 508 ms / 1,41 s | 1,91 s |
+| recovery | 319 ms / 49,0 s | 41 req/s | 1,41% | 1,8/s | 428 ms / 993 ms | 1,65 s |
+
+Request baca runtuh sejak tingkat stress dan **tidak pulih** saat beban turun: 100 request `GET /workflow` timeout (60 detik), dan k6 kehabisan VU (300) karena request menggantung. Penyebabnya query N+1 pada board workflow: reviewer, execution, dan izin edit dimuat per pengajuan, sehingga ratusan pengajuan berarti ribuan query per panggilan (316 ms tanpa beban untuk 516 pengajuan). Di bawah beban, pool koneksi platform habis dan endpoint lain ikut menunggu. Perbaikannya memuat reviewer dan execution dalam satu query masing-masing dan menghitung izin sekali; respons tetap sama, waktu tanpa beban turun ke 30 ms.
+
+**Run 2 (setelah perbaikan, kondisi awal sama):**
+
+| Tingkat | Baca p50 / p95 | Throughput | Error | Job selesai | Antre p50 / p95 | Approve → selesai p95 |
+|---------|----------------|------------|-------|-------------|-----------------|-----------------------|
+| normal | 4,4 ms / 20 ms | 86 req/s | 0% | 5,8/s | 337 ms / 1,33 s | 1,52 s |
+| stress | 13,6 ms / 104 ms | 172 req/s | 0% | 11,1/s | 284 ms / 1,35 s | 1,52 s |
+| peak | 1,50 s / 3,54 s | 160 req/s | 0% | 2,2/s | 922 ms / 3,30 s | 5,73 s |
+| recovery | 48 ms / 2,87 s | 107 req/s | 0% | 6,0/s | 279 ms / 1,26 s | 1,35 s |
+
+Total 42.004 request tanpa error, 2.007 job selesai, 0 workflow gagal. Eksekusi worker sendiri singkat (`job_run_ms` p50 28 ms, p95 225 ms).
+
+Analisis:
+
+- **Normal dan stress (2×)** memenuhi semua threshold. Throughput naik dua kali lipat sesuai beban, dan job selesai naik ke 11/detik karena tiga database diproses paralel.
+- **Peak (4×)** melewati kapasitas satu mesin: p95 baca 3,5 detik dan job yang selesai turun ke 2,2/detik. k6 sempat mencapai batas 300 VU (3.446 iterasi baca dibuang), artinya server tidak bisa menyelesaikan request secepat request datang. Tidak ada request yang gagal; semuanya hanya lebih lambat. Threshold p95 baca dan p95 approve sengaja dibiarkan gagal di tingkat ini sebagai batas yang terukur.
+- **Recovery** pulih: p50 baca kembali ke 48 ms dan job kembali ~6/detik. p95 2,9 detik berasal dari detik-detik awal saat antrean dari tingkat peak masih dikuras.
+- **Waktu antre** naik di peak (p95 3,3 detik) karena 16 VU berebut tiga database; eksekusi pada satu database diserialisasi lewat lock (by design), sedangkan database berbeda tetap paralel.
+- **Batas berikutnya**: k6 menerima 8,4 GB selama 5 menit (26 MB/detik), terutama dari board workflow yang mengirim SQL setiap migration. Ukuran respons tumbuh seiring jumlah migration; langkah lanjutan adalah paginasi board atau memisahkan SQL ke endpoint detail, seperti yang sudah dilakukan pada daftar migration dan riwayat.
+
+### Riwayat run sebelumnya (beban konstan, satu database)
+
+Temuan dan perbaikannya:
+
+1. **Versi migration bentrok.** Run beban konstan paling awal gagal membuat migration setelah 20 create dalam satu menit, karena versi `YYYYMMDDHHMM` beresolusi menit dan hanya dicoba naik 20 kali. Versi kini dihitung atomik: `GREATEST(waktu sekarang, versi tertinggi + 1)`. Regresi diuji di `TestCreateManyMigrationsInSameMinute`.
+2. **Validasi langsung menolak saat database sibuk.** Dry-run memakai `pg_try_advisory_xact_lock`, sehingga validasi yang bertepatan dengan eksekusi lain langsung gagal. Kini dry-run menunggu lock maksimal 5 detik (`lock_timeout`) sebelum menyatakan database sibuk.
+3. **Respons daftar terlalu besar.** Daftar migration dan riwayat mengirim isi SQL setiap baris (rata-rata 160 KB per respons saat data bertambah). Isi SQL kini hanya ada di endpoint detail; p95 baca turun dari 895 ms ke 34 ms.
 
 ## Alur Kerja Git
 
@@ -430,3 +590,90 @@ Pull request yang mengubah skema (`migrations/`) atau kontrak antar anggota haru
 - `db_connections.connection_url` berisi kredensial database target: jangan tampilkan ulang di UI dan jangan tulis ke log.
 - Pengecekan izin selalu di backend. Menyembunyikan tombol di UI tidak cukup.
 - Hash password (`Account.PasswordHash`) tidak pernah masuk ke `auth.User` di context, dan tidak boleh dikirim ke template.
+
+## Security: SAST dengan CodeQL
+
+Static Application Security Testing (SAST) diaktifkan pada repository melalui GitHub Actions workflow [`.github/workflows/codeql.yml`](.github/workflows/codeql.yml) menggunakan `github/codeql-action/init@v3` dan `analyze@v3`.
+
+- **Cakupan analisis:**
+  - **`go`** (`build-mode: autobuild`): `main.go`, `internal/**`, `cmd/**`.
+  - **`javascript-typescript`** (`build-mode: none`): `frontend/src/**`, `frontend/tests/**`, `internal/web/templates/**` (inline script), `k6/**`.
+- **Query suite:** `security-extended`.
+- **Trigger:** `push` dan `pull_request` ke branch `main` dan `dev`, serta `workflow_dispatch`.
+- **Hasil scan awal:** commit `6fdac12` (25 November 2026) — ditemukan **8 alert** (4 `High`, 4 `Medium`).
+
+### Daftar Temuan dan Keputusan
+
+| Alert | Bahasa | Rule | Severity | Lokasi Kode | Potensi Dampak (OWASP Top 10) | Keputusan | Alasan / Referensi Perbaikan |
+| :---: | :--- | :--- | :---: | :--- | :--- | :--- | :--- |
+| #1 | JS/HTML | `js/xss-through-dom` (DOM text reinterpreted as HTML) | High | `internal/web/templates/admin/group_detail.html:121` | **A03: Injection (DOM XSS)** — atribut `data-form-action` disalin langsung ke `form.action` tanpa validasi skema/path. | **Diperbaiki** | Validasi `action` dengan regex ketat `^/admin/groups/\d+/members/\d+/delete$` sebelum mengeset `form.action`. Commit: `83bcc5b`. |
+| #2 | Go | `go/sql-injection` (Database query built from user-controlled sources) | High | `internal/dbm/database_api.go:509` | **A03: Injection (SQL Injection)** — nama schema/tabel dari parameter URL tetap mengalir ke `QuoteTable` meski telah dicek keberadaannya. | **Diperbaiki** | Menambahkan `resolveTable` yang mengembalikan identifier kanonis dari katalog `information_schema.tables` dan memakainya di `describeTable` (`QuoteTable` + parameterized `LIMIT`/`OFFSET`). Commit: `a8ae06f`, `3f8027f`. |
+| #3 | Go | `go/sql-injection` (Database query built from user-controlled sources) | High | `internal/dbm/introspect.go:103` | **A03: Injection (SQL Injection)** — `SELECT COUNT(*) FROM %s` menerima identifier tabel hasil input HTTP. | **Diperbaiki** | Memutus aliran taint HTTP menggunakan identifier kanonis hasil `resolveTable` pada seluruh pemanggil `CountRows`. Commit: `a8ae06f`, `3f8027f`, `975856b`. |
+| #4 | Go | `go/sql-injection` (Database query built from user-controlled sources) | High | `internal/dbm/introspect.go:109` | **A03: Injection (SQL Injection)** — `ListRows` menyusun nama tabel dari input HTTP ke string SQL. | **Diperbaiki** | Menggunakan identifier kanonis hasil `resolveTable` di `tableDetail` sebelum diteruskan ke `ListRows`, sementara `limit`/`offset` tetap parameterized. Commit: `a8ae06f`, `975856b`. |
+| #5 | Go | `go/log-injection` (Log entries created from user input) | Medium | `internal/activity/logger.go:74` | **A09: Security Logging and Monitoring Failures (Log Forging)** — karakter newline (`\r`/`\n`) dari input user pada atribut `slog.Error` berpotensi memalsukan baris log. | **Diperbaiki** | Menyaring `\n` dan `\r` dengan `strings.ReplaceAll` pada seluruh atribut string (`action`, `status`, `user_id`, `request_id`, dan `Detail`) sebelum ditulis ke `slog`. Commit: `83bcc5b`, `0428eac`. |
+| #6 | Go | `go/log-injection` (Log entries created from user input) | Medium | `internal/activity/logger.go:76` | **A09: Security Logging and Monitoring Failures (Log Forging)** — sama seperti #5 pada cabang `slog.Warn`. | **Diperbaiki** | Disanitasi melalui `sanitizeLogString` (`strings.ReplaceAll`). Commit: `83bcc5b`, `0428eac`. |
+| #7 | Go | `go/log-injection` (Log entries created from user input) | Medium | `internal/activity/logger.go:78` | **A09: Security Logging and Monitoring Failures (Log Forging)** — sama seperti #5 pada cabang `slog.Info`. | **Diperbaiki** | Disanitasi melalui `sanitizeLogString` (`strings.ReplaceAll`). Commit: `83bcc5b`, `0428eac`. |
+| #8 | Go | `go/log-injection` (Log entries created from user input) | Medium | `internal/dbm/api.go:126` | **A09: Security Logging and Monitoring Failures (Log Forging)** — `r.Method` dan `r.URL.Path` dicatat langsung lewat `log.Printf`. | **Diperbaiki** | Menghapus karakter `\r` dan `\n` dari `r.Method` dan `r.URL.Path` sebelum dicatat ke `log.Printf`. Commit: `83bcc5b`. |
+
+### Hasil Scan Ulang & Keterbatasan SAST
+
+- Setelah seluruh commit perbaikan (`83bcc5b`, `0428eac`, `a8ae06f`, `3f8027f`, `975856b`) di-push ke `dev`, scan ulang **CodeQL SAST** pada `javascript-typescript` dan `go` menutup seluruh **8/8 alert** (**0 Open Alerts**).
+- **Keterbatasan SAST:** Hasil scan CodeQL yang bersih (**0 alert**) **tidak menjamin** aplikasi sepenuhnya bebas dari kerentanan. SAST menganalisis kode secara statis dan tidak menggantikan pengujian runtime (DAST), konfigurasi infrastruktur, maupun *manual security review* terhadap *business logic flaws*.
+## Activity logging PostgreSQL
+
+Backend menulis log JSON ke stdout. Gunakan `request_id` untuk menghubungkan
+event HTTP dan SQL, serta `migration_id` untuk SQL dalam eksekusi migration.
+Log memuat operasi dan fingerprint SQL. Teks SQL mentah, nilai parameter, dan
+pesan error mentah disamarkan. SQLSTATE tetap tersedia untuk error PostgreSQL.
+
+Contoh field pada hasil eksekusi SQL:
+
+```json
+{"level":"ERROR","action":"sql.result","status":"failed","request_id":"req-1","user_id":"42","database":"target","migration_id":"7","query":"SELECT","parameter_count":"1","parameters":"[redacted]","duration_us":"124","sqlstate":"22000","error":"operation failed"}
+```
+
+`sql.start` menandai awal eksekusi. Hasil COMMIT dan ROLLBACK muncul sebagai
+`sql.commit` dan `sql.rollback`. Untuk batch, posisi query dan hasil batch
+dicatat terpisah.
+
+### Contoh Output Span OpenTelemetry
+
+Trace context dipropagasikan dari HTTP API → `migration_jobs.trace_context` → worker (`queue.job`) → `migration.execute` → `migration.lock` → query SQL (`sql.exec`), sehingga seluruh rantai berbagi `trace_id` yang sama dengan log JSON di atas:
+
+```json
+[
+  {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "span_id": "00f067aa0ba902b7",
+    "parent_span_id": "",
+    "name": "POST /api/migration-requests/{id}/approve",
+    "duration_ms": 18.4,
+    "status": "OK"
+  },
+  {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "span_id": "53995c3f42cd8ad8",
+    "parent_span_id": "00f067aa0ba902b7",
+    "name": "queue.job",
+    "duration_ms": 412.7,
+    "status": "OK"
+  },
+  {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "span_id": "8a3c60f7d188f8fa",
+    "parent_span_id": "53995c3f42cd8ad8",
+    "name": "migration.execute",
+    "duration_ms": 405.1,
+    "status": "OK",
+    "attributes": { "migration_id": "7", "execution_id": "12", "mode": "batch" }
+  },
+  {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "span_id": "b7ad6b7169203331",
+    "parent_span_id": "8a3c60f7d188f8fa",
+    "name": "migration.lock",
+    "duration_ms": 3.2,
+    "status": "OK"
+  }
+]
+```

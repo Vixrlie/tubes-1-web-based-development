@@ -1,10 +1,5 @@
 package dbm
 
-// Target = koneksi ke satu database target berbagai DBMS. DB memakai
-// database/sql (driver "pgx" stdlib untuk PostgreSQL, go-sql-driver/mysql
-// untuk MySQL/MariaDB); selisih SQL antar DBMS (pengutipan, kueri
-// introspeksi, kunci transaksi, EXPLAIN) terkapsulasi di Dialect.
-
 import (
 	"context"
 	"database/sql"
@@ -12,51 +7,38 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/Vixrlie/tubes-1-web-based-development/internal/activity"
 	gomysql "github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5"
-	_ "github.com/jackc/pgx/v5/stdlib" // driver "pgx" untuk database/sql
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
-// Target = pasangan koneksi + dialect untuk satu database target.
 type Target struct {
 	DB      *sql.DB
 	Dialect Dialect
 }
 
-// Close menutup seluruh koneksi target.
 func (t *Target) Close() {
 	if t != nil && t.DB != nil {
 		t.DB.Close()
 	}
 }
 
-// QuoteTable mengutip "schema.tabel" sesuai dialect.
 func (t *Target) QuoteTable(schema, table string) string {
 	return t.Dialect.QuoteIdent(schema, table)
 }
 
-// Dialect = perbedaan SQL antar DBMS target.
 type Dialect interface {
-	// Name mengembalikan "postgres" | "mysql".
 	Name() string
-	// OpenArgs mengubah URL koneksi menjadi (nama driver, DSN) database/sql.
 	OpenArgs(rawURL string) (driver, dsn string, err error)
-	// QuoteIdent mengutip identifier ("a"."b" vs `a`.`b`).
 	QuoteIdent(parts ...string) string
-	// LockSQL/UnlockSQL = kunci per-koneksi setara advisory lock ("" bila tidak ada).
 	LockSQL(connID int64) string
 	UnlockSQL(connID int64) string
-	// Explain membangun perintah EXPLAIN untuk satu statement.
 	Explain(analyze bool, stmt string) string
-	// ExplainIsJSON: true bila keluaran EXPLAIN berupa JSON yang bisa diparse
-	// menjadi ringkasan; false = tampilkan keluaran mentah.
 	ExplainIsJSON(analyze bool) bool
-	// Queries berisi teks kueri introspeksi (bentuk hasil scan identik antar dialect).
 	Queries() Queries
 }
 
-// Queries = kueri introspeksi per dialect. Placeholder mengikuti driver:
-// "$n" untuk PostgreSQL, "?" untuk MySQL.
 type Queries struct {
 	Summaries   string // (schema, tabel, jumlah kolom, perkiraan baris)
 	PKs         string // (schema, tabel, kolom PK)
@@ -69,8 +51,6 @@ type Queries struct {
 	Rows        string // "SELECT * FROM %s LIMIT .." (%s = tabel terutip)
 }
 
-// OpenTarget membuka koneksi target dari URL tersimpan (db_connections.connection_url).
-// Skema URL menentukan DBMS: postgres:// atau mysql://.
 func OpenTarget(ctx context.Context, rawURL string) (*Target, error) {
 	if rawURL == "" {
 		return nil, ErrConnNotFound
@@ -88,9 +68,19 @@ func OpenTarget(ctx context.Context, rawURL string) (*Target, error) {
 	if err != nil {
 		return nil, err
 	}
-	db, err := sql.Open(driver, dsn)
-	if err != nil {
-		return nil, err
+	var db *sql.DB
+	if driver == "pgx" {
+		cfg, err := pgx.ParseConfig(dsn)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Tracer = activity.PostgresTracer{Logger: activity.New(), Database: cfg.Database}
+		db = stdlib.OpenDB(*cfg)
+	} else {
+		db, err = sql.Open(driver, dsn)
+		if err != nil {
+			return nil, err
+		}
 	}
 	pingCtx, cancel := context.WithTimeout(ctx, connectTimeout)
 	defer cancel()
@@ -118,10 +108,6 @@ func schemeLabel(rawURL string) string {
 	return "PostgreSQL"
 }
 
-// --- PostgreSQL -------------------------------------------------------------
-
-// Postgres = dialect PostgreSQL. Kueri dipertahankan seperti versi pgx
-// sebelum refactor multi-DBMS.
 type Postgres struct{}
 
 func (Postgres) Name() string { return "postgres" }
@@ -189,12 +175,12 @@ func (Postgres) Queries() Queries {
 		JOIN pg_namespace n ON n.oid = t.relnamespace
 		JOIN pg_am am ON am.oid = ic.relam
 		JOIN LATERAL unnest(ix.indkey) WITH ORDINALITY AS k(attnum, ordinal) ON true
-		JOIN pg_attribute a ON a.attrelid = ix.indexrelid AND a.attnum = k.attnum
+		JOIN pg_attribute a ON a.attrelid = ix.indrelid AND a.attnum = k.attnum
 		WHERE n.nspname = $1 AND t.relname = $2 AND ix.indisprimary = false AND a.attnum > 0
 		GROUP BY ic.oid, ic.relname, ix.indisunique, am.amname
 		ORDER BY name`,
 		Constraints: `
-		SELECT tc.constraint_name, tc.constraint_type, kcu.columns,
+		SELECT tc.constraint_name, tc.constraint_type, COALESCE(kcu.columns, ''),
 		       COALESCE(fk.ref, '') AS reference
 		FROM information_schema.table_constraints tc
 		LEFT JOIN (
@@ -212,13 +198,15 @@ func (Postgres) Queries() Queries {
 			JOIN pg_class cl ON cl.oid = con.conrelid
 			JOIN pg_namespace ns ON ns.oid = cl.relnamespace
 			LEFT JOIN pg_class clref ON clref.oid = con.confrelid
-			LEFT JOIN pg_namespace nsref ON nsref.oid = clref.connamespace
+			LEFT JOIN pg_namespace nsref ON nsref.oid = clref.relnamespace
 			LEFT JOIN pg_attribute atref ON atref.attrelid = con.confrelid AND atref.attnum = ANY(con.confkey)
 			WHERE con.contype = 'f'
 		) fk ON fk.conname = tc.constraint_name
 		   AND fk.nspname = tc.table_schema
 		   AND fk.relname = tc.table_name
 		WHERE tc.table_schema = $1 AND tc.table_name = $2
+		  -- CHECK otomatis untuk kolom NOT NULL sudah tampil sebagai nullable.
+		  AND NOT (tc.constraint_type = 'CHECK' AND tc.constraint_name LIKE '%\_not\_null')
 		ORDER BY tc.constraint_type, tc.constraint_name`,
 		ForeignKeys: `
 		SELECT con.conname,
@@ -248,15 +236,12 @@ func (Postgres) Queries() Queries {
 		CountTables: `
 		SELECT COUNT(*) FROM information_schema.tables
 		  WHERE table_type = 'BASE TABLE'
-		    AND table_schema NOT IN ('pg_catalog', 'information_schema')`,
+		    AND table_schema NOT IN ('pg_catalog', 'information_schema')
+		    AND table_name NOT LIKE '\_pathgres\_%'`,
 		Rows: `SELECT * FROM %s LIMIT $1 OFFSET $2`,
 	}
 }
 
-// --- MySQL / MariaDB --------------------------------------------------------
-
-// MySQL = dialect MySQL/MariaDB lewat information_schema. Skema = nama
-// database yang tersambung (TABLE_SCHEMA = DATABASE() bagi query global).
 type MySQL struct{}
 
 func (MySQL) Name() string { return "mysql" }
@@ -279,8 +264,6 @@ func (MySQL) OpenArgs(rawURL string) (string, string, error) {
 	cfg.Addr = host + ":" + port
 	cfg.DBName = strings.TrimPrefix(u.Path, "/")
 	cfg.ParseTime = true
-	// Satu eksekusi migration boleh berisi banyak statement (satu paket SQL),
-	// sama seperti perilaku pgx di PostgreSQL.
 	cfg.Params = map[string]string{"multiStatements": "true"}
 	return "mysql", cfg.FormatDSN(), nil
 }
@@ -293,7 +276,6 @@ func (MySQL) QuoteIdent(parts ...string) string {
 	return strings.Join(quoted, ".")
 }
 
-// GET_LOCK bersifat per-sesi; dilepas oleh UnlockSQL atau saat koneksi ditutup.
 func (MySQL) LockSQL(connID int64) string {
 	return fmt.Sprintf("SELECT GET_LOCK('pathgres-%d', 30)", connID)
 }
@@ -304,7 +286,6 @@ func (MySQL) UnlockSQL(connID int64) string {
 
 func (MySQL) Explain(analyze bool, stmt string) string {
 	if analyze {
-		// EXPLAIN ANALYZE MySQL menghasilkan pohon teks, bukan JSON.
 		return "EXPLAIN ANALYZE " + stmt
 	}
 	return "EXPLAIN FORMAT=JSON " + stmt
@@ -391,7 +372,8 @@ func (MySQL) Queries() Queries {
 		CountTables: `
 		SELECT COUNT(*) FROM information_schema.TABLES
 		  WHERE TABLE_TYPE = 'BASE TABLE'
-		    AND TABLE_SCHEMA NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys')`,
+		    AND TABLE_SCHEMA NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys')
+		    AND TABLE_NAME NOT LIKE '\_pathgres\_%'`,
 		Rows: `SELECT * FROM %s LIMIT ? OFFSET ?`,
 	}
 }

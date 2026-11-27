@@ -20,8 +20,8 @@ type diffPage struct {
 	web.Shell
 	Title       string
 	Crumbs      []web.Crumb
-	FormAction  string // POST diff (pembanding)
-	DraftAction string // POST CreateDraft (endpoint migration yang sudah ada)
+	FormAction  string           // POST diff (pembanding)
+	DraftAction string           // POST editor migration, SQL up terisi kandidat diff
 	Fields      []map[string]any // dropdown koneksi pembanding
 	Actions     []web.Button     // tombol form utama
 	Error       string
@@ -112,7 +112,7 @@ func (h *Handlers) basePage(r *http.Request, connID int64) (diffPage, bool) {
 			{Label: "Schema Diff"},
 		},
 		FormAction:  base + "/diff",
-		DraftAction: base,
+		DraftAction: base + "/new",
 		Actions: []web.Button{
 			{Label: "Bandingkan", Type: "submit"},
 			{Label: "Batal", Variant: "secondary", Href: base},

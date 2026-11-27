@@ -100,6 +100,16 @@ type GroupDetailPage struct {
 	// AddMembers = data pop up "Tambah Anggota" (tombol pembukanya dibuat NewMembersCard).
 	// nil -> pop up tidak dirender dan tombol kembali menjadi link biasa ke addHref.
 	AddMembers *AddMembersModal
+	// Leader = form penetapan leader group (approver migration). nil -> tidak dirender.
+	Leader *LeaderForm
+}
+
+// LeaderForm = pilihan leader dari anggota aktif group.
+type LeaderForm struct {
+	FormAction   string
+	Options      []DropdownOption
+	Current      string // ID leader saat ini, kosong = belum ada
+	CurrentLabel string
 }
 
 // ID form tersembunyi untuk hapus grup; dirujuk tombol lewat atribut form=.

@@ -1,0 +1,62 @@
+{{/*
+Halaman Review Migration: SQL yang akan dijalankan, approval per group,
+form setuju/tolak untuk leader, dan attempt eksekusi. Halaman memuat ulang
+dirinya selama pengajuan masih di antrian atau berjalan.
+Data: dbm.requestDetailPage (lihat dbm/migration_pages.go).
+*/}}
+{{define "content"}}
+{{if .AutoRefresh}}<meta http-equiv="refresh" content="3">{{end}}
+{{template `page-header` (dict `Title` .Title `Crumbs` .Crumbs `Actions` .Actions)}}
+
+<div class="stack">
+    {{template `flash` .}}
+
+    <section class="card">
+        {{template `card-head` (dict `Title` `Status`)}}
+        <p>{{template `table-cell` .StatusCell}}</p>
+        {{with .Request.Error}}<p class="flash flash--error">{{.}}</p>{{end}}
+        {{if .AutoRefresh}}<p class="card__note">Diproses worker secara asynchronous; halaman diperbarui otomatis.</p>{{end}}
+    </section>
+
+    <section class="card">
+        {{template `card-head` (dict `Title` (printf `SQL %s` .Request.Action))}}
+        <pre class="sql-block">{{.Request.SQL}}</pre>
+        {{with .Request.Note}}<p class="card__note">Catatan pengaju: {{.}}</p>{{end}}
+    </section>
+
+    {{template `table` .Reviewers}}
+
+    {{if .Request.CanApprove}}
+    <section class="card">
+        {{template `card-head` (dict `Title` `Keputusan Anda`)}}
+        <p class="card__note">Keputusan berlaku untuk setiap group yang Anda pimpin dan masih menunggu.</p>
+        <form method="post" action="{{.ApproveURL}}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{.User.CSRFToken}}">
+            <div class="input">
+                <label class="input__label" for="approve-note">Catatan (opsional)</label>
+                <div class="input__box"><input class="input__control" id="approve-note" name="note"></div>
+            </div>
+            {{template `button` (dict `Label` `Setujui Migration` `Type` `submit`)}}
+        </form>
+        <form method="post" action="{{.RejectURL}}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{.User.CSRFToken}}">
+            <div class="input">
+                <label class="input__label" for="reject-note">Alasan penolakan</label>
+                <div class="input__box"><input class="input__control" id="reject-note" name="note" required></div>
+            </div>
+            {{template `button` (dict `Label` `Tolak` `Type` `submit` `Variant` `soft-danger`)}}
+        </form>
+    </section>
+    {{end}}
+
+    {{if .Request.CanCancel}}
+    <form method="post" action="{{.CancelURL}}">
+        <input type="hidden" name="csrf_token" value="{{.User.CSRFToken}}">
+        {{template `button` (dict `Label` `Batalkan Pengajuan` `Type` `submit` `Variant` `secondary`)}}
+    </form>
+    {{end}}
+
+    {{template `detail-card` .Detail}}
+    {{template `table` .Executions}}
+</div>
+{{end}}

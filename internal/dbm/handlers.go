@@ -23,20 +23,23 @@ type Config struct {
 	Policy   access.Policy
 	Registry Registry
 	Renderer auth.Renderer
-	// Migrations menyimpan & membaca riwayat migration (opsional; default
+	// Migrations menyimpan definisi migration (opsional; default
 	// PGMigrationStore di atas Platform).
 	Migrations MigrationStore
+	// Workflow menjalankan pengajuan, approval, dan riwayat. Bila nil dibuat
+	// dari field di atas tanpa queue (approval akhir ditolak ErrNoQueue).
+	Workflow *Workflow
 }
 
-// Handlers melayani userflow database (daftar, schema, detail tabel). Semua route
-// memeriksa izin via access.Policy; penolakan 403 polos, karena FE belum punya halaman error.
+// Handlers melayani userflow database (daftar, schema, detail tabel,
+// migration) dan JSON API workflow. Semua route memeriksa izin via access.Policy.
 type Handlers struct {
 	platform   *pgxpool.Pool
 	policy     access.Policy
 	registry   Registry
 	renderer   auth.Renderer
 	migrations MigrationStore
-	runner     *MigrationRunner
+	workflow   *Workflow
 }
 
 func NewHandlers(cfg Config) *Handlers {
@@ -52,17 +55,30 @@ func NewHandlers(cfg Config) *Handlers {
 	if migrations == nil && cfg.Platform != nil {
 		migrations = NewPGMigrationStore(cfg.Platform)
 	}
-	h := &Handlers{
+	workflow := cfg.Workflow
+	if workflow == nil {
+		workflow = NewWorkflow(WorkflowConfig{
+			Pool: cfg.Platform, Policy: policy, Store: migrations, Registry: registry,
+		})
+	}
+	return &Handlers{
 		platform:   cfg.Platform,
 		policy:     policy,
 		registry:   registry,
 		renderer:   cfg.Renderer,
 		migrations: migrations,
+		workflow:   workflow,
 	}
-	if cfg.Platform != nil {
-		h.runner = NewMigrationRunner(cfg.Platform, registry)
+}
+
+// can = pemeriksaan izin tanpa menulis respons (untuk menampilkan tombol).
+func (h *Handlers) can(ctx context.Context, user auth.User, connID int64, edit bool) bool {
+	action := access.ActionView
+	if edit {
+		action = access.ActionEdit
 	}
-	return h
+	ok, err := h.policy.Can(ctx, user.ID, connID, action)
+	return err == nil && ok
 }
 
 // Routes mendaftarkan route userflow /databases/* pada grup terproteksi
@@ -74,19 +90,12 @@ func (h *Handlers) Routes(r chi.Router) {
 		r.Get("/{connID}/schema", h.schema)
 		r.Get("/{connID}/tables/{table}", h.tableDetail)
 		r.Get("/{connID}/tables/{table}/data", h.tableData)
-		// Halaman migration: riwayat, editor (draft), detail, preview & eksekusi.
-		r.Get("/{connID}/migrations", h.migrationsList)
-		r.Post("/{connID}/migrations", h.migrationsCreate)
-		// Diff: canonical sekeluarga /migrations/* + alias pendek /diff.
+		// Diff didaftarkan sebelum /migrations/{mID} agar tidak tertangkap sebagai ID.
 		r.Get("/{connID}/migrations/diff", h.diffForm)
 		r.Post("/{connID}/migrations/diff", h.diffRun)
 		r.Get("/{connID}/diff", h.diffForm)
 		r.Post("/{connID}/diff", h.diffRun)
-		r.Get("/{connID}/migrations/new", h.migrationEditor)
-		r.Get("/{connID}/migrations/{mID}", h.migrationDetail)
-		r.Get("/{connID}/migrations/{mID}/preview", h.migrationPreview)
-		r.Post("/{connID}/migrations/{mID}/explain", h.migrationExplain)
-		r.Post("/{connID}/migrations/{mID}/execute", h.migrationExecute)
+		h.migrationPageRoutes(r)
 	})
 }
 
@@ -465,7 +474,7 @@ func (h *Handlers) renderTable(w http.ResponseWriter, r *http.Request, tab strin
 		http.NotFound(w, r)
 		return
 	}
-	valid, err := validateTable(r.Context(), pool, schemaName, tableName)
+	canonSchema, canonTable, valid, err := resolveTable(r.Context(), pool, schemaName, tableName)
 	if err != nil {
 		h.serverError(w, "validasi tabel", err)
 		return
@@ -474,6 +483,7 @@ func (h *Handlers) renderTable(w http.ResponseWriter, r *http.Request, tab strin
 		http.NotFound(w, r)
 		return
 	}
+	schemaName, tableName = canonSchema, canonTable
 	if tab != "constraints" && tab != "data" {
 		tab = "columns"
 	}
